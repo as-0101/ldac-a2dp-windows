@@ -13,6 +13,9 @@
 #include <string>
 #include <vector>
 #include <algorithm>
+#include <cwctype>
+#include <cwchar>
+#include <iterator>
 
 #pragma comment(lib, "Setupapi.lib")
 #pragma comment(lib, "Newdev.lib")
