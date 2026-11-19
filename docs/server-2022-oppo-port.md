@@ -22,7 +22,7 @@ Enable stereo A2DP playback from Windows Server 2022 Datacenter (build 20348) to
 - The OPPO A2DP instance observed on this host:
   `BTHENUM\\{0000110B-0000-1000-8000-00805F9B34FB}_LOCALMFG&0002\\7&384EA00A&0&840F2A13E3E2_C00000000`
 - The observed remote Bluetooth address encoded in that instance is `84:0F:2A:13:E3:E2`.
-- The host has `Acx01000.sys`, but file presence alone does not prove that every ACX DDI used by this project is available at runtime.
+- The host has `Acx01000.sys`, version 10.0.20348.3451, and `portcls.sys`, version 10.0.20348.5756. These file versions are useful evidence, but runtime DDI availability still needs verification.
 
 ## Source-project findings
 
@@ -34,14 +34,15 @@ Enable stereo A2DP playback from Windows Server 2022 Datacenter (build 20348) to
   - AVRCP and AVRCP target IDs for the same JBL identity.
 - Therefore the current INF does not match the OPPO node observed on the Server 2022 host. Do not install the unmodified package expecting it to bind to OPPO.
 - Upstream README documents actual operation with JBL Live 780NC on Windows 11, not Server 2022. Its test procedure uses test signing and Secure Boot changes on a test machine. That is not approval to apply those settings to the production host.
+- The upstream project requests KMDF 1.31 and ACX 1.1. Microsoft's version tables list KMDF 1.31 as supported on Windows 10 2004 and later, and Windows Server 2022 includes KMDF 1.33. Microsoft's ACX version overview lists ACX 1.1 with minimum KMDF 1.31 and Windows 10 2004 support. This makes the framework versions plausible for Server 2022; it is not yet proof that every DDI and the complete driver work on build 20348.
 - The upstream GitHub Actions run inspected during this porting review successfully built the KMDF driver, protocol/service tests and settings utility. This verifies the upstream CI build, not OPPO compatibility or Server 2022 runtime operation.
 
 ## Porting work plan
 
 1. **Compatibility audit**
-   - Check every ACX DDI used by `driver/LdacA2dp/audio.c` against the ACX runtime available on Server 2022 build 20348.
-   - Check the KMDF/BthPort DDI usage and minimum runtime versions.
-   - Establish whether the existing ACX 1.1 endpoint can run on build 20348. If not, choose a supported PortCls/SYSVAD-style render endpoint or another documented fallback; do not guess based only on the presence of Acx01000.sys.
+   - KMDF 1.31 / ACX 1.1 are no longer presumed blockers: Microsoft documents KMDF 1.31 on Windows 10 2004 and later, Server 2022 includes KMDF 1.33, and ACX 1.1 has a documented Windows 10 2004 baseline with KMDF 1.31.
+   - Still verify each ACX DDI used by `driver/LdacA2dp/audio.c` and the BthPort/BthEnum interfaces on build 20348.
+   - Fix the driver's INF target decoration: upstream currently declares `NT$ARCH$.10.0...22621`, while Server 2022 is build 20348. Create a Server 2022-compatible model section only after confirming all required APIs are available; do not merely lower the INF number to force installation.
 2. **OPPO device matching**
    - Capture the complete Hardware IDs, Compatible IDs, instance ID, SDP service records and remote address from a test system.
    - Design an install strategy that targets the selected OPPO devnode only. If a shared compatible ID is unavoidable, enforce a strict remote-address/device identity check before the driver opens channels; verify unrelated A2DP devices remain on their original driver.
@@ -66,7 +67,9 @@ Enable stereo A2DP playback from Windows Server 2022 Datacenter (build 20348) to
 - [x] User-created fork confirmed: `as-0101/ldac-a2dp-windows`.
 - [x] Dedicated adaptation branch created: `server-2022-oppo`.
 - [x] Initial source/INF review completed.
-- [ ] ACX/KMDF/BthPort compatibility audit for build 20348.
+- [x] Initial KMDF/ACX version comparison against Microsoft documentation.
+- [ ] Per-DDI ACX/BthPort compatibility check for build 20348.
+- [ ] Correct and validate the INF target OS decoration for Server 2022.
 - [ ] OPPO SDP and device identity capture.
 - [ ] Safe OPPO-specific driver installation strategy.
 - [ ] SBC-only playback in isolated test VM.
