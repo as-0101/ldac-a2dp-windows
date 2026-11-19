@@ -114,7 +114,7 @@ int main(int argc, char** argv)
             int error = WSAGetLastError();
             if (error == WSA_E_NO_MORE || error == WSAENOMORE) break;
             if (error != WSAEFAULT || bytes < sizeof(WSAQUERYSETA)) {
-                std::fprintf(stderr, "WSALookupServiceNext failed: %d (required=%lu)\\n", error, bytes);
+                std::fprintf(stderr, "WSALookupServiceNext failed: %d (required=%lu)\n", error, bytes);
                 break;
             }
 
@@ -125,13 +125,13 @@ int main(int argc, char** argv)
             if (WSALookupServiceNextA(lookup, flags, &bytes, result) == SOCKET_ERROR) {
                 error = WSAGetLastError();
                 if (error == WSA_E_NO_MORE || error == WSAENOMORE) break;
-                std::fprintf(stderr, "WSALookupServiceNext retry failed: %d\\n", error);
+                std::fprintf(stderr, "WSALookupServiceNext retry failed: %d\n", error);
                 break;
             }
         }
 
         ++records;
-        std::printf("\\nRecord %u: %s\\n", records,
+        std::printf("\nRecord %u: %s\n", records,
             result->lpszServiceInstanceName ? result->lpszServiceInstanceName : "(unnamed)");
         if (result->lpBlob && result->lpBlob->pBlobData && result->lpBlob->cbSize) {
             const BYTE* blob = result->lpBlob->pBlobData;
@@ -147,12 +147,12 @@ int main(int argc, char** argv)
             PrintAttribute(blob, len, 0x0205, "Vendor ID source");
             if (hasVendor && hasProduct && hasSource) {
                 foundIdentity = true;
-                std::printf("  Identity tuple     %04X:%04X (source=%u)\\n", vendor, product, source);
+                std::printf("  Identity tuple     %04X:%04X (source=%u)\n", vendor, product, source);
                 if (hasVersion)
-                    std::printf("  Device ID version  %u.%u\\n", version >> 8, version & 0xFF);
+                    std::printf("  Device ID version  %u.%u\n", version >> 8, version & 0xFF);
             }
         } else {
-            std::printf("  SDP record blob unavailable\\n");
+            std::printf("  SDP record blob unavailable\n");
         }
     }
 
