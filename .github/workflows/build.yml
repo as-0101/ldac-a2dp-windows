@@ -27,6 +27,13 @@ jobs:
       - name: Build Bluetooth SDP probe
         shell: cmd
         run: tools\stand\build-sdp-probe.cmd
+      - name: Upload SDP probe
+        uses: actions/upload-artifact@v4
+        with:
+          name: bluetooth-sdp-probe
+          path: build/sdp-probe.exe
+          if-no-files-found: error
+          retention-days: 7
 
   driver:
     name: KMDF driver
