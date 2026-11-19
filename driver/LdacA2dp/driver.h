@@ -76,6 +76,12 @@ typedef struct _DEVICE_CONTEXT {
     BTH_PROFILE_DRIVER_INTERFACE ProfileInterface;
     BTH_ADDR LocalAddress;
     BTH_ADDR RemoteAddress;
+    USHORT RemoteVid;           /* from the remote Device ID SDP record, if published */
+    USHORT RemotePid;
+    USHORT RemoteMfg;
+    USHORT LocalMfg;            /* manufacturer of the local Bluetooth radio */
+    USHORT RemoteVidType;
+    BOOLEAN EnumeratorInfoValid;
     L2CAP_SERVER_HANDLE ServerHandle; /* PSM 0x19 server filtered to RemoteAddress */
     BOOLEAN PsmRegistered;
 
