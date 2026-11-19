@@ -135,3 +135,57 @@ Added `tools/stand/sdp-probe.cpp` and `tools/stand/build-sdp-probe.cmd`. The pro
 Default peer address is the previously observed OPPO address `84:0F:2A:13:E3:E2`; an alternate address can be passed as the first command-line argument. This is user-mode only and does not install or bind a kernel driver. The build workflow now compiles this probe in the Settings utility job.
 
 Limitations: the tool has not yet been run against the actual OPPO earbuds. Some devices may omit the Device ID SDP service or individual attributes; absence is inconclusive and must not be converted into a guessed VID/PID or a broad INF match. SDP values are remote-reported identity data and must be cross-checked before generating a device-specific INF.
+
+
+## Actual OPPO SDP and PnP results (2026-11-19) — supersedes earlier pending identity checks
+
+The standalone probe was built and run against OPPO Enco Buds2 at Bluetooth address 84:0F:2A:13:E3:E2.
+
+- The first Device ID-only query (service UUID 0x1200) returned no record. This is inconclusive: it does not prove the headset has no vendor/product identity.
+- The expanded L2CAP service enumeration returned five SDP service records:
+  - 0x110B: Audio Sink (A2DP Sink).
+  - 0x110E: Advanced Audio / AVRCP Controller role.
+  - 0x110C: AVRCP Target.
+  - 0x111E: Hands-Free.
+  - 0000079A-D102-11E1-9B23-00025B00A5A5: vendor-specific oppointeraction.
+- No standard Device ID attributes 0x0201, 0x0202, 0x0203, 0x0205 were found in these returned service records. The remote Device ID SDP service remains absent from the observed result.
+- Device Manager / PowerShell enumeration showed six devnodes in one ContainerId {FB1FD640-FDAD-5D08-83ED-59D48F60EA5A}: the physical OPPO device node plus the five profile service nodes. Earlier prose referring to seven nodes was a counting error.
+- The screenshot with Device Manager properties open for Advanced Audio displayed compatible IDs containing UUID 0x110E; that is not the A2DP Audio Sink node. The relevant A2DP node is UUID 0x110B, shown in PowerShell as Служба приемника аудио.
+- For the actual A2DP node (UUID 0x110B), Windows reports:
+  - INF: bth.inf
+  - Provider: Microsoft
+  - Driver description: Audio Sink Service
+  - Driver version: 10.0.20348.5756
+  - Matching ID: BTHENUM\\{0000110b-0000-1000-8000-00805f9b34fb}_GENERIC
+  - Hardware ID: BTHENUM\\{0000110b-0000-1000-8000-00805f9b34fb}_LOCALMFG&0002
+  - Compatible IDs: generic A2DP service UUID and its _GENERIC form.
+  - Parent: BTH\\MS_BTHBRB\\6&10f06c5d&3&1
+  - Instance ID includes remote MAC suffix 840F2A13E3E2, but Hardware ID and Compatible IDs do not.
+- The other A2DP-profile nodes likewise use _LOCALMFG&0002; this is local-radio manufacturer data and is shared across peers on this radio, not an OPPO-specific selector.
+
+## Driver-selection implications and next safe design gate
+
+- Windows INF Models entries match device Hardware IDs and Compatible IDs; they do not match an arbitrary per-instance MAC suffix. Instance IDs uniquely distinguish devnodes, but they are a separate identifier family from the IDs used for INF package matching. See Microsoft's Device Identification Strings and INF Models documentation.
+- Therefore adding the generic A2DP Compatible ID or _LOCALMFG&0002 to the current function-driver INF would make the package eligible for every matching A2DP devnode on the Intel radio, not just OPPO. This is prohibited for production.
+- The current fork's INF still names JBL-specific remote VID/PID IDs and has a Windows 10.0.22621+ target decoration. It does not currently match OPPO and does not yet target Server 2022 build 20348.
+- The current driver's DetectRole identifies only the Bluetooth service UUID from the Hardware ID. It does not perform an OPPO MAC-address check at EvtDeviceAdd. L2capQueryAddresses retrieves the remote address later, after the function driver has already been selected and its device object created. Consequently that later address-filtered L2CAP setup is not a safe substitute for PnP driver selection.
+- Microsoft documents the SetupAPI workflow for selecting a driver for a specific device instance using SetupDiOpenDeviceInfo, building the compatible-driver list, selecting a particular driver node, and installing it with DiInstallDevice (the older InstallSelectedDriver API is deprecated). This is a possible manual per-devnode test mechanism, not yet a production-safe deployment design: a staged INF with generic A2DP IDs may still be considered for other devices during later PnP matching. Driver ranking and re-enumeration behavior must be tested in a disposable VM before drawing a safety conclusion.
+- Next work must stay in source/VM validation. Do not widen the INF on the production host; do not install the unsigned artifact; do not enable test-signing or change Secure Boot on the production host.
+- A viable design must demonstrate both: (1) only the exact OPPO A2DP devnode is selected for the custom function driver; and (2) other A2DP devices continue to select their existing inbox driver after reboot, radio restart, and device re-enumeration. If this cannot be shown, investigate an alternative architecture (for example, a per-instance filter or a user-mode Bluetooth transport plus a separately scoped virtual audio endpoint) instead of using a broad function-driver match.
+
+References:
+- https://learn.microsoft.com/en-us/windows-hardware/drivers/install/device-identification-strings
+- https://learn.microsoft.com/en-us/windows-hardware/drivers/install/inf-models-section
+- https://learn.microsoft.com/en-us/windows-hardware/drivers/install/installselecteddriver
+
+## Updated evidence status (2026-11-19)
+
+- [x] SDP L2CAP service enumeration executed on the actual OPPO headset.
+- [x] Confirmed A2DP Sink service UUID 0x110B and other profile UUIDs.
+- [x] Confirmed no Device ID attributes in returned SDP records.
+- [x] Confirmed actual A2DP devnode currently binds to inbox bth.inf through the generic A2DP compatible ID.
+- [x] Confirmed the MAC address is present in the A2DP Instance ID but not in Hardware IDs / Compatible IDs.
+- [ ] Design and test a safe per-instance selection/driver-binding strategy in a disposable Server 2022 VM.
+- [ ] Verify whether the Server 2022 runtime supports every ACX/BthPort DDI used.
+- [ ] SBC-only playback test in isolated VM.
+- [ ] Production installation package with signed driver and documented rollback.
