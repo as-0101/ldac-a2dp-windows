@@ -154,8 +154,8 @@ static bool IsA2dpCompatible(HDEVINFO set, SP_DEVINFO_DATA& dev) {
     return false;
 }
 static bool FindDriver(HDEVINFO set, SP_DEVINFO_DATA& dev,
-    const std::wstring& wantedInf, bool rollback, SP_DRVINFO_DATA_W& selected) {
-    if (!SetupDiBuildDriverInfoList(set, &dev, SPDIT_COMPATDRIVER)) {
+    const std::wstring& wantedInf, bool rollback, SP_DRVINFO_DATA_W& selected, bool buildList = true) {
+    if (buildList && !SetupDiBuildDriverInfoList(set, &dev, SPDIT_COMPATDRIVER)) {
         std::wcerr << L"SetupDiBuildDriverInfoList failed: " << GetLastError() << L"\n";
         return false;
     }
@@ -283,6 +283,37 @@ static int Install() {
     if (!StageInf(infPath, publishedInf)) {
         SetupDiDestroyDeviceInfoList(target.set);
         return 17;
+    }
+    SP_DRVINFO_DATA_W customDriver{};
+    SP_DRVINFO_DATA_W inboxDriver{};
+    customDriver.cbSize = sizeof(customDriver);
+    inboxDriver.cbSize = sizeof(inboxDriver);
+    if (!FindDriver(target.set, target.data, publishedInf, false, customDriver, true) ||
+        !FindDriver(target.set, target.data, L"", true, inboxDriver, false)) {
+        SetupDiDestroyDriverInfoList(target.set, &target.data, SPDIT_COMPATDRIVER);
+        SetupDiDestroyDeviceInfoList(target.set);
+        return 18;
+    }
+    SP_DRVINSTALL_PARAMS customRank{};
+    SP_DRVINSTALL_PARAMS inboxRank{};
+    customRank.cbSize = sizeof(customRank);
+    inboxRank.cbSize = sizeof(inboxRank);
+    if (!SetupDiGetDriverInstallParamsW(target.set, &target.data, &customDriver, &customRank) ||
+        !SetupDiGetDriverInstallParamsW(target.set, &target.data, &inboxDriver, &inboxRank)) {
+        std::wcerr << L"Cannot verify driver ranking; refusing generic A2DP install. Error: "
+                   << GetLastError() << L"\\n";
+        SetupDiDestroyDriverInfoList(target.set, &target.data, SPDIT_COMPATDRIVER);
+        SetupDiDestroyDeviceInfoList(target.set);
+        return 19;
+    }
+    std::wcout << L"Driver rank: test package=0x" << std::hex << customRank.Rank
+               << L", inbox bth.inf=0x" << inboxRank.Rank << std::dec << L"\\n";
+    if (customRank.Rank <= inboxRank.Rank) {
+        std::wcerr << L"Safety gate: the test package is not ranked below inbox bth.inf. "
+                      L"Refusing to stage a generic A2DP match that could affect other headsets.\\n";
+        SetupDiDestroyDriverInfoList(target.set, &target.data, SPDIT_COMPATDRIVER);
+        SetupDiDestroyDeviceInfoList(target.set);
+        return 20;
     }
     bool reboot = false;
     const bool ok = ApplyDriver(target, false, publishedInf, reboot);
