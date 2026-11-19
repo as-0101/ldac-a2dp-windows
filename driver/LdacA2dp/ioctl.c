@@ -60,6 +60,12 @@ static VOID FillStatus(_In_ PDEVICE_CONTEXT Ctx, _Out_ LDACA2DP_STATUS *Out)
     Out->MediaMtu = Ctx->Media.Open ? Ctx->Media.OutMtu : 0;
     Out->DelayReport100us = Ctx->Avdtp.delay_100us;
     Out->RemoteAddress = Ctx->RemoteAddress;
+    Out->RemoteVid = Ctx->RemoteVid;
+    Out->RemotePid = Ctx->RemotePid;
+    Out->RemoteMfg = Ctx->RemoteMfg;
+    Out->LocalMfg = Ctx->LocalMfg;
+    Out->RemoteVidType = Ctx->RemoteVidType;
+    Out->EnumeratorInfoValid = Ctx->EnumeratorInfoValid;
     Out->LastError = Ctx->LastError;
     Out->ServerRegistered = Ctx->ServerHandle != NULL;
     Out->SignalingIncoming = Ctx->Sig.Open && Ctx->Sig.Incoming;
