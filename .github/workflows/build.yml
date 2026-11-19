@@ -24,6 +24,9 @@ jobs:
         with:
           dotnet-version: 10.0.x
       - run: dotnet build ui/LdacConfig -c Release
+      - name: Build Bluetooth SDP probe
+        shell: cmd
+        run: tools\stand\build-sdp-probe.cmd
 
   driver:
     name: KMDF driver
