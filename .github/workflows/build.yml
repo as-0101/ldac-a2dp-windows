@@ -36,3 +36,10 @@ jobs:
       - name: Build (build_driver.cmd Release)
         shell: cmd
         run: build_driver.cmd Release
+      - name: Upload unsigned driver build for inspection
+        uses: actions/upload-artifact@v4
+        with:
+          name: ldac-a2dp-driver-unsigned
+          path: build/LdacA2dp/Release/**
+          if-no-files-found: error
+          retention-days: 7
