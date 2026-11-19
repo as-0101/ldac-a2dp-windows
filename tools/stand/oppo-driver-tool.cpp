@@ -121,7 +121,7 @@ static bool FindTarget(TargetDevice& target, bool requireSingleA2dp = true) {
     if (requireSingleA2dp && target.a2dpCount != 1) {
         std::wcerr << L"Refusing install: found " << target.a2dpCount
                    << L" present A2DP devnodes. This test package requires the OPPO "
-                      L"to be the only paired/present A2DP sink in the test VM.\n";
+                      L"to be the only present A2DP sink on this physical Server 2022 host.\n";
         return false;
     }
     GetDriverInfPath(target.set, target.data, target.infPath);
