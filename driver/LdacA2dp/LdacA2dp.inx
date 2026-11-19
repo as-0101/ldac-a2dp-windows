@@ -10,8 +10,8 @@
 
 [Version]
 Signature   = "$WINDOWS NT$"
-Class       = MEDIA
-ClassGuid   = {4d36e96c-e325-11ce-bfc1-08002be10318}
+Class       = Bluetooth
+ClassGuid   = {e0cbf06c-cd8b-4647-bb8a-263b43f0f974}
 Provider    = %ManufacturerName%
 CatalogFile = LdacA2dp.cat
 DriverVer   =
