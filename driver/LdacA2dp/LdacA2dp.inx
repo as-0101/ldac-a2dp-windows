@@ -27,7 +27,12 @@ DefaultDestDir = 13
 LdacA2dp.sys = 1,,
 
 [Manufacturer]
-%ManufacturerName% = LdacA2dp,NT$ARCH$.10.0...22621
+%ManufacturerName% = LdacA2dp,NT$ARCH$.10.0...20348,NT$ARCH$.10.0...22621
+
+[LdacA2dp.NT$ARCH$.10.0...20348]
+; OPPO Enco Buds2 test target. This generic compatible ID is used only with
+; the per-instance SetupAPI installer and the driver's runtime Bluetooth-MAC guard.
+%LdacA2dp.DeviceDesc% = LdacA2dp_Device, BTHENUM\\{0000110b-0000-1000-8000-00805f9b34fb}_GENERIC
 
 [LdacA2dp.NT$ARCH$.10.0...22621]
 ; JBL Live 780NC (DeviceID VID 0x02B0 from the SIG namespace, PID 0x0000)
