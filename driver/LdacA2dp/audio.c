@@ -458,22 +458,22 @@ NTSTATUS AudioCreate(_In_ PDEVICE_CONTEXT Ctx)
     status = WdfMemoryCreate(&attributes, NonPagedPoolNx, LDACA2DP_POOL_TAG, LDACA2DP_PCM_RING_SIZE, &ringMemory,
                              (PVOID *)&Ctx->PcmRing);
     if (!NT_SUCCESS(status))
-        return status;
+        do { DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_ERROR_LEVEL, "LdacA2dp: AudioCreate failed at line %lu: 0x%08X\n", (ULONG)__LINE__, status); return status; } while (0);
     Ctx->PcmRingSize = LDACA2DP_PCM_RING_SIZE;
     status = WdfSpinLockCreate(&attributes, &Ctx->PcmLock);
     if (!NT_SUCCESS(status))
-        return status;
+        do { DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_ERROR_LEVEL, "LdacA2dp: AudioCreate failed at line %lu: 0x%08X\n", (ULONG)__LINE__, status); return status; } while (0);
     WDF_IO_QUEUE_CONFIG_INIT(&queueConfig, WdfIoQueueDispatchManual);
     queueConfig.PowerManaged = WdfFalse;
     status = WdfIoQueueCreate(device, &queueConfig, WDF_NO_OBJECT_ATTRIBUTES, &Ctx->PcmReadQueue);
     if (!NT_SUCCESS(status))
-        return status;
+        do { DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_ERROR_LEVEL, "LdacA2dp: AudioCreate failed at line %lu: 0x%08X\n", (ULONG)__LINE__, status); return status; } while (0);
     WDF_WORKITEM_CONFIG_INIT(&workConfig, AudioEvtVolumeWorkItem);
     WDF_OBJECT_ATTRIBUTES_INIT(&attributes);
     attributes.ParentObject = device;
     status = WdfWorkItemCreate(&workConfig, &attributes, &Ctx->VolumeWorkItem);
     if (!NT_SUCCESS(status))
-        return status;
+        do { DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_ERROR_LEVEL, "LdacA2dp: AudioCreate failed at line %lu: 0x%08X\n", (ULONG)__LINE__, status); return status; } while (0);
     Ctx->VolumeLevel = AudioAvrcpToLevel(100); /* until the headphones report theirs */
 
     init = AcxCircuitInitAllocate(device);
@@ -487,12 +487,12 @@ NTSTATUS AudioCreate(_In_ PDEVICE_CONTEXT Ctx)
     }
     if (!NT_SUCCESS(status)) {
         AcxCircuitInitFree(init);
-        return status;
+        do { DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_ERROR_LEVEL, "LdacA2dp: AudioCreate failed at line %lu: 0x%08X\n", (ULONG)__LINE__, status); return status; } while (0);
     }
     WDF_OBJECT_ATTRIBUTES_INIT_CONTEXT_TYPE(&attributes, CIRCUIT_CONTEXT);
     status = AcxCircuitCreate(device, &attributes, &init, &circuit); /* frees init either way */
     if (!NT_SUCCESS(status))
-        return status;
+        do { DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_ERROR_LEVEL, "LdacA2dp: AudioCreate failed at line %lu: 0x%08X\n", (ULONG)__LINE__, status); return status; } while (0);
     GetCircuitContext(circuit)->Dev = Ctx;
 
     /* hardware volume and mute: Windows stops scaling the PCM; the level goes
@@ -511,7 +511,7 @@ NTSTATUS AudioCreate(_In_ PDEVICE_CONTEXT Ctx)
     attributes.ParentObject = circuit;
     status = AcxVolumeCreate(circuit, &attributes, &volumeConfig, &Ctx->VolumeElement);
     if (!NT_SUCCESS(status))
-        return status;
+        do { DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_ERROR_LEVEL, "LdacA2dp: AudioCreate failed at line %lu: 0x%08X\n", (ULONG)__LINE__, status); return status; } while (0);
     ACX_MUTE_CALLBACKS_INIT(&muteCallbacks);
     muteCallbacks.EvtAcxMuteAssignState = AudioEvtMuteAssign;
     muteCallbacks.EvtAcxMuteRetrieveState = AudioEvtMuteRetrieve;
@@ -523,12 +523,12 @@ NTSTATUS AudioCreate(_In_ PDEVICE_CONTEXT Ctx)
     attributes.ParentObject = circuit;
     status = AcxMuteCreate(circuit, &attributes, &muteConfig, &Ctx->MuteElement);
     if (!NT_SUCCESS(status))
-        return status;
+        do { DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_ERROR_LEVEL, "LdacA2dp: AudioCreate failed at line %lu: 0x%08X\n", (ULONG)__LINE__, status); return status; } while (0);
     elements[0] = (ACXELEMENT)Ctx->VolumeElement;
     elements[1] = (ACXELEMENT)Ctx->MuteElement;
     status = AcxCircuitAddElements(circuit, elements, RTL_NUMBER_OF(elements));
     if (!NT_SUCCESS(status))
-        return status;
+        do { DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_ERROR_LEVEL, "LdacA2dp: AudioCreate failed at line %lu: 0x%08X\n", (ULONG)__LINE__, status); return status; } while (0);
 
     /* host pin: where the audio engine writes */
     ACX_PIN_CONFIG_INIT(&pinCfg);
@@ -539,7 +539,7 @@ NTSTATUS AudioCreate(_In_ PDEVICE_CONTEXT Ctx)
     attributes.ParentObject = circuit;
     status = AcxPinCreate(circuit, &attributes, &pinCfg, &pins[RenderHostPin]);
     if (!NT_SUCCESS(status))
-        return status;
+        do { DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_ERROR_LEVEL, "LdacA2dp: AudioCreate failed at line %lu: 0x%08X\n", (ULONG)__LINE__, status); return status; } while (0);
 
     /* bridge pin: the headphones (endpoint form factor) */
     ACX_PIN_CONFIG_INIT(&pinCfg);
@@ -550,7 +550,7 @@ NTSTATUS AudioCreate(_In_ PDEVICE_CONTEXT Ctx)
     attributes.ParentObject = circuit;
     status = AcxPinCreate(circuit, &attributes, &pinCfg, &pins[RenderBridgePin]);
     if (!NT_SUCCESS(status))
-        return status;
+        do { DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_ERROR_LEVEL, "LdacA2dp: AudioCreate failed at line %lu: 0x%08X\n", (ULONG)__LINE__, status); return status; } while (0);
 
     /* the encoder resamples to the link rate, so offer the usual mix formats;
      * 96 kHz / 24-bit matches LDAC at its best */
@@ -567,12 +567,12 @@ NTSTATUS AudioCreate(_In_ PDEVICE_CONTEXT Ctx)
     if (NT_SUCCESS(status))
         status = AddFormat(device, circuit, formats, 96000, 32, 24, FALSE);
     if (!NT_SUCCESS(status))
-        return status;
+        do { DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_ERROR_LEVEL, "LdacA2dp: AudioCreate failed at line %lu: 0x%08X\n", (ULONG)__LINE__, status); return status; } while (0);
 
     status = AcxCircuitAddPins(circuit, pins, RenderPinCount);
     if (NT_SUCCESS(status))
         Ctx->Render = circuit;
-    return status;
+    do { DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_ERROR_LEVEL, "LdacA2dp: AudioCreate failed at line %lu: 0x%08X\n", (ULONG)__LINE__, status); return status; } while (0);
 }
 
 /* ---- stream --------------------------------------------------------------------- */
