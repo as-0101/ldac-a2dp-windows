@@ -34,14 +34,16 @@ static DEVICE_ROLE DetectRole(_In_ PWDFDEVICE_INIT DeviceInit)
     RtlZeroMemory(ids, sizeof(ids));
     if (!NT_SUCCESS(WdfFdoInitQueryProperty(DeviceInit, DevicePropertyHardwareID, sizeof(ids) - 2 * sizeof(WCHAR), ids,
                                             &got)))
-        return RoleA2dp;
+        return RoleUnknown;
     for (p = ids; *p; p++) {
+        if (_wcsnicmp(p, L"{0000110b", 9) == 0)
+            return RoleA2dp;
         if (_wcsnicmp(p, L"{0000110e", 9) == 0)
             return RoleAvrcp;
         if (_wcsnicmp(p, L"{0000110c", 9) == 0)
             return RoleIdle;
     }
-    return RoleA2dp;
+    return RoleUnknown;
 }
 
 NTSTATUS LdacA2dpEvtDeviceAdd(_In_ WDFDRIVER Driver, _Inout_ PWDFDEVICE_INIT DeviceInit)
@@ -62,6 +64,10 @@ NTSTATUS LdacA2dpEvtDeviceAdd(_In_ WDFDRIVER Driver, _Inout_ PWDFDEVICE_INIT Dev
     PAGED_CODE();
 
     role = DetectRole(DeviceInit);
+    /* Fail closed: never treat an unknown BTHENUM service as A2DP. */
+    if (role == RoleUnknown)
+        return STATUS_NOT_SUPPORTED;
+
     if (role == RoleIdle) {
         WDF_OBJECT_ATTRIBUTES_INIT_CONTEXT_TYPE(&attributes, DEVICE_CONTEXT);
         status = WdfDeviceCreate(&DeviceInit, &attributes, &device);
