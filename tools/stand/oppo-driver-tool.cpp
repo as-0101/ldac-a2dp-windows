@@ -104,7 +104,7 @@ struct TargetDevice {
     unsigned int a2dpCount = 0;
     bool found = false;
 };
-static bool FindTarget(TargetDevice& target) {
+static bool FindTarget(TargetDevice& target, bool requireSingleA2dp = true) {
     target.set = SetupDiGetClassDevsW(nullptr, kEnumerator, nullptr,
         DIGCF_ALLCLASSES | DIGCF_PRESENT);
     if (target.set == INVALID_HANDLE_VALUE) {
@@ -134,7 +134,7 @@ static bool FindTarget(TargetDevice& target) {
                    << kTargetMac << L".\n";
         return false;
     }
-    if (target.a2dpCount != 1) {
+    if (requireSingleA2dp && target.a2dpCount != 1) {
         std::wcerr << L"Refusing install: found " << target.a2dpCount
                    << L" present A2DP devnodes. This test package requires the OPPO "
                       L"to be the only paired/present A2DP sink in the test VM.\n";
@@ -198,6 +198,10 @@ static bool ApplyDriver(TargetDevice& target, bool rollback,
     SP_DRVINFO_DATA_W driver{};
     driver.cbSize = sizeof(driver);
     if (!FindDriver(target.set, target.data, wantedInf, rollback, driver)) return false;
+    if (!SetupDiSetSelectedDevice(target.set, &target.data)) {
+        std::wcerr << L"SetupDiSetSelectedDevice failed: " << GetLastError() << L"\n";
+        return false;
+    }
     if (!SetupDiSetSelectedDriverW(target.set, &target.data, &driver)) {
         std::wcerr << L"SetupDiSetSelectedDriver failed: " << GetLastError() << L"\n";
         return false;
@@ -299,7 +303,7 @@ static int Rollback() {
         return 21;
     }
     TargetDevice target;
-    if (!FindTarget(target)) {
+    if (!FindTarget(target, false) {
         if (target.set != INVALID_HANDLE_VALUE) SetupDiDestroyDeviceInfoList(target.set);
         return 22;
     }
