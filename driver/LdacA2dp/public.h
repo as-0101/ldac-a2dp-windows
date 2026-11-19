@@ -79,6 +79,13 @@ typedef struct _LDACA2DP_STATUS {
     UINT8 AvrcpState;         /* LDACA2DP_AVRCP_*: the AVRCP device of the same headphones */
     UINT8 Reserved3;
     INT32 AvrcpLastError;     /* NTSTATUS of the last failed AVCTP channel open */
+    UINT16 RemoteVid;         /* from BTH_ENUMERATOR_INFO / remote SDP Device ID */
+    UINT16 RemotePid;
+    UINT16 RemoteMfg;
+    UINT16 LocalMfg;          /* local Bluetooth radio manufacturer */
+    UINT16 RemoteVidType;
+    UINT8 EnumeratorInfoValid;
+    UINT8 Reserved4;
 } LDACA2DP_STATUS;
 
 /*
