@@ -112,3 +112,17 @@ A successful CI build is not a working driver on Server 2022. The finish line is
 - `l2cap.c`: logs results of `IOCTL_INTERNAL_BTHENUM_GET_DEVINFO`, optional `GET_ENUMINFO`, and `BRB_HCI_GET_LOCAL_BD_ADDR`, including SDP identity fields when available.
 
 These diagnostics do not install the driver and do not change inbox Bluetooth components. They must be built and reviewed before any test. The next gate is CI compilation; after that, runtime evidence must come from a disposable Server 2022 VM with a dedicated USB Bluetooth adapter. No production-host installation is authorized.
+
+
+## Safer OPPO identity discovery before driver binding
+
+Do not use a generic A2DP hardware ID to load the custom kernel driver on the production host. The current upstream INF still targets Windows build 22621+ and a JBL-specific VID/PID; it does not target Server 2022 build 20348 or OPPO Enco Buds2.
+
+A safer next experiment is a standalone user-mode SDP probe using the documented Winsock Bluetooth namespace APIs (`WSALookupServiceBegin`, `WSALookupServiceNext`, `WSALookupServiceEnd`) with `NS_BTH`, the known remote Bluetooth address, `LUP_FLUSHCACHE`, and `LUP_RETURN_BLOB`. Microsoft's advanced-query path supports `BTH_QUERY_SERVICE` and returning raw SDP records. Query the Bluetooth Device ID service (UUID 0x1200) and parse its Device ID attributes (vendor ID, product ID, vendor ID source, version). This path should be validated on the Server 2022 host before attempting any kernel driver installation; it does not require binding a custom driver to the headphones.
+
+References:
+- https://learn.microsoft.com/en-us/windows/win32/bluetooth/bluetooth-and-wsalookupservicebegin-for-service-discovery
+- https://learn.microsoft.com/en-us/windows/desktop/api/Ws2bth/ns-ws2bth-bth_query_service
+- https://learn.microsoft.com/en-us/windows/win32/api/bluetoothapis/nf-bluetoothapis-bluetoothsdpgetattributevalue
+
+This is a proposed diagnostic path, not yet implemented or verified against OPPO. If the Device ID SDP record is absent, we must use a separate safe discovery route rather than guessing VID/PID or widening the INF match.
