@@ -91,9 +91,9 @@ static BOOLEAN IsTargetA2dpInstance(_In_ PWDFDEVICE_INIT DeviceInit)
                                        &required, &type);
     if (!NT_SUCCESS(status) || type != DEVPROP_TYPE_STRING ||
         required < sizeof(WCHAR) || required > sizeof(instanceId) ||
-        instanceId[(RTL_NUMBER_OF(instanceId) - 1)] != L'\\0') {
+        instanceId[(RTL_NUMBER_OF(instanceId) - 1)] != L'\0') {
         DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_ERROR_LEVEL,
-                   "LdacA2dp: cannot read instance ID; refusing A2DP devnode (0x%08X).\\n", status);
+                   "LdacA2dp: cannot read instance ID; refusing A2DP devnode (0x%08X).\n", status);
         return FALSE;
     }
 
@@ -106,13 +106,13 @@ static BOOLEAN IsTargetA2dpInstance(_In_ PWDFDEVICE_INIT DeviceInit)
         candidate.MaximumLength = targetMac.Length;
         if (RtlEqualUnicodeString(&candidate, &targetMac, TRUE)) {
             DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL,
-                       "LdacA2dp: OPPO target instance accepted.\\n");
+                       "LdacA2dp: OPPO target instance accepted.\n");
             return TRUE;
         }
     }
 
     DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_WARNING_LEVEL,
-               "LdacA2dp: A2DP devnode is not the configured OPPO peer; refusing it.\\n");
+               "LdacA2dp: A2DP devnode is not the configured OPPO peer; refusing it.\n");
     return FALSE;
 }
 
