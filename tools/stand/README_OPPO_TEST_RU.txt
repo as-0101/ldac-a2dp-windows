@@ -1,79 +1,60 @@
-LDAC A2DP — OPPO ENCO BUDS2 — TEST PACKAGE
+LDAC A2DP — OPPO ENCO BUDS2 — PHYSICAL SERVER TEST PACKAGE
 ============================================================
 
-ТОЛЬКО ДЛЯ ИЗОЛИРОВАННОЙ VM WINDOWS SERVER 2022 BUILD 20348.
-НЕ УСТАНАВЛИВАТЬ НА ОСНОВНОЙ / ПРОИЗВОДСТВЕННЫЙ СЕРВЕР.
+TARGET
+------
+Physical Windows Server 2022 Datacenter, build 20348.
+Bluetooth peer: OPPO Enco Buds2, MAC 84:0F:2A:13:E3:E2.
+Initial playback target: SBC stereo. Do not enable HFP/microphone during first test.
 
-Цель
-----
-Проверить SBC A2DP playback через отдельный тестовый драйвер.
-Пакет адресован к Bluetooth MAC гарнитуры 84:0F:2A:13:E3:E2.
-
-Защитные ограничения установщика
----------------------------------
-- Только Windows Server 2022 build 20348.
-- Только VMware virtual machine.
-- Только точный A2DP узел с MAC 84:0F:2A:13:E3:E2.
-- Установщик прекращает работу, если обнаружит больше одного присутствующего A2DP devnode.
-- Установщик требует подтверждения наличия снимка VM.
-- DriverEntry проверяет Instance ID и отказывается обслуживать другие A2DP MAC.
-- Используется DiInstallDevice для выбранного devnode, не UpdateDriverForPlugAndPlayDevices и не pnputil /install.
-- Пакет подписан временным тестовым сертификатом, не является production-сертификатом Microsoft.
-
-ПЕРЕД НАЧАЛОМ
--------------
-1. Создать отдельную VM Windows Server 2022 build 20348.
-2. Подключить к ней отдельный USB Bluetooth адаптер через USB passthrough.
-3. Убедиться, что в VM сопряжены только OPPO Enco Buds2 в качестве A2DP sink.
-4. Сделать snapshot VM, который можно восстановить.
-5. Проверить статус драйвера командой status-oppo.cmd.
-
-Подготовка тестовой VM
-----------------------
-Запустить prepare-test-vm.cmd от имени администратора.
-Скрипт:
-- проверит производителя VM (VMware);
-- установит тестовый сертификат в LocalMachine Root и TrustedPublisher;
-- включит test signing через BCD.
-После успешного завершения вручную перезагрузить VM.
-Если включение test signing не удалось, ОСТАНОВИТЬСЯ. Не отключать Secure Boot автоматически.
-
-Установка
+IMPORTANT
 ---------
-После перезагрузки запустить install-oppo.cmd от имени администратора.
-Установщик:
-- проверит Server 2022 build 20348 и VMware;
-- проверит точный MAC и единственный A2DP devnode;
-- проверит, что исходный драйвер — inbox bth.inf;
-- попросит ввести I_HAVE_A_SNAPSHOT_TO_CONTINUE;
-- поместит пакет в Driver Store;
-- выберет и установит этот пакет только на целевой devnode через DiInstallDevice.
+This is an experimental test-signed kernel driver, not a Microsoft production-signed driver.
+It has not yet been proven stable on this physical hardware. A kernel-driver fault can cause
+a system crash. Keep rollback-oppo.cmd and this package available locally before proceeding.
 
-После установки выполнить перезагрузку VM. Проверить появление устройства воспроизведения
-LDAC A2DP / Headphones и начать только с SBC. Не подключать микрофон/HFP.
+SAFETY GATES
+------------
+- Windows Server 2022 build 20348 only.
+- Exact OPPO A2DP devnode MAC 84:0F:2A:13:E3:E2 only.
+- Installer refuses if more than one present A2DP devnode is found.
+- Installer requires the current driver to be inbox bth.inf.
+- Installer compares the test driver rank against inbox bth.inf and refuses if the generic
+  match could outrank inbox and affect other headsets.
+- Driver runtime checks the target Bluetooth instance/MAC.
+- Installation uses DiInstallDevice for the selected devnode, not a blanket PnP update.
+- Rollback selects inbox bth.inf / Audio Sink Service for the OPPO A2DP devnode.
 
-Откат
------
-Запустить rollback-oppo.cmd от имени администратора.
-Он выберет inbox bth.inf / Audio Sink Service для того же точного OPPO A2DP devnode.
-Перезагрузить VM.
-После проверки отката можно выключить test signing:
+PREPARATION
+-----------
+1. Extract the complete ZIP to a local folder.
+2. Run prepare-oppo-host.cmd as Administrator.
+3. The script imports ldac-a2dp-test.cer into LocalMachine Root and TrustedPublisher,
+   then enables test signing with BCD.
+4. Restart the physical server.
+
+INSTALLATION
+------------
+1. Confirm OPPO Enco Buds2 is paired and connected.
+2. Run status-oppo.cmd first; confirm the exact MAC and current INF bth.inf.
+3. Run install-oppo.cmd as Administrator.
+4. At the confirmation prompt type exactly: I_ACCEPT_LIVE_DRIVER_TEST
+5. If the installer refuses because multiple A2DP devnodes exist, STOP. Do not bypass
+   the single-device gate; identify the extra A2DP devnode first.
+6. Restart if requested. Check Device Manager and Sound > Playback devices.
+7. Begin with SBC playback only. Test low volume first.
+
+ROLLBACK
+--------
+Run rollback-oppo.cmd as Administrator. It selects the inbox bth.inf driver for the same
+OPPO A2DP devnode. Restart the server.
+After confirming rollback, disable test signing:
     bcdedit /set testsigning off
-Удаление тестового сертификата из Root и TrustedPublisher выполняется через certmgr.msc
-для локального компьютера либо оснастку сертификатов компьютера.
+Restart again. Remove the test certificate from LocalMachine Root and TrustedPublisher
+only after the test driver has been rolled back.
 
-Ограничения и предупреждения
-----------------------------
-Это экспериментальный тестовый пакет. Успешный CI build не доказывает работу на железе.
-Проверяется только Server 2022 build 20348 / VMware. Не переносить INF на другие системы.
-Не устанавливать на производственный сервер и не отключать Secure Boot ради этого пакета.
-При любом несовпадении проверок установщик завершает работу без изменения устройства.
-
-Порядок проверки результата
----------------------------
-- OPPO A2DP узел обслуживается тестовым LdacA2dp.inf.
-- Другие A2DP устройства не перехвачены.
-- Устройство воспроизведения появляется.
-- Стабильное воспроизведение тестового WAV через SBC.
-- Несколько циклов disconnect/reconnect.
-- Успешный rollback к inbox bth.inf.
+LIMITATIONS
+-----------
+A successful build and successful driver installation do not guarantee ACX/BT runtime
+compatibility on Server 2022. Verify endpoint creation, playback, disconnect/reconnect,
+and system stability before considering the driver usable.
