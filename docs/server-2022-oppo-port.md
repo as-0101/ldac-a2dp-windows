@@ -22,6 +22,7 @@ Enable stereo A2DP playback from Windows Server 2022 Datacenter (build 20348) to
 - The OPPO A2DP instance observed on this host:
   `BTHENUM\\{0000110B-0000-1000-8000-00805F9B34FB}_LOCALMFG&0002\\7&384EA00A&0&840F2A13E3E2_C00000000`
 - The observed remote Bluetooth address encoded in that instance is `84:0F:2A:13:E3:E2`.
+- Important ID clarification from Microsoft's Bluetooth PnP documentation: `_LOCALMFG&0002` identifies the **local Bluetooth radio manufacturer**, not OPPO. It is therefore not a unique OPPO identifier and must not be treated as one.
 - The host has `Acx01000.sys`, version 10.0.20348.3451, and `portcls.sys`, version 10.0.20348.5756. These file versions are useful evidence, but runtime DDI availability still needs verification.
 
 ## Source-project findings
@@ -45,8 +46,9 @@ Enable stereo A2DP playback from Windows Server 2022 Datacenter (build 20348) to
    - Fix the driver's INF target decoration: upstream currently declares `NT$ARCH$.10.0...22621`, while Server 2022 is build 20348. Create a Server 2022-compatible model section only after confirming all required APIs are available; do not merely lower the INF number to force installation.
 2. **OPPO device matching**
    - Capture the complete Hardware IDs, Compatible IDs, instance ID, SDP service records and remote address from a test system.
-   - Design an install strategy that targets the selected OPPO devnode only. If a shared compatible ID is unavoidable, enforce a strict remote-address/device identity check before the driver opens channels; verify unrelated A2DP devices remain on their original driver.
-   - Do not assume the `LOCALMFG&0002` suffix uniquely identifies OPPO.
+   - Microsoft's Bluetooth ID rules confirm `_LOCALMFG&nnnn` identifies the local Bluetooth radio manufacturer. It can narrow the match to a radio family, but cannot identify one remote headphone model.
+   - The preferred specific match is a remote VID/PID pair supplied by the headphone's SDP Device ID service. The current OPPO instance shows no such VID/PID, so determine whether OPPO publishes that service and whether another stable remote-specific identifier is available.
+   - Do not use the generic A2DP service ID or `_LOCALMFG&0002` as if either uniquely identifies OPPO. If no remote-specific ID exists, design and test a per-devnode installation/selection mechanism and prove that other A2DP devices remain on their original driver before proceeding.
 3. **Minimal A2DP path**
    - Disable/omit AVRCP and HFP initially.
    - Negotiate SBC only, open AVDTP signaling and media L2CAP channels, and stream test audio.
@@ -70,7 +72,8 @@ Enable stereo A2DP playback from Windows Server 2022 Datacenter (build 20348) to
 - [x] Initial KMDF/ACX version comparison against Microsoft documentation.
 - [ ] Per-DDI ACX/BthPort compatibility check for build 20348.
 - [ ] Correct and validate the INF target OS decoration for Server 2022.
-- [ ] OPPO SDP and device identity capture.
+- [x] Clarified Bluetooth `_LOCALMFG` ID semantics from Microsoft documentation.
+- [ ] OPPO SDP and device identity capture / determine whether a remote-specific VID/PID exists.
 - [ ] Safe OPPO-specific driver installation strategy.
 - [ ] SBC-only playback in isolated test VM.
 - [ ] Verified install/rollback package for the target host.
