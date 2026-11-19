@@ -100,7 +100,9 @@ NTSTATUS L2capQueryAddresses(_In_ PDEVICE_CONTEXT Ctx)
                                                        NULL, &out, NULL, NULL);
     if (!NT_SUCCESS(status))
         return status;
+    WdfSpinLockAcquire(Ctx->Lock);
     Ctx->RemoteAddress = info.address;
+    WdfSpinLockRelease(Ctx->Lock);
 
     /* Optional diagnostics: remote VID/PID/MFG come from SDP; LocalMfg is
      * the local radio. Do not make audio startup depend on this query. */
@@ -108,6 +110,7 @@ NTSTATUS L2capQueryAddresses(_In_ PDEVICE_CONTEXT Ctx)
     WDF_MEMORY_DESCRIPTOR_INIT_BUFFER(&out, &enumInfo, sizeof(enumInfo));
     status = WdfIoTargetSendInternalIoctlSynchronously(Ctx->IoTarget, NULL, IOCTL_INTERNAL_BTHENUM_GET_ENUMINFO,
                                                        NULL, &out, NULL, NULL);
+    WdfSpinLockAcquire(Ctx->Lock);
     if (NT_SUCCESS(status)) {
         Ctx->RemoteVid = enumInfo.Vid;
         Ctx->RemotePid = enumInfo.Pid;
@@ -116,8 +119,14 @@ NTSTATUS L2capQueryAddresses(_In_ PDEVICE_CONTEXT Ctx)
         Ctx->RemoteVidType = enumInfo.VidType;
         Ctx->EnumeratorInfoValid = TRUE;
     } else {
+        Ctx->RemoteVid = 0;
+        Ctx->RemotePid = 0;
+        Ctx->RemoteMfg = 0;
+        Ctx->LocalMfg = 0;
+        Ctx->RemoteVidType = 0;
         Ctx->EnumeratorInfoValid = FALSE;
     }
+    WdfSpinLockRelease(Ctx->Lock);
 
     RtlZeroMemory(&localBrb, sizeof(localBrb));
     Ctx->ProfileInterface.BthInitializeBrb((PBRB)&localBrb, BRB_HCI_GET_LOCAL_BD_ADDR);
