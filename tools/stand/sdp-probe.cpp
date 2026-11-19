@@ -105,52 +105,54 @@ int main(int argc, char** argv)
     unsigned int records = 0;
     bool foundIdentity = false;
     for (;;) {
-        DWORD bytes = 0;
-        WSAQUERYSETA first{};
-        first.dwSize = sizeof(first);
-        if (WSALookupServiceNextA(lookup, flags, &bytes, &first) == SOCKET_ERROR) {
+        std::vector<BYTE> storage(4096);
+        auto* result = reinterpret_cast<WSAQUERYSETA*>(storage.data());
+        result->dwSize = static_cast<DWORD>(storage.size());
+        DWORD bytes = static_cast<DWORD>(storage.size());
+
+        if (WSALookupServiceNextA(lookup, flags, &bytes, result) == SOCKET_ERROR) {
             int error = WSAGetLastError();
             if (error == WSA_E_NO_MORE || error == WSAENOMORE) break;
             if (error != WSAEFAULT || bytes < sizeof(WSAQUERYSETA)) {
-                std::fprintf(stderr, "WSALookupServiceNext sizing failed: %d (required=%lu)\n", error, bytes);
+                std::fprintf(stderr, "WSALookupServiceNext failed: %d (required=%lu)\\n", error, bytes);
                 break;
             }
 
-            std::vector<BYTE> storage(bytes);
-            auto* result = reinterpret_cast<WSAQUERYSETA*>(storage.data());
-            std::memset(result, 0, bytes);
-            result->dwSize = bytes;
+            storage.resize(bytes);
+            result = reinterpret_cast<WSAQUERYSETA*>(storage.data());
+            std::memset(result, 0, storage.size());
+            result->dwSize = static_cast<DWORD>(storage.size());
             if (WSALookupServiceNextA(lookup, flags, &bytes, result) == SOCKET_ERROR) {
                 error = WSAGetLastError();
                 if (error == WSA_E_NO_MORE || error == WSAENOMORE) break;
-                std::fprintf(stderr, "WSALookupServiceNext data failed: %d\n", error);
+                std::fprintf(stderr, "WSALookupServiceNext retry failed: %d\\n", error);
                 break;
             }
+        }
 
-            ++records;
-            std::printf("\nRecord %u: %s\n", records,
-                result->lpszServiceInstanceName ? result->lpszServiceInstanceName : "(unnamed)");
-            if (result->lpBlob && result->lpBlob->pBlobData && result->lpBlob->cbSize) {
-                const BYTE* blob = result->lpBlob->pBlobData;
-                ULONG len = result->lpBlob->cbSize;
-                USHORT vendor = 0, product = 0, version = 0, source = 0;
-                bool hasVendor = ReadU16(blob, len, 0x0201, &vendor);
-                bool hasProduct = ReadU16(blob, len, 0x0202, &product);
-                bool hasVersion = ReadU16(blob, len, 0x0203, &version);
-                bool hasSource = ReadU16(blob, len, 0x0205, &source);
-                PrintAttribute(blob, len, 0x0201, "Vendor ID");
-                PrintAttribute(blob, len, 0x0202, "Product ID");
-                PrintAttribute(blob, len, 0x0203, "Version");
-                PrintAttribute(blob, len, 0x0205, "Vendor ID source");
-                if (hasVendor && hasProduct && hasSource) {
-                    foundIdentity = true;
-                    std::printf("  Identity tuple     %04X:%04X (source=%u)\n", vendor, product, source);
-                    if (hasVersion)
-                        std::printf("  Device ID version  %u.%u\n", version >> 8, version & 0xFF);
-                }
-            } else {
-                std::printf("  SDP record blob unavailable\n");
+        ++records;
+        std::printf("\\nRecord %u: %s\\n", records,
+            result->lpszServiceInstanceName ? result->lpszServiceInstanceName : "(unnamed)");
+        if (result->lpBlob && result->lpBlob->pBlobData && result->lpBlob->cbSize) {
+            const BYTE* blob = result->lpBlob->pBlobData;
+            ULONG len = result->lpBlob->cbSize;
+            USHORT vendor = 0, product = 0, version = 0, source = 0;
+            bool hasVendor = ReadU16(blob, len, 0x0201, &vendor);
+            bool hasProduct = ReadU16(blob, len, 0x0202, &product);
+            bool hasVersion = ReadU16(blob, len, 0x0203, &version);
+            bool hasSource = ReadU16(blob, len, 0x0205, &source);
+            PrintAttribute(blob, len, 0x0201, "Vendor ID");
+            PrintAttribute(blob, len, 0x0202, "Product ID");
+            PrintAttribute(blob, len, 0x0203, "Version");
+            PrintAttribute(blob, len, 0x0205, "Vendor ID source");
+            if (hasVendor && hasProduct && hasSource) {
+                foundIdentity = true;
+                std::printf("  Identity tuple     %04X:%04X (source=%u)\\n", vendor, product, source);
+                if (hasVersion)
+                    std::printf("  Device ID version  %u.%u\\n", version >> 8, version & 0xFF);
             }
+        } else {
+            std::printf("  SDP record blob unavailable\\n");
         }
     }
 
