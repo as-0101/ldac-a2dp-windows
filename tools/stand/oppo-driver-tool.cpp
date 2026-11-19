@@ -303,7 +303,7 @@ static int Rollback() {
         return 21;
     }
     TargetDevice target;
-    if (!FindTarget(target, false) {
+    if (!FindTarget(target, false)) {
         if (target.set != INVALID_HANDLE_VALUE) SetupDiDestroyDeviceInfoList(target.set);
         return 22;
     }
