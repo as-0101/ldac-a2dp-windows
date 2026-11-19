@@ -25,7 +25,16 @@ $cer = Join-Path $package "ldac-a2dp-test.cer"
 $password = ConvertTo-SecureString "Disposable-VM-Test-Only-2026" -AsPlainText -Force
 Export-PfxCertificate -Cert $cert -FilePath $pfx -Password $password | Out-Null
 Export-Certificate -Cert $cert -FilePath $cer | Out-Null
-$signtool = Get-ChildItem (Join-Path $env:ProgramFiles "Windows Kits/10/bin") -Filter signtool.exe -Recurse | Where-Object { $_.FullName.Contains("x64") -and $_.FullName.EndsWith("signtool.exe") } | Sort-Object FullName -Descending | Select-Object -First 1
+$kitRoots = @((Join-Path $env:ProgramFiles "Windows Kits/10/bin"))
+$pf86 = [Environment]::GetEnvironmentVariable("ProgramFiles(x86)")
+if ($pf86) { $kitRoots += (Join-Path $pf86 "Windows Kits/10/bin") }
+$signtool = $null
+foreach ($kitRoot in $kitRoots) {
+    if (Test-Path $kitRoot) {
+        $signtool = Get-ChildItem $kitRoot -Filter signtool.exe -Recurse | Where-Object { $_.FullName.Contains("x64") -and $_.FullName.EndsWith("signtool.exe") } | Sort-Object FullName -Descending | Select-Object -First 1
+        if ($signtool) { break }
+    }
+}
 if (!$signtool) { throw "Windows SDK signtool.exe x64 was not found." }
 $catalog = Join-Path $package "LdacA2dp.cat"
 & $signtool.FullName sign /v /fd SHA256 /f $pfx /p "Disposable-VM-Test-Only-2026" $catalog
