@@ -126,3 +126,12 @@ References:
 - https://learn.microsoft.com/en-us/windows/win32/api/bluetoothapis/nf-bluetoothapis-bluetoothsdpgetattributevalue
 
 This is a proposed diagnostic path, not yet implemented or verified against OPPO. If the Device ID SDP record is absent, we must use a separate safe discovery route rather than guessing VID/PID or widening the INF match.
+
+
+## User-mode Device ID SDP probe implemented (2026-11-19)
+
+Added `tools/stand/sdp-probe.cpp` and `tools/stand/build-sdp-probe.cmd`. The probe uses Winsock Bluetooth service discovery (`WSALookupServiceBegin/Next/End`) with the Device ID service UUID 0x1200, forces an over-the-air query with `LUP_FLUSHCACHE`, requests the raw SDP record with `LUP_RETURN_BLOB`, and reads standard Device ID attributes 0x0201 (Vendor ID), 0x0202 (Product ID), 0x0203 (Version), and 0x0205 (Vendor ID source) using `BluetoothSdpGetAttributeValue`.
+
+Default peer address is the previously observed OPPO address `84:0F:2A:13:E3:E2`; an alternate address can be passed as the first command-line argument. This is user-mode only and does not install or bind a kernel driver. The build workflow now compiles this probe in the Settings utility job.
+
+Limitations: the tool has not yet been run against the actual OPPO earbuds. Some devices may omit the Device ID SDP service or individual attributes; absence is inconclusive and must not be converted into a guessed VID/PID or a broad INF match. SDP values are remote-reported identity data and must be cross-checked before generating a device-specific INF.
