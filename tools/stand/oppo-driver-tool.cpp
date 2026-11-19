@@ -301,13 +301,13 @@ static int Install() {
     if (!SetupDiGetDriverInstallParamsW(target.set, &target.data, &customDriver, &customRank) ||
         !SetupDiGetDriverInstallParamsW(target.set, &target.data, &inboxDriver, &inboxRank)) {
         std::wcerr << L"Cannot verify driver ranking; refusing generic A2DP install. Error: "
-                   << GetLastError() << L"\\n";
+                   << GetLastError() << L"\n";
         SetupDiDestroyDriverInfoList(target.set, &target.data, SPDIT_COMPATDRIVER);
         SetupDiDestroyDeviceInfoList(target.set);
         return 19;
     }
     std::wcout << L"Driver rank: test package=0x" << std::hex << customRank.Rank
-               << L", inbox bth.inf=0x" << inboxRank.Rank << std::dec << L"\\n";
+               << L", inbox bth.inf=0x" << inboxRank.Rank << std::dec << L"\n";
     if (customRank.Rank <= inboxRank.Rank) {
         std::wcerr << L"Safety gate: the test package is not ranked below inbox bth.inf. "
                       L"Refusing to stage a generic A2DP match that could affect other headsets.\\n";
