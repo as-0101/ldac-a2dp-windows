@@ -98,8 +98,13 @@ NTSTATUS L2capQueryAddresses(_In_ PDEVICE_CONTEXT Ctx)
     WDF_MEMORY_DESCRIPTOR_INIT_BUFFER(&out, &info, sizeof(info));
     status = WdfIoTargetSendInternalIoctlSynchronously(Ctx->IoTarget, NULL, IOCTL_INTERNAL_BTHENUM_GET_DEVINFO,
                                                        NULL, &out, NULL, NULL);
-    if (!NT_SUCCESS(status))
+    if (!NT_SUCCESS(status)) {
+        DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_ERROR_LEVEL,
+                   "LdacA2dp: BTHENUM_GET_DEVINFO failed: 0x%08X\\n", status);
         return status;
+    }
+    DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL,
+               "LdacA2dp: BTHENUM_GET_DEVINFO succeeded.\\n");
     WdfSpinLockAcquire(Ctx->Lock);
     Ctx->RemoteAddress = info.address;
     WdfSpinLockRelease(Ctx->Lock);
@@ -127,12 +132,26 @@ NTSTATUS L2capQueryAddresses(_In_ PDEVICE_CONTEXT Ctx)
         Ctx->EnumeratorInfoValid = FALSE;
     }
     WdfSpinLockRelease(Ctx->Lock);
+    if (NT_SUCCESS(status)) {
+        DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL,
+                   "LdacA2dp: BTHENUM_GET_ENUMINFO succeeded (remote VID=%04X PID=%04X MFG=%04X, local MFG=%04X, VID type=%u).\\n",
+                   enumInfo.Vid, enumInfo.Pid, enumInfo.Mfg, enumInfo.LocalMfg, enumInfo.VidType);
+    } else {
+        DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_WARNING_LEVEL,
+                   "LdacA2dp: BTHENUM_GET_ENUMINFO unavailable: 0x%08X.\\n", status);
+    }
 
     RtlZeroMemory(&localBrb, sizeof(localBrb));
     Ctx->ProfileInterface.BthInitializeBrb((PBRB)&localBrb, BRB_HCI_GET_LOCAL_BD_ADDR);
     status = SendBrbSync(Ctx, &localBrb);
-    if (NT_SUCCESS(status))
+    if (NT_SUCCESS(status)) {
         Ctx->LocalAddress = localBrb.BtAddress;
+        DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL,
+                   "LdacA2dp: BRB_HCI_GET_LOCAL_BD_ADDR succeeded.\\n");
+    } else {
+        DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_ERROR_LEVEL,
+                   "LdacA2dp: BRB_HCI_GET_LOCAL_BD_ADDR failed: 0x%08X\\n", status);
+    }
     return status;
 }
 
