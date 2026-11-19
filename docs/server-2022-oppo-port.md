@@ -73,7 +73,7 @@ Enable stereo A2DP playback from Windows Server 2022 Datacenter (build 20348) to
 - The project currently requests KMDF 1.31 and ACX 1.1. Microsoft documents ACX 1.1 as the public ACX release with a minimum KMDF 1.31; the ACX 1.1 DDI list includes a finite set of newer APIs. The KMDF version-history table explicitly lists KMDF 1.33 in Windows Server 2022 and says drivers using it run on Server 2022. This makes the KMDF requirement plausible on build 20348; it does **not** by itself prove that every ACX DDI used by this driver is exported/available in the Server 2022 ACX runtime.
 - The target machine has `Acx01000.sys` version `10.0.20348.3451` (captured previously). File presence/version alone does not establish the ACX runtime DDI set. Before any load test, compare the imported ACX symbols used by the driver against the target runtime or use a debugger/runtime load test in a disposable VM.
 - The INF still has only a Windows build 22621+ target decoration. It will not select Server 2022 build 20348 as currently written. Once a safe OPPO-specific ID is established, prepare a separate 20348-targeted INF section and validate it with InfVerif/Inf2Cat. Do not simply lower the minimum build while the hardware ID still matches only JBL.
-- GitHub Actions currently reports zero workflow runs for the PR head and zero repository workflow runs. Therefore no compile/test result is available yet; the source changes remain uncompiled.
+- GitHub Actions currently reports zero workflow runs for the PR head and zero repository workflow runs. Therefore no compile/test result is available yet; the source changes remain uncompiled. Added a `workflow_dispatch` trigger so the build can also be started manually once Actions are enabled for this fork.
 
 ## Current status
 
@@ -85,8 +85,10 @@ Enable stereo A2DP playback from Windows Server 2022 Datacenter (build 20348) to
 - [ ] Create and validate a separate INF target decoration for build 20348, only after safe remote identity matching is established.
 - [ ] Correct and validate the INF target OS decoration for Server 2022.
 - [x] Clarified Bluetooth `_LOCALMFG` ID semantics from Microsoft documentation.
+- [x] Added a non-fatal `IOCTL_INTERNAL_BTHENUM_GET_ENUMINFO` query and exposed remote SDP identity in the service status output (source changes only; not yet built or run).
 - [ ] OPPO SDP and device identity capture / determine whether a remote-specific VID/PID exists.
 - [ ] Safe OPPO-specific driver installation strategy.
+- [ ] Enable/dispatch GitHub Actions workflow and obtain a real CI build result.
 - [ ] SBC-only playback in isolated test VM.
 - [ ] Verified install/rollback package for the target host.
 
