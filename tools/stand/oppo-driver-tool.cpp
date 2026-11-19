@@ -57,19 +57,6 @@ static bool IsSupportedOs() {
     v.dwOSVersionInfoSize = sizeof(v);
     return fn(&v) == 0 && v.dwMajorVersion == 10 && v.dwBuildNumber == 20348;
 }
-static bool IsVmware() {
-    HKEY key = nullptr;
-    if (RegOpenKeyExW(HKEY_LOCAL_MACHINE,
-        L"HARDWARE\\DESCRIPTION\\System\\BIOS", 0, KEY_QUERY_VALUE, &key) != ERROR_SUCCESS)
-        return false;
-    wchar_t manufacturer[256]{};
-    DWORD type = 0, bytes = sizeof(manufacturer);
-    const LONG rc = RegQueryValueExW(key, L"SystemManufacturer", nullptr, &type,
-        reinterpret_cast<BYTE*>(manufacturer), &bytes);
-    RegCloseKey(key);
-    return rc == ERROR_SUCCESS && type == REG_SZ &&
-        ContainsNoCase(manufacturer, L"VMware");
-}
 static bool GetDriverInfPath(HDEVINFO set, SP_DEVINFO_DATA& dev, std::wstring& value) {
     HKEY key = SetupDiOpenDevRegKey(set, &dev, DICS_FLAG_GLOBAL, 0, DIREG_DRV, KEY_QUERY_VALUE);
     if (key == INVALID_HANDLE_VALUE) return false;
@@ -266,7 +253,7 @@ static int Install() {
                   L"Type I_HAVE_A_SNAPSHOT_TO_CONTINUE: ";
     std::wstring confirmation;
     std::getline(std::wcin, confirmation);
-    if (confirmation != L"I_HAVE_A_SNAPSHOT_TO_CONTINUE") {
+    if (confirmation != L"I_ACCEPT_LIVE_DRIVER_TEST") {
         std::wcerr << L"Confirmation not received. No changes made.\n";
         SetupDiDestroyDeviceInfoList(target.set);
         return 15;
