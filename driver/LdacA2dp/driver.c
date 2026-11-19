@@ -18,13 +18,19 @@ NTSTATUS DriverEntry(_In_ PDRIVER_OBJECT DriverObject, _In_ PUNICODE_STRING Regi
 
     WDF_DRIVER_CONFIG_INIT(&config, LdacA2dpEvtDeviceAdd);
     config.DriverPoolTag = LDACA2DP_POOL_TAG;
+    DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL,
+               "LdacA2dp: DriverEntry started.\n");
     status = WdfDriverCreate(DriverObject, RegistryPath, WDF_NO_OBJECT_ATTRIBUTES, &config, &driver);
+    DbgPrintEx(DPFLTR_IHVDRIVER_ID, NT_SUCCESS(status) ? DPFLTR_INFO_LEVEL : DPFLTR_ERROR_LEVEL,
+               "LdacA2dp: WdfDriverCreate -> 0x%08X.\n", status);
     if (!NT_SUCCESS(status))
         return status;
 
     PeerInitialize();
     ACX_DRIVER_CONFIG_INIT(&acxConfig);
     status = AcxDriverInitialize(driver, &acxConfig);
+    DbgPrintEx(DPFLTR_IHVDRIVER_ID, NT_SUCCESS(status) ? DPFLTR_INFO_LEVEL : DPFLTR_ERROR_LEVEL,
+               "LdacA2dp: AcxDriverInitialize(ACX 1.1) -> 0x%08X.\n", status);
     if (!NT_SUCCESS(status))
         return status;
 
@@ -35,14 +41,19 @@ NTSTATUS DriverEntry(_In_ PDRIVER_OBJECT DriverObject, _In_ PUNICODE_STRING Regi
      * the individual DDI imports on the target OS.
      */
     ACX_DRIVER_VERSION_AVAILABLE_PARAMS_INIT(&acxVersion, 1, 1);
-    if (!AcxDriverIsVersionAvailable(driver, &acxVersion)) {
+    {
+        BOOLEAN acxAvailable = AcxDriverIsVersionAvailable(driver, &acxVersion);
+        DbgPrintEx(DPFLTR_IHVDRIVER_ID, acxAvailable ? DPFLTR_INFO_LEVEL : DPFLTR_ERROR_LEVEL,
+                   "LdacA2dp: AcxDriverIsVersionAvailable(1.1) -> %u.\n", acxAvailable);
+        if (!acxAvailable) {
         DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_ERROR_LEVEL,
                    "LdacA2dp: ACX runtime 1.1 unavailable; refusing to load.\n");
         return STATUS_REVISION_MISMATCH;
+        }
     }
 
     DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL,
-               "LdacA2dp: ACX runtime 1.1 available.\n");
+               "LdacA2dp: DriverEntry completed successfully.\n");
     return STATUS_SUCCESS;
 }
 
@@ -162,17 +173,23 @@ NTSTATUS LdacA2dpEvtDeviceAdd(_In_ WDFDRIVER Driver, _Inout_ PWDFDEVICE_INIT Dev
     if (role == RoleA2dp) {
         ACX_DEVICEINIT_CONFIG_INIT(&acxInitConfig);
         status = AcxDeviceInitInitialize(DeviceInit, &acxInitConfig);
+        DbgPrintEx(DPFLTR_IHVDRIVER_ID, NT_SUCCESS(status) ? DPFLTR_INFO_LEVEL : DPFLTR_ERROR_LEVEL,
+                   "LdacA2dp: AcxDeviceInitInitialize -> 0x%08X.\n", status);
         if (!NT_SUCCESS(status))
             return status;
     }
 
     WDF_OBJECT_ATTRIBUTES_INIT_CONTEXT_TYPE(&attributes, DEVICE_CONTEXT);
     status = WdfDeviceCreate(&DeviceInit, &attributes, &device);
+    DbgPrintEx(DPFLTR_IHVDRIVER_ID, NT_SUCCESS(status) ? DPFLTR_INFO_LEVEL : DPFLTR_ERROR_LEVEL,
+               "LdacA2dp: WdfDeviceCreate(role=%u) -> 0x%08X.\n", role, status);
     if (!NT_SUCCESS(status))
         return status;
     if (role == RoleA2dp) {
         ACX_DEVICE_CONFIG_INIT(&acxConfig);
         status = AcxDeviceInitialize(device, &acxConfig);
+        DbgPrintEx(DPFLTR_IHVDRIVER_ID, NT_SUCCESS(status) ? DPFLTR_INFO_LEVEL : DPFLTR_ERROR_LEVEL,
+                   "LdacA2dp: AcxDeviceInitialize -> 0x%08X.\n", status);
         if (!NT_SUCCESS(status))
             return status;
     }
