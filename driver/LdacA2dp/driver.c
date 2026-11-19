@@ -36,12 +36,12 @@ NTSTATUS DriverEntry(_In_ PDRIVER_OBJECT DriverObject, _In_ PUNICODE_STRING Regi
     ACX_DRIVER_VERSION_AVAILABLE_PARAMS_INIT(&acxVersion, 1, 1);
     if (!AcxDriverIsVersionAvailable(driver, &acxVersion)) {
         DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_ERROR_LEVEL,
-                   "LdacA2dp: ACX runtime 1.1 unavailable; refusing to load.\\n");
+                   "LdacA2dp: ACX runtime 1.1 unavailable; refusing to load.\n");
         return STATUS_REVISION_MISMATCH;
     }
 
     DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL,
-               "LdacA2dp: ACX runtime 1.1 available.\\n");
+               "LdacA2dp: ACX runtime 1.1 available.\n");
     return STATUS_SUCCESS;
 }
 
@@ -186,18 +186,18 @@ NTSTATUS LdacA2dpEvtPrepareHardware(_In_ WDFDEVICE Device, _In_ WDFCMRESLIST Raw
                                      BTHDDI_PROFILE_DRIVER_INTERFACE_VERSION_FOR_QI, NULL);
     if (!NT_SUCCESS(status)) {
         DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_ERROR_LEVEL,
-                   "LdacA2dp: BTH profile interface query failed: 0x%08X\\n", status);
+                   "LdacA2dp: BTH profile interface query failed: 0x%08X\n", status);
         return status;
     }
 
     if (ctx->ProfileInterface.BthInitializeBrb == NULL) {
         DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_ERROR_LEVEL,
-                   "LdacA2dp: BTH profile interface lacks BthInitializeBrb.\\n");
+                   "LdacA2dp: BTH profile interface lacks BthInitializeBrb.\n");
         return STATUS_NOT_SUPPORTED;
     }
 
     DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL,
-               "LdacA2dp: BTH profile interface acquired.\\n");
+               "LdacA2dp: BTH profile interface acquired.\n");
 
     status = L2capInitialize(ctx);
     if (!NT_SUCCESS(status) || ctx->Role != RoleA2dp)
