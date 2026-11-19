@@ -83,4 +83,4 @@ Enable stereo A2DP playback from Windows Server 2022 Datacenter (build 20348) to
 
 ## Important distinction
 
-A successful CI build is not a working driver on Server 2022. The finish line is verified stereo playback through OPPO Enco Buds2 on the target OS, with a safe rollback path. The current broad-ID route is not safe for production because it could replace the audio driver for other Bluetooth headsets on the same Intel radio.
+A successful CI build is not a working driver on Server 2022. The finish line is verified stereo playback through OPPO Enco Buds2 on the target OS, with a safe rollback path. The current broad-ID route is not safe for production because it could replace the audio driver for other Bluetooth headsets on the same Intel radio. The new SDP identity diagnostic is source-complete but has not yet been compiled or run on hardware.
