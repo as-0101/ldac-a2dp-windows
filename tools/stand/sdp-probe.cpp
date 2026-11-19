@@ -73,7 +73,7 @@ int main(int argc, char** argv)
     SOCKADDR_BTH peer{};
     peer.addressFamily = AF_BTH;
     peer.btAddr = address;
-    peer.serviceClassId = GUID_NULL;
+    peer.serviceClassId = GUID{};
     peer.port = BT_PORT_ANY;
     char context[128]{};
     DWORD contextLength = sizeof(context);
@@ -121,7 +121,7 @@ int main(int argc, char** argv)
             storage.resize(bytes);
             result = reinterpret_cast<WSAQUERYSETA*>(storage.data());
             std::memset(result, 0, storage.size());
-            result->dwSize = static_cast<DWORD>(storage.size());
+            result->dwSize = sizeof(WSAQUERYSETA);
             if (WSALookupServiceNextA(lookup, flags, &bytes, result) == SOCKET_ERROR) {
                 error = WSAGetLastError();
                 if (error == WSA_E_NO_MORE || error == WSAENOMORE) break;
