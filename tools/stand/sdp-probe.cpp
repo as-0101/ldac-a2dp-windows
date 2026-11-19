@@ -110,7 +110,7 @@ int main(int argc, char** argv)
         first.dwSize = sizeof(first);
         if (WSALookupServiceNextA(lookup, flags, &bytes, &first) == SOCKET_ERROR) {
             int error = WSAGetLastError();
-            if (error == WSA_E_NO_MORE) break;
+            if (error == WSA_E_NO_MORE || error == WSAENOMORE) break;
             if (error != WSAEFAULT || bytes < sizeof(WSAQUERYSETA)) {
                 std::fprintf(stderr, "WSALookupServiceNext sizing failed: %d (required=%lu)\n", error, bytes);
                 break;
@@ -119,10 +119,10 @@ int main(int argc, char** argv)
             std::vector<BYTE> storage(bytes);
             auto* result = reinterpret_cast<WSAQUERYSETA*>(storage.data());
             std::memset(result, 0, bytes);
-            result->dwSize = sizeof(WSAQUERYSETA);
+            result->dwSize = bytes;
             if (WSALookupServiceNextA(lookup, flags, &bytes, result) == SOCKET_ERROR) {
                 error = WSAGetLastError();
-                if (error == WSA_E_NO_MORE) break;
+                if (error == WSA_E_NO_MORE || error == WSAENOMORE) break;
                 std::fprintf(stderr, "WSALookupServiceNext data failed: %d\n", error);
                 break;
             }
