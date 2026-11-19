@@ -53,3 +53,16 @@ jobs:
           path: build/LdacA2dp/Release/**
           if-no-files-found: error
           retention-days: 7
+      - name: Build OPPO per-instance SetupAPI tool
+        shell: cmd
+        run: tools\stand\build-oppo-driver-tool.cmd
+      - name: Assemble test-signed Server 2022 VM package
+        shell: pwsh
+        run: tools\stand\package-oppo-test.ps1
+      - name: Upload OPPO Server 2022 test package
+        uses: actions/upload-artifact@v4
+        with:
+          name: ldac-a2dp-oppo-server2022-test
+          path: build/ldac-a2dp-oppo-server2022-test.zip
+          if-no-files-found: error
+          retention-days: 7
