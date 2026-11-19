@@ -22,6 +22,7 @@ Enable stereo A2DP playback from Windows Server 2022 Datacenter (build 20348) to
 - The OPPO A2DP instance observed on this host:
   `BTHENUM\\{0000110B-0000-1000-8000-00805F9B34FB}_LOCALMFG&0002\\7&384EA00A&0&840F2A13E3E2_C00000000`
 - The observed remote Bluetooth address encoded in that instance is `84:0F:2A:13:E3:E2`.
+- The captured Hardware ID has `_LOCALMFG&0002` but no `_VID&..._PID&...` suffix. Therefore the current Windows enumeration did not expose a remote-specific Device ID pair for this OPPO instance.
 - Important ID clarification from Microsoft's Bluetooth PnP documentation: `_LOCALMFG&0002` identifies the **local Bluetooth radio manufacturer**, not OPPO. It is therefore not a unique OPPO identifier and must not be treated as one.
 - The host has `Acx01000.sys`, version 10.0.20348.3451, and `portcls.sys`, version 10.0.20348.5756. These file versions are useful evidence, but runtime DDI availability still needs verification.
 
@@ -44,11 +45,11 @@ Enable stereo A2DP playback from Windows Server 2022 Datacenter (build 20348) to
    - KMDF 1.31 / ACX 1.1 are no longer presumed blockers: Microsoft documents KMDF 1.31 on Windows 10 2004 and later, Server 2022 includes KMDF 1.33, and ACX 1.1 has a documented Windows 10 2004 baseline with KMDF 1.31.
    - Still verify each ACX DDI used by `driver/LdacA2dp/audio.c` and the BthPort/BthEnum interfaces on build 20348.
    - Fix the driver's INF target decoration: upstream currently declares `NT$ARCH$.10.0...22621`, while Server 2022 is build 20348. Create a Server 2022-compatible model section only after confirming all required APIs are available; do not merely lower the INF number to force installation.
-2. **OPPO device matching**
-   - Capture the complete Hardware IDs, Compatible IDs, instance ID, SDP service records and remote address from a test system.
-   - Microsoft's Bluetooth ID rules confirm `_LOCALMFG&nnnn` identifies the local Bluetooth radio manufacturer. It can narrow the match to a radio family, but cannot identify one remote headphone model.
-   - The preferred specific match is a remote VID/PID pair supplied by the headphone's SDP Device ID service. The current OPPO instance shows no such VID/PID, so determine whether OPPO publishes that service and whether another stable remote-specific identifier is available.
-   - Do not use the generic A2DP service ID or `_LOCALMFG&0002` as if either uniquely identifies OPPO. If no remote-specific ID exists, design and test a per-devnode installation/selection mechanism and prove that other A2DP devices remain on their original driver before proceeding.
+2. **OPPO device matching — currently the main blocker**
+   - Microsoft's Bluetooth PnP rules are explicit: `_LOCALMFG&nnnn` identifies the local Bluetooth radio manufacturer, not the remote headset. A `VID/PID` pair is generated only when the remote device publishes a Device ID through SDP.
+   - The captured OPPO A2DP Hardware ID contains `_LOCALMFG&0002` but no remote `_VID&..._PID&...` pair. The current evidence therefore does not give the INF a unique OPPO hardware ID.
+   - Adding `_LOCALMFG&0002` to the INF would match A2DP services on that local Intel radio, not only OPPO. It could take over audio for other paired headsets. **Do not put this broad match in a production package.**
+   - Next investigate `IOCTL_INTERNAL_BTHENUM_GET_ENUMINFO` / `BTH_ENUMERATOR_INFO` and the OPPO SDP Device ID record to see whether additional remote identity data exists. If no remote-specific PnP ID is available, the safest first hardware test is an isolated VM with a dedicated passed-through Bluetooth adapter and only the OPPO sink paired. A production installation remains blocked until we have a safe selection strategy.
 3. **Minimal A2DP path**
    - Disable/omit AVRCP and HFP initially.
    - Negotiate SBC only, open AVDTP signaling and media L2CAP channels, and stream test audio.
@@ -80,4 +81,4 @@ Enable stereo A2DP playback from Windows Server 2022 Datacenter (build 20348) to
 
 ## Important distinction
 
-A successful CI build is not a working driver on Server 2022. The finish line is verified stereo playback through OPPO Enco Buds2 on the target OS, with a safe rollback path.
+A successful CI build is not a working driver on Server 2022. The finish line is verified stereo playback through OPPO Enco Buds2 on the target OS, with a safe rollback path. The current broad-ID route is not safe for production because it could replace the audio driver for other Bluetooth headsets on the same Intel radio.
