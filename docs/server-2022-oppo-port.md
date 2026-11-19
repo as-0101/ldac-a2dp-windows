@@ -103,3 +103,12 @@ A successful CI build is not a working driver on Server 2022. The finish line is
 - The repository Actions page showed zero workflow runs after Actions were enabled. The branch contains a `push` / `pull_request` workflow and the PR is open; the default branch also contains the build workflow.
 - The next safe trigger is a documentation-only commit on `server-2022-oppo`, which will generate a fresh push / pull-request synchronization event. This does not modify `main` or install/run a driver on any machine.
 - No CI result is claimed until the run actually appears and completes.
+
+
+## Runtime compatibility diagnostics added (2026-11-19)
+
+- `driver.c`: after `AcxDriverInitialize`, calls `AcxDriverIsVersionAvailable` for ACX 1.1. If unavailable, DriverEntry returns `STATUS_REVISION_MISMATCH`; it logs the result. This proves runtime ACX version availability only, not that every imported DDI or the complete audio circuit works on Server 2022.
+- `driver.c`: after `WdfFdoQueryForInterface`, validates that `BthInitializeBrb` is present and logs interface-query success/failure.
+- `l2cap.c`: logs results of `IOCTL_INTERNAL_BTHENUM_GET_DEVINFO`, optional `GET_ENUMINFO`, and `BRB_HCI_GET_LOCAL_BD_ADDR`, including SDP identity fields when available.
+
+These diagnostics do not install the driver and do not change inbox Bluetooth components. They must be built and reviewed before any test. The next gate is CI compilation; after that, runtime evidence must come from a disposable Server 2022 VM with a dedicated USB Bluetooth adapter. No production-host installation is authorized.
