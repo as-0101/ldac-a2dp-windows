@@ -19,10 +19,10 @@ Copy-Item $tool $package
 foreach ($file in @("prepare-oppo-host.cmd", "install-oppo.cmd", "rollback-oppo.cmd", "status-oppo.cmd", "README_OPPO_TEST_RU.txt")) {
     Copy-Item (Join-Path $PSScriptRoot $file) $package
 }
-$cert = New-SelfSignedCertificate -Type CodeSigningCert -Subject "CN=LDAC A2DP OPPO Disposable VM Test Only" -CertStoreLocation "Cert:/CurrentUser/My" -KeyExportPolicy Exportable -KeyLength 2048 -HashAlgorithm SHA256 -NotAfter (Get-Date).AddYears(2)
+$cert = New-SelfSignedCertificate -Type CodeSigningCert -Subject "CN=LDAC A2DP OPPO Physical Server 2022 Test Only" -CertStoreLocation "Cert:/CurrentUser/My" -KeyExportPolicy Exportable -KeyLength 2048 -HashAlgorithm SHA256 -NotAfter (Get-Date).AddYears(2)
 $pfx = Join-Path $env:RUNNER_TEMP "ldac-a2dp-test.pfx"
 $cer = Join-Path $package "ldac-a2dp-test.cer"
-$password = ConvertTo-SecureString "Disposable-VM-Test-Only-2026" -AsPlainText -Force
+$password = ConvertTo-SecureString "Physical-Server-2022-Test-Only-2026" -AsPlainText -Force
 Export-PfxCertificate -Cert $cert -FilePath $pfx -Password $password | Out-Null
 Export-Certificate -Cert $cert -FilePath $cer | Out-Null
 $kitRoots = @((Join-Path $env:ProgramFiles "Windows Kits/10/bin"))
@@ -37,7 +37,7 @@ foreach ($kitRoot in $kitRoots) {
 }
 if (!$signtool) { throw "Windows SDK signtool.exe x64 was not found." }
 $catalog = Join-Path $package "LdacA2dp.cat"
-& $signtool.FullName sign /v /fd SHA256 /f $pfx /p "Disposable-VM-Test-Only-2026" $catalog
+& $signtool.FullName sign /v /fd SHA256 /f $pfx /p "Physical-Server-2022-Test-Only-2026" $catalog
 if ($LASTEXITCODE -ne 0) { throw "signtool failed with exit code $LASTEXITCODE" }
 Remove-Item $pfx -Force
 Remove-Item $zip -Force -ErrorAction SilentlyContinue
