@@ -88,10 +88,18 @@ Enable stereo A2DP playback from Windows Server 2022 Datacenter (build 20348) to
 - [x] Added a non-fatal `IOCTL_INTERNAL_BTHENUM_GET_ENUMINFO` query and exposed remote SDP identity in the service status output (source changes only; not yet built or run).
 - [ ] OPPO SDP and device identity capture / determine whether a remote-specific VID/PID exists.
 - [ ] Safe OPPO-specific driver installation strategy.
-- [ ] Enable/dispatch GitHub Actions workflow and obtain a real CI build result.
+- [x] Enable GitHub Actions for the fork (confirmed by user on 2026-11-19).
+- [ ] Trigger the first CI run after Actions were enabled and obtain a real build result.
 - [ ] SBC-only playback in isolated test VM.
 - [ ] Verified install/rollback package for the target host.
 
 ## Important distinction
 
 A successful CI build is not a working driver on Server 2022. The finish line is verified stereo playback through OPPO Enco Buds2 on the target OS, with a safe rollback path. The current broad-ID route is not safe for production because it could replace the audio driver for other Bluetooth headsets on the same Intel radio. The new SDP identity diagnostic is source-complete but has not yet been compiled or run on hardware.
+
+
+### CI activation note (2026-11-19)
+
+- The repository Actions page showed zero workflow runs after Actions were enabled. The branch contains a `push` / `pull_request` workflow and the PR is open; the default branch also contains the build workflow.
+- The next safe trigger is a documentation-only commit on `server-2022-oppo`, which will generate a fresh push / pull-request synchronization event. This does not modify `main` or install/run a driver on any machine.
+- No CI result is claimed until the run actually appears and completes.
