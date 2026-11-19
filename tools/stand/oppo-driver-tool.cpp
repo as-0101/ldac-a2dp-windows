@@ -162,8 +162,7 @@ static bool FindDriver(HDEVINFO set, SP_DEVINFO_DATA& dev,
         if (!detailOk && GetLastError() != ERROR_INSUFFICIENT_BUFFER) continue;
         const std::wstring infName = BaseName(detail.InfFileName);
         const bool match = rollback
-            ? (_wcsicmp(infName.c_str(), L"bth.inf") == 0 &&
-               ContainsNoCase(info.Description, L"Audio Sink Service"))
+            ? (_wcsicmp(infName.c_str(), L"bth.inf") == 0)
             : (_wcsicmp(infName.c_str(), wantedInf.c_str()) == 0 &&
                _wcsicmp(info.Description, kDeviceDescription) == 0);
         if (match) { selected = info; return true; }
