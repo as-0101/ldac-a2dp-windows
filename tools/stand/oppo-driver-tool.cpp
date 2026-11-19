@@ -5,7 +5,6 @@
 #include <windows.h>
 #include <setupapi.h>
 #include <newdev.h>
-#include <devpkey.h>
 #include <cfgmgr32.h>
 #include <winternl.h>
 #include <sddl.h>
@@ -71,18 +70,16 @@ static bool IsVmware() {
     return rc == ERROR_SUCCESS && type == REG_SZ &&
         ContainsNoCase(manufacturer, L"VMware");
 }
-static bool ReadDeviceProperty(HDEVINFO set, SP_DEVINFO_DATA& dev,
-    const DEVPROPKEY& key, std::wstring& value) {
-    DEVPROPTYPE type = 0;
-    DWORD required = 0;
-    SetupDiGetDevicePropertyW(set, &dev, &key, &type, nullptr, 0, &required, 0);
-    if (GetLastError() != ERROR_INSUFFICIENT_BUFFER || required < sizeof(wchar_t) ||
-        required > 65536) return false;
-    std::vector<BYTE> data(required + sizeof(wchar_t), 0);
-    if (!SetupDiGetDevicePropertyW(set, &dev, &key, &type, data.data(),
-        static_cast<DWORD>(data.size()), &required, 0) || type != DEVPROP_TYPE_STRING)
-        return false;
-    value.assign(reinterpret_cast<const wchar_t*>(data.data()));
+static bool GetDriverInfPath(HDEVINFO set, SP_DEVINFO_DATA& dev, std::wstring& value) {
+    HKEY key = SetupDiOpenDevRegKey(set, &dev, DICS_FLAG_GLOBAL, 0, DIREG_DRV, KEY_QUERY_VALUE);
+    if (key == INVALID_HANDLE_VALUE) return false;
+    wchar_t infPath[MAX_PATH]{};
+    DWORD type = 0, bytes = sizeof(infPath);
+    const LONG rc = RegQueryValueExW(key, L"InfPath", nullptr, &type,
+        reinterpret_cast<BYTE*>(infPath), &bytes);
+    RegCloseKey(key);
+    if (rc != ERROR_SUCCESS || type != REG_SZ || bytes < sizeof(wchar_t)) return false;
+    value.assign(infPath);
     return true;
 }
 static bool GetInstanceId(HDEVINFO set, SP_DEVINFO_DATA& dev, std::wstring& id) {
@@ -140,7 +137,7 @@ static bool FindTarget(TargetDevice& target, bool requireSingleA2dp = true) {
                       L"to be the only paired/present A2DP sink in the test VM.\n";
         return false;
     }
-    ReadDeviceProperty(target.set, target.data, DEVPKEY_Device_DriverInfPath, target.infPath);
+    GetDriverInfPath(target.set, target.data, target.infPath);
     return true;
 }
 static bool IsA2dpCompatible(HDEVINFO set, SP_DEVINFO_DATA& dev) {
