@@ -2,9 +2,10 @@
 ; LdacA2dp.inf - A2DP source profile driver (LDAC / SBC) for selected Bluetooth sinks.
 ;
 ; Binds by full hardware ID (service UUID + DeviceID VID/PID), which outranks the
-; generic BTHENUM\{0000110b-...} match used by BthA2dp and Alternative A2DP.
-; The device is also the headphones' audio endpoint (ACX render circuit
-; "Headphones0"), so it lives in the MEDIA class like Alternative A2DP.
+; generic BTHENUM\{0000110b-...} match used by the inbox service driver.
+; This INF installs on a BTHENUM service devnode, so its setup class and GUID
+; must match the Bluetooth enumerated devnode. ACX endpoint interfaces are
+; registered separately below.
 ; Test machines only until the driver is signed: requires "bcdedit /set testsigning on".
 ;
 
