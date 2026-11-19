@@ -107,7 +107,7 @@ int main(int argc, char** argv)
     for (;;) {
         std::vector<BYTE> storage(4096);
         auto* result = reinterpret_cast<WSAQUERYSETA*>(storage.data());
-        result->dwSize = static_cast<DWORD>(storage.size());
+        result->dwSize = sizeof(WSAQUERYSETA);
         DWORD bytes = static_cast<DWORD>(storage.size());
 
         if (WSALookupServiceNextA(lookup, flags, &bytes, result) == SOCKET_ERROR) {
