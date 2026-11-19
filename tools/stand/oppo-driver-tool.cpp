@@ -236,7 +236,6 @@ static int Status() {
 static int Install() {
     if (!IsAdministrator()) { std::wcerr << L"Run elevated as Administrator.\n"; return 10; }
     if (!IsSupportedOs()) { std::wcerr << L"This test package is restricted to Windows Server 2022 build 20348.\n"; return 11; }
-    if (!IsVmware()) { std::wcerr << L"Safety gate: VMware virtual machine not detected. Refusing test-driver installation.\n"; return 12; }
     TargetDevice target;
     if (!FindTarget(target)) {
         if (target.set != INVALID_HANDLE_VALUE) SetupDiDestroyDeviceInfoList(target.set);
@@ -248,9 +247,9 @@ static int Install() {
         SetupDiDestroyDeviceInfoList(target.set);
         return 14;
     }
-    std::wcout << L"\nTEST VM ONLY. Confirm that this VM has a restorable snapshot and that "
-                  L"the OPPO earbuds are the only present A2DP sink.\n"
-                  L"Type I_HAVE_A_SNAPSHOT_TO_CONTINUE: ";
+    std::wcout << L"\nLIVE WINDOWS SERVER 2022 INSTALL. Confirm physical-host installation and that "
+                  L"OPPO Enco Buds2 is the only present A2DP sink.\n"
+                  L"Type I_ACCEPT_LIVE_DRIVER_TEST: ";
     std::wstring confirmation;
     std::getline(std::wcin, confirmation);
     if (confirmation != L"I_ACCEPT_LIVE_DRIVER_TEST") {
@@ -313,8 +312,8 @@ static int Install() {
 }
 static int Rollback() {
     if (!IsAdministrator()) { std::wcerr << L"Run elevated as Administrator.\n"; return 20; }
-    if (!IsSupportedOs() || !IsVmware()) {
-        std::wcerr << L"Rollback tool is restricted to the Windows Server 2022 VMware test VM.\n";
+    if (!IsSupportedOs()) {
+        std::wcerr << L"Rollback tool is restricted to Windows Server 2022 build 20348.\n";
         return 21;
     }
     TargetDevice target;
