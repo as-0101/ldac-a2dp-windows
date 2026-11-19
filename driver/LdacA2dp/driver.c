@@ -145,7 +145,7 @@ NTSTATUS LdacA2dpEvtDeviceAdd(_In_ WDFDRIVER Driver, _Inout_ PWDFDEVICE_INIT Dev
         status = WdfDeviceCreate(&DeviceInit, &attributes, &device);
         if (NT_SUCCESS(status))
             GetDeviceContext(device)->Role = RoleIdle;
-        return status;
+        do { DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_ERROR_LEVEL, "LdacA2dp: DeviceAdd failed at line %lu: 0x%08X\n", (ULONG)__LINE__, status); return status; } while (0);
     }
 
     WDF_PNPPOWER_EVENT_CALLBACKS_INIT(&pnp);
@@ -163,18 +163,18 @@ NTSTATUS LdacA2dpEvtDeviceAdd(_In_ WDFDRIVER Driver, _Inout_ PWDFDEVICE_INIT Dev
         ACX_DEVICEINIT_CONFIG_INIT(&acxInitConfig);
         status = AcxDeviceInitInitialize(DeviceInit, &acxInitConfig);
         if (!NT_SUCCESS(status))
-            return status;
+            do { DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_ERROR_LEVEL, "LdacA2dp: DeviceAdd failed at line %lu: 0x%08X\n", (ULONG)__LINE__, status); return status; } while (0);
     }
 
     WDF_OBJECT_ATTRIBUTES_INIT_CONTEXT_TYPE(&attributes, DEVICE_CONTEXT);
     status = WdfDeviceCreate(&DeviceInit, &attributes, &device);
     if (!NT_SUCCESS(status))
-        return status;
+        do { DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_ERROR_LEVEL, "LdacA2dp: DeviceAdd failed at line %lu: 0x%08X\n", (ULONG)__LINE__, status); return status; } while (0);
     if (role == RoleA2dp) {
         ACX_DEVICE_CONFIG_INIT(&acxConfig);
         status = AcxDeviceInitialize(device, &acxConfig);
         if (!NT_SUCCESS(status))
-            return status;
+            do { DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_ERROR_LEVEL, "LdacA2dp: DeviceAdd failed at line %lu: 0x%08X\n", (ULONG)__LINE__, status); return status; } while (0);
     }
     WDF_DEVICE_PNP_CAPABILITIES_INIT(&pnpCaps);
     pnpCaps.SurpriseRemovalOK = WdfTrue;
@@ -197,14 +197,14 @@ NTSTATUS LdacA2dpEvtDeviceAdd(_In_ WDFDRIVER Driver, _Inout_ PWDFDEVICE_INIT Dev
     attributes.ParentObject = device;
     status = WdfSpinLockCreate(&attributes, &ctx->Lock);
     if (!NT_SUCCESS(status))
-        return status;
+        do { DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_ERROR_LEVEL, "LdacA2dp: DeviceAdd failed at line %lu: 0x%08X\n", (ULONG)__LINE__, status); return status; } while (0);
 
     WDF_TIMER_CONFIG_INIT(&timerConfig, LdacA2dpEvtSignalTimer);
     WDF_OBJECT_ATTRIBUTES_INIT(&attributes);
     attributes.ParentObject = device;
     status = WdfTimerCreate(&timerConfig, &attributes, &ctx->SignalTimer);
     if (!NT_SUCCESS(status))
-        return status;
+        do { DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_ERROR_LEVEL, "LdacA2dp: DeviceAdd failed at line %lu: 0x%08X\n", (ULONG)__LINE__, status); return status; } while (0);
     if (role == RoleAvrcp)
         return STATUS_SUCCESS; /* no I/O interface: AVRCP talks only to the headphones and VHF */
 
@@ -212,11 +212,11 @@ NTSTATUS LdacA2dpEvtDeviceAdd(_In_ WDFDRIVER Driver, _Inout_ PWDFDEVICE_INIT Dev
     queueConfig.EvtIoDeviceControl = LdacA2dpEvtIoDeviceControl;
     status = WdfIoQueueCreate(device, &queueConfig, WDF_NO_OBJECT_ATTRIBUTES, WDF_NO_HANDLE);
     if (!NT_SUCCESS(status))
-        return status;
+        do { DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_ERROR_LEVEL, "LdacA2dp: DeviceAdd failed at line %lu: 0x%08X\n", (ULONG)__LINE__, status); return status; } while (0);
 
     status = AudioCreate(ctx);
     if (!NT_SUCCESS(status))
-        return status;
+        do { DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_ERROR_LEVEL, "LdacA2dp: DeviceAdd failed at line %lu: 0x%08X\n", (ULONG)__LINE__, status); return status; } while (0);
 
     return WdfDeviceCreateDeviceInterface(device, &GUID_DEVINTERFACE_LDACA2DP, NULL);
 }
@@ -238,7 +238,7 @@ NTSTATUS LdacA2dpEvtPrepareHardware(_In_ WDFDEVICE Device, _In_ WDFCMRESLIST Raw
     if (!NT_SUCCESS(status)) {
         DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_ERROR_LEVEL,
                    "LdacA2dp: BTH profile interface query failed: 0x%08X\n", status);
-        return status;
+        do { DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_ERROR_LEVEL, "LdacA2dp: PrepareHardware failed at line %lu: 0x%08X\n", (ULONG)__LINE__, status); return status; } while (0);
     }
 
     if (ctx->ProfileInterface.BthInitializeBrb == NULL) {
@@ -252,7 +252,7 @@ NTSTATUS LdacA2dpEvtPrepareHardware(_In_ WDFDEVICE Device, _In_ WDFCMRESLIST Raw
 
     status = L2capInitialize(ctx);
     if (!NT_SUCCESS(status) || ctx->Role != RoleA2dp)
-        return status;
+        do { DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_ERROR_LEVEL, "LdacA2dp: PrepareHardware failed at line %lu: 0x%08X\n", (ULONG)__LINE__, status); return status; } while (0);
     AudioNameFromBluetooth(ctx); /* before the endpoint gets built */
     return AcxDeviceAddCircuit(Device, ctx->Render);
 }
