@@ -184,8 +184,20 @@ NTSTATUS LdacA2dpEvtPrepareHardware(_In_ WDFDEVICE Device, _In_ WDFCMRESLIST Raw
     status = WdfFdoQueryForInterface(Device, &GUID_BTHDDI_PROFILE_DRIVER_INTERFACE,
                                      (PINTERFACE)&ctx->ProfileInterface, sizeof(ctx->ProfileInterface),
                                      BTHDDI_PROFILE_DRIVER_INTERFACE_VERSION_FOR_QI, NULL);
-    if (!NT_SUCCESS(status))
+    if (!NT_SUCCESS(status)) {
+        DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_ERROR_LEVEL,
+                   "LdacA2dp: BTH profile interface query failed: 0x%08X\\n", status);
         return status;
+    }
+
+    if (ctx->ProfileInterface.BthInitializeBrb == NULL) {
+        DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_ERROR_LEVEL,
+                   "LdacA2dp: BTH profile interface lacks BthInitializeBrb.\\n");
+        return STATUS_NOT_SUPPORTED;
+    }
+
+    DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL,
+               "LdacA2dp: BTH profile interface acquired.\\n");
 
     status = L2capInitialize(ctx);
     if (!NT_SUCCESS(status) || ctx->Role != RoleA2dp)
