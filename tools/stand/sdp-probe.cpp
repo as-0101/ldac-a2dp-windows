@@ -11,8 +11,8 @@
 #pragma comment(lib, "Ws2_32.lib")
 #pragma comment(lib, "Bthprops.lib")
 
-static const GUID kDeviceIdService =
-{ 0x00001200, 0x0000, 0x1000, { 0x80, 0x00, 0x00, 0x80, 0x5F, 0x9B, 0x34, 0xFB } };
+static const GUID kL2capProtocol =
+{ 0x00000100, 0x0000, 0x1000, { 0x80, 0x00, 0x00, 0x80, 0x5F, 0x9B, 0x34, 0xFB } };
 
 static bool ParseAddress(const char* text, BTH_ADDR* address)
 {
@@ -87,7 +87,7 @@ int main(int argc, char** argv)
 
     WSAQUERYSETA query{};
     query.dwSize = sizeof(query);
-    query.lpServiceClassId = const_cast<LPGUID>(&kDeviceIdService);
+    query.lpServiceClassId = const_cast<LPGUID>(&kL2capProtocol);
     query.dwNameSpace = NS_BTH;
     query.dwNumberOfCsAddrs = 0;
     query.lpszContext = context;
@@ -101,7 +101,7 @@ int main(int argc, char** argv)
         return error == WSASERVICE_NOT_FOUND ? 5 : 6;
     }
 
-    std::printf("Bluetooth SDP Device ID query\nPeer: %s\nContext: %s\n", addressText, context);
+    std::printf("Bluetooth SDP L2CAP service enumeration\nPeer: %s\nContext: %s\n", addressText, context);
     unsigned int records = 0;
     bool foundIdentity = false;
     for (;;) {
@@ -136,6 +136,9 @@ int main(int argc, char** argv)
         if (result->lpBlob && result->lpBlob->pBlobData && result->lpBlob->cbSize) {
             const BYTE* blob = result->lpBlob->pBlobData;
             ULONG len = result->lpBlob->cbSize;
+            std::printf("  SDP record bytes    %lu\n  Raw SDP: ", len);
+            for (ULONG i = 0; i < len; ++i) std::printf("%02X", blob[i]);
+            std::printf("\n");
             USHORT vendor = 0, product = 0, version = 0, source = 0;
             bool hasVendor = ReadU16(blob, len, 0x0201, &vendor);
             bool hasProduct = ReadU16(blob, len, 0x0202, &product);
@@ -159,13 +162,13 @@ int main(int argc, char** argv)
     WSALookupServiceEnd(lookup);
     WSACleanup();
     if (!records) {
-        std::printf("No Device ID SDP record returned. This does not prove the headset lacks VID/PID.\n");
+        std::printf("No L2CAP SDP service records returned. Check that the headset is awake and in range; this does not prove it lacks VID/PID.\n");
         return 7;
     }
     if (!foundIdentity) {
-        std::printf("Device ID service returned, but its standard identity tuple was incomplete.\n");
+        std::printf("SDP service records returned, but no complete Device ID identity tuple was found.\n");
         return 8;
     }
-    std::printf("\nIdentity retrieved from SDP. It is not yet a verified Windows PnP hardware ID.\n");
+    std::printf("\nA candidate identity tuple was found in SDP. Verify its record/service before using it as a Windows PnP hardware ID.\n");
     return 0;
 }
