@@ -11,6 +11,7 @@ NTSTATUS DriverEntry(_In_ PDRIVER_OBJECT DriverObject, _In_ PUNICODE_STRING Regi
 {
     WDF_DRIVER_CONFIG config;
     ACX_DRIVER_CONFIG acxConfig;
+    ACX_DRIVER_VERSION_AVAILABLE_PARAMS acxVersion;
     WDFDRIVER driver;
     NTSTATUS status;
 
@@ -19,9 +20,29 @@ NTSTATUS DriverEntry(_In_ PDRIVER_OBJECT DriverObject, _In_ PUNICODE_STRING Regi
     status = WdfDriverCreate(DriverObject, RegistryPath, WDF_NO_OBJECT_ATTRIBUTES, &config, &driver);
     if (!NT_SUCCESS(status))
         return status;
+
     PeerInitialize();
     ACX_DRIVER_CONFIG_INIT(&acxConfig);
-    return AcxDriverInitialize(driver, &acxConfig);
+    status = AcxDriverInitialize(driver, &acxConfig);
+    if (!NT_SUCCESS(status))
+        return status;
+
+    /*
+     * The binary is built against ACX 1.1 headers. Verify the runtime actually
+     * exposes ACX 1.1 before any ACX device/circuit objects are created.
+     * This is a fail-closed compatibility gate, not a substitute for testing
+     * the individual DDI imports on the target OS.
+     */
+    ACX_DRIVER_VERSION_AVAILABLE_PARAMS_INIT(&acxVersion, 1, 1);
+    if (!AcxDriverIsVersionAvailable(driver, &acxVersion)) {
+        DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_ERROR_LEVEL,
+                   "LdacA2dp: ACX runtime 1.1 unavailable; refusing to load.\\n");
+        return STATUS_REVISION_MISMATCH;
+    }
+
+    DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL,
+               "LdacA2dp: ACX runtime 1.1 available.\\n");
+    return STATUS_SUCCESS;
 }
 
 /* Which of the headphones' devnodes this is, from its hardware IDs. */
