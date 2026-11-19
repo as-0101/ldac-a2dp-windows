@@ -157,10 +157,24 @@ static bool FindDriver(HDEVINFO set, SP_DEVINFO_DATA& dev,
         SP_DRVINFO_DETAIL_DATA_W detail{};
         detail.cbSize = sizeof(detail);
         DWORD required = 0;
-        const BOOL detailOk = SetupDiGetDriverInfoDetailW(set, &dev, &info,
+        BOOL detailOk = SetupDiGetDriverInfoDetailW(set, &dev, &info,
             &detail, sizeof(detail), &required);
-        if (!detailOk && GetLastError() != ERROR_INSUFFICIENT_BUFFER) continue;
-        const std::wstring infName = BaseName(detail.InfFileName);
+        std::wstring infPath;
+        if (detailOk) {
+            infPath.assign(detail.InfFileName);
+        } else {
+            const DWORD detailError = GetLastError();
+            if (detailError != ERROR_INSUFFICIENT_BUFFER ||
+                required < sizeof(SP_DRVINFO_DETAIL_DATA_W) || required > 1024 * 1024) continue;
+            std::vector<BYTE> detailBuffer(required, 0);
+            auto* fullDetail = reinterpret_cast<SP_DRVINFO_DETAIL_DATA_W*>(detailBuffer.data());
+            fullDetail->cbSize = sizeof(SP_DRVINFO_DETAIL_DATA_W);
+            detailOk = SetupDiGetDriverInfoDetailW(set, &dev, &info,
+                fullDetail, required, &required);
+            if (!detailOk) continue;
+            infPath.assign(fullDetail->InfFileName);
+        }
+        const std::wstring infName = BaseName(infPath);
         const bool match = rollback
             ? (_wcsicmp(infName.c_str(), L"bth.inf") == 0)
             : (_wcsicmp(infName.c_str(), wantedInf.c_str()) == 0 &&
