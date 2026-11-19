@@ -1,4 +1,5 @@
 #include "driver.h"
+#include <devpkey.h>
 
 #ifdef ALLOC_PRAGMA
 #pragma alloc_text(INIT, DriverEntry)
@@ -67,6 +68,54 @@ static DEVICE_ROLE DetectRole(_In_ PWDFDEVICE_INIT DeviceInit)
     return RoleUnknown;
 }
 
+/*
+ * The test package is intentionally scoped to the one OPPO Enco Buds2
+ * instance observed during this port. INF matching is necessarily based on
+ * the generic A2DP compatible ID, so the function driver independently
+ * refuses every A2DP devnode whose instance ID does not contain this peer MAC.
+ * Keep the installer and this runtime guard in sync.
+ */
+static BOOLEAN IsTargetA2dpInstance(_In_ PWDFDEVICE_INIT DeviceInit)
+{
+    WDF_DEVICE_PROPERTY_DATA propertyData;
+    WCHAR instanceId[512] = { 0 };
+    ULONG required = 0;
+    DEVPROPTYPE type = 0;
+    UNICODE_STRING actual;
+    UNICODE_STRING targetMac;
+    NTSTATUS status;
+
+    WDF_DEVICE_PROPERTY_DATA_INIT(&propertyData, &DEVPKEY_Device_InstanceId);
+    status = WdfFdoInitQueryPropertyEx(DeviceInit, &propertyData,
+                                       sizeof(instanceId), instanceId,
+                                       &required, &type);
+    if (!NT_SUCCESS(status) || type != DEVPROP_TYPE_STRING ||
+        required < sizeof(WCHAR) || required > sizeof(instanceId) ||
+        instanceId[(RTL_NUMBER_OF(instanceId) - 1)] != L'\\0') {
+        DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_ERROR_LEVEL,
+                   "LdacA2dp: cannot read instance ID; refusing A2DP devnode (0x%08X).\\n", status);
+        return FALSE;
+    }
+
+    RtlInitUnicodeString(&actual, instanceId);
+    RtlInitUnicodeString(&targetMac, L"840F2A13E3E2");
+    for (USHORT offset = 0; offset + targetMac.Length / sizeof(WCHAR) <= actual.Length / sizeof(WCHAR); ++offset) {
+        UNICODE_STRING candidate;
+        candidate.Buffer = actual.Buffer + offset;
+        candidate.Length = targetMac.Length;
+        candidate.MaximumLength = targetMac.Length;
+        if (RtlEqualUnicodeString(&candidate, &targetMac, TRUE)) {
+            DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL,
+                       "LdacA2dp: OPPO target instance accepted.\\n");
+            return TRUE;
+        }
+    }
+
+    DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_WARNING_LEVEL,
+               "LdacA2dp: A2DP devnode is not the configured OPPO peer; refusing it.\\n");
+    return FALSE;
+}
+
 NTSTATUS LdacA2dpEvtDeviceAdd(_In_ WDFDRIVER Driver, _Inout_ PWDFDEVICE_INIT DeviceInit)
 {
     WDF_PNPPOWER_EVENT_CALLBACKS pnp;
@@ -87,6 +136,8 @@ NTSTATUS LdacA2dpEvtDeviceAdd(_In_ WDFDRIVER Driver, _Inout_ PWDFDEVICE_INIT Dev
     role = DetectRole(DeviceInit);
     /* Fail closed: never treat an unknown BTHENUM service as A2DP. */
     if (role == RoleUnknown)
+        return STATUS_NOT_SUPPORTED;
+    if (role == RoleA2dp && !IsTargetA2dpInstance(DeviceInit))
         return STATUS_NOT_SUPPORTED;
 
     if (role == RoleIdle) {
