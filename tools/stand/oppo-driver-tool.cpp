@@ -127,6 +127,18 @@ static bool FindTarget(TargetDevice& target, bool requireSingleA2dp = true) {
     GetDriverInfPath(target.set, target.data, target.infPath);
     return true;
 }
+static bool GetDeviceStringProperty(HDEVINFO set, SP_DEVINFO_DATA& dev, DWORD property, std::wstring& value) {
+    DWORD type = 0, required = 0;
+    SetupDiGetDeviceRegistryPropertyW(set, &dev, property, &type, nullptr, 0, &required);
+    if (GetLastError() != ERROR_INSUFFICIENT_BUFFER || required < sizeof(wchar_t) || required > 65536)
+        return false;
+    std::vector<wchar_t> buffer(required / sizeof(wchar_t) + 1, L'\\0');
+    if (!SetupDiGetDeviceRegistryPropertyW(set, &dev, property, &type,
+        reinterpret_cast<PBYTE>(buffer.data()), required, &required) || type != REG_SZ)
+        return false;
+    value.assign(buffer.data());
+    return true;
+}
 static bool IsA2dpCompatible(HDEVINFO set, SP_DEVINFO_DATA& dev) {
     DWORD type = 0, required = 0;
     SetupDiGetDeviceRegistryPropertyW(set, &dev, SPDRP_COMPATIBLEIDS,
@@ -323,6 +335,94 @@ static int Install() {
                           : L"Installation completed; restart is still recommended before playback testing.\n");
     return 0;
 }
+static int Upgrade() {
+    if (!IsAdministrator()) { std::wcerr << L"Run elevated as Administrator.\\n"; return 30; }
+    if (!IsSupportedOs()) { std::wcerr << L"Diagnostic upgrade is restricted to Windows Server 2022 build 20348.\\n"; return 31; }
+    TargetDevice target;
+    if (!FindTarget(target)) {
+        if (target.set != INVALID_HANDLE_VALUE) SetupDiDestroyDeviceInfoList(target.set);
+        return 32;
+    }
+    std::wstring service, manufacturer;
+    if (_wcsicmp(BaseName(target.infPath).c_str(), L"bth.inf") == 0 ||
+        !GetDeviceStringProperty(target.set, target.data, SPDRP_SERVICE, service) ||
+        !GetDeviceStringProperty(target.set, target.data, SPDRP_MFG, manufacturer) ||
+        _wcsicmp(service.c_str(), L"LdacA2dp") != 0 ||
+        _wcsicmp(manufacturer.c_str(), L"LDAC A2DP Project") != 0) {
+        std::wcerr << L"Safety gate: current devnode is not owned by the expected LDAC A2DP driver. Current INF: "
+                   << target.infPath << L"; service: " << service << L"; manufacturer: " << manufacturer << L".\\n";
+        SetupDiDestroyDeviceInfoList(target.set);
+        return 33;
+    }
+    const std::wstring dir = ModuleDirectory();
+    const std::wstring infPath = dir + L"\\\\LdacA2dp.inf";
+    const DWORD attrs = GetFileAttributesW(infPath.c_str());
+    if (dir.empty() || attrs == INVALID_FILE_ATTRIBUTES || (attrs & FILE_ATTRIBUTE_DIRECTORY)) {
+        std::wcerr << L"LdacA2dp.inf must be beside this tool.\\n";
+        SetupDiDestroyDeviceInfoList(target.set);
+        return 34;
+    }
+    std::wcout << L"\\nDIAGNOSTIC DRIVER UPGRADE for exact OPPO A2DP instance.\\n"
+                  L"Current INF: " << target.infPath << L"\\n"
+                  L"Current service: " << service << L"\\n"
+                  L"Type I_ACCEPT_LDAC_DIAGNOSTIC_UPGRADE: ";
+    std::wstring confirmation;
+    std::getline(std::wcin, confirmation);
+    if (confirmation != L"I_ACCEPT_LDAC_DIAGNOSTIC_UPGRADE") {
+        std::wcerr << L"Confirmation not received. No changes made.\\n";
+        SetupDiDestroyDeviceInfoList(target.set);
+        return 35;
+    }
+    std::wstring publishedInf;
+    if (!StageInf(infPath, publishedInf)) {
+        SetupDiDestroyDeviceInfoList(target.set);
+        return 36;
+    }
+    SP_DRVINFO_DATA_W currentDriver{}, newDriver{}, inboxDriver{};
+    currentDriver.cbSize = newDriver.cbSize = inboxDriver.cbSize = sizeof(SP_DRVINFO_DATA_W);
+    if (!FindDriver(target.set, target.data, BaseName(target.infPath), false, currentDriver, true) ||
+        !FindDriver(target.set, target.data, publishedInf, false, newDriver, false) ||
+        !FindDriver(target.set, target.data, L"", true, inboxDriver, false)) {
+        SetupDiDestroyDriverInfoList(target.set, &target.data, SPDIT_COMPATDRIVER);
+        SetupDiDestroyDeviceInfoList(target.set);
+        return 37;
+    }
+    if (newDriver.DriverVersion <= currentDriver.DriverVersion) {
+        std::wcerr << L"Safety gate: candidate driver is not newer than installed driver. Current="
+                   << currentDriver.DriverVersion << L", candidate=" << newDriver.DriverVersion << L".\\n";
+        SetupDiDestroyDriverInfoList(target.set, &target.data, SPDIT_COMPATDRIVER);
+        SetupDiDestroyDeviceInfoList(target.set);
+        return 38;
+    }
+    SP_DRVINSTALL_PARAMS newRank{}, inboxRank{};
+    newRank.cbSize = inboxRank.cbSize = sizeof(SP_DRVINSTALL_PARAMS);
+    if (!SetupDiGetDriverInstallParamsW(target.set, &target.data, &newDriver, &newRank) ||
+        !SetupDiGetDriverInstallParamsW(target.set, &target.data, &inboxDriver, &inboxRank)) {
+        std::wcerr << L"Cannot verify candidate rank against inbox bth.inf; refusing upgrade. Error: "
+                   << GetLastError() << L"\\n";
+        SetupDiDestroyDriverInfoList(target.set, &target.data, SPDIT_COMPATDRIVER);
+        SetupDiDestroyDeviceInfoList(target.set);
+        return 39;
+    }
+    std::wcout << L"Installed version key: " << currentDriver.DriverVersion
+               << L"; candidate version key: " << newDriver.DriverVersion << L"\\n"
+               << L"Candidate rank: 0x" << std::hex << newRank.Rank
+               << L"; inbox rank: 0x" << inboxRank.Rank << std::dec << L"\\n";
+    if (newRank.Rank <= inboxRank.Rank) {
+        std::wcerr << L"Safety gate: candidate rank could take precedence over inbox for other A2DP sinks. Refusing.\\n";
+        SetupDiDestroyDriverInfoList(target.set, &target.data, SPDIT_COMPATDRIVER);
+        SetupDiDestroyDeviceInfoList(target.set);
+        return 40;
+    }
+    bool reboot = false;
+    const bool ok = ApplyDriver(target, false, publishedInf, reboot);
+    SetupDiDestroyDriverInfoList(target.set, &target.data, SPDIT_COMPATDRIVER);
+    SetupDiDestroyDeviceInfoList(target.set);
+    if (!ok) return 41;
+    std::wcout << (reboot ? L"Diagnostic driver upgrade selected; restart required.\\n"
+                          : L"Diagnostic driver upgrade selected; restart recommended.\\n");
+    return 0;
+}
 static int Rollback() {
     if (!IsAdministrator()) { std::wcerr << L"Run elevated as Administrator.\n"; return 20; }
     if (!IsSupportedOs()) {
@@ -345,11 +445,12 @@ static int Rollback() {
 }
 int wmain(int argc, wchar_t** argv) {
     if (argc != 2) {
-        std::wcout << L"Usage: oppo-driver-tool.exe status|install|rollback\n";
+        std::wcout << L"Usage: oppo-driver-tool.exe status|install|upgrade|rollback\n";
         return 1;
     }
     if (_wcsicmp(argv[1], L"status") == 0) return Status();
     if (_wcsicmp(argv[1], L"install") == 0) return Install();
+    if (_wcsicmp(argv[1], L"upgrade") == 0) return Upgrade();
     if (_wcsicmp(argv[1], L"rollback") == 0) return Rollback();
     std::wcerr << L"Unknown command.\n";
     return 1;
