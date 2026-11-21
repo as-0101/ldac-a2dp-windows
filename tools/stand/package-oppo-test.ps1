@@ -16,7 +16,7 @@ Copy-Item (Join-Path $driverSource "LdacA2dp.sys") $package
 Copy-Item (Join-Path $driverSource "LdacA2dp.inf") $package
 Copy-Item (Join-Path $driverSource "ldaca2dp.cat") (Join-Path $package "LdacA2dp.cat")
 Copy-Item $tool $package
-foreach ($file in @("prepare-oppo-host.cmd", "install-oppo.cmd", "rollback-oppo.cmd", "status-oppo.cmd", "README_OPPO_TEST_RU.txt")) {
+foreach ($file in @("prepare-oppo-host.cmd", "install-oppo.cmd", "upgrade-oppo.cmd", "rollback-oppo.cmd", "status-oppo.cmd", "README_OPPO_TEST_RU.txt")) {
     Copy-Item (Join-Path $PSScriptRoot $file) $package
 }
 $cert = New-SelfSignedCertificate -Type CodeSigningCert -Subject "CN=LDAC A2DP OPPO Physical Server 2022 Test Only" -CertStoreLocation "Cert:/CurrentUser/My" -KeyExportPolicy Exportable -KeyLength 2048 -HashAlgorithm SHA256 -NotAfter (Get-Date).AddYears(2)
