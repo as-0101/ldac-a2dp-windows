@@ -600,6 +600,11 @@ int DriverPrintStatus(uint64_t address)
     if (!probe.Probe(st))
         return fprintf(stderr, "no LdacA2dp device\n"), 1;
     printf("headphones   %s\n", FormatAddress(st.RemoteAddress).c_str());
+    if (st.EnumeratorInfoValid)
+        printf("SDP identity  remote VID %04X PID %04X MFG %04X (type %u), local radio MFG %04X\n",
+               st.RemoteVid, st.RemotePid, st.RemoteMfg, st.RemoteVidType, st.LocalMfg);
+    else
+        printf("SDP identity  unavailable\n");
     printf("AVDTP state  %u, codec %u, %u Hz, MTU %u, delay %.1f ms, last error 0x%08X\n", st.AvdtpState, st.Codec,
            st.SampleRate, st.MediaMtu, st.DelayReport100us / 10.0, (unsigned)st.LastError);
     printf("media        %llu sent, %llu failed, %u in flight\n", st.MediaPacketsSent, st.MediaPacketsFailed,

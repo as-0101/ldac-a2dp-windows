@@ -24,6 +24,16 @@ jobs:
         with:
           dotnet-version: 10.0.x
       - run: dotnet build ui/LdacConfig -c Release
+      - name: Build Bluetooth SDP probe
+        shell: cmd
+        run: tools\stand\build-sdp-probe.cmd
+      - name: Upload SDP probe
+        uses: actions/upload-artifact@v4
+        with:
+          name: bluetooth-sdp-probe
+          path: build/sdp-probe.exe
+          if-no-files-found: error
+          retention-days: 7
 
   driver:
     name: KMDF driver
@@ -36,3 +46,23 @@ jobs:
       - name: Build (build_driver.cmd Release)
         shell: cmd
         run: build_driver.cmd Release
+      - name: Upload unsigned driver build for inspection
+        uses: actions/upload-artifact@v4
+        with:
+          name: ldac-a2dp-driver-unsigned
+          path: build/LdacA2dp/Release/**
+          if-no-files-found: error
+          retention-days: 7
+      - name: Build OPPO per-instance SetupAPI tool
+        shell: cmd
+        run: tools\stand\build-oppo-driver-tool.cmd
+      - name: Assemble test-signed physical Server 2022 package
+        shell: pwsh
+        run: tools\stand\package-oppo-test.ps1
+      - name: Upload OPPO Server 2022 test package
+        uses: actions/upload-artifact@v4
+        with:
+          name: ldac-a2dp-oppo-server2022-test
+          path: build/ldac-a2dp-oppo-server2022-test.zip
+          if-no-files-found: error
+          retention-days: 7

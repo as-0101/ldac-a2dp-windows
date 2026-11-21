@@ -44,7 +44,7 @@ typedef enum _CHANNEL_KIND { ChannelSignaling = 0, ChannelMedia = 1 } CHANNEL_KI
  *      buttons out through a VHF consumer-control HID device;
  *  A/V Remote Control Target {0000110C}: idle, only keeps the inbox
  *      AvrcpTransport off the device so that nobody else claims PSM 0x17. */
-typedef enum _DEVICE_ROLE { RoleA2dp = 0, RoleAvrcp = 1, RoleIdle = 2 } DEVICE_ROLE;
+typedef enum _DEVICE_ROLE { RoleA2dp = 0, RoleAvrcp = 1, RoleIdle = 2, RoleUnknown = 3 } DEVICE_ROLE;
 
 typedef struct _L2CAP_CHANNEL {
     struct _DEVICE_CONTEXT *Device;
@@ -76,6 +76,12 @@ typedef struct _DEVICE_CONTEXT {
     BTH_PROFILE_DRIVER_INTERFACE ProfileInterface;
     BTH_ADDR LocalAddress;
     BTH_ADDR RemoteAddress;
+    USHORT RemoteVid;           /* from the remote Device ID SDP record, if published */
+    USHORT RemotePid;
+    USHORT RemoteMfg;
+    USHORT LocalMfg;            /* manufacturer of the local Bluetooth radio */
+    USHORT RemoteVidType;
+    BOOLEAN EnumeratorInfoValid;
     L2CAP_SERVER_HANDLE ServerHandle; /* PSM 0x19 server filtered to RemoteAddress */
     BOOLEAN PsmRegistered;
 

@@ -16,6 +16,8 @@ An open-source replacement for the Windows Bluetooth audio source (`BthA2dp`) th
 
 ## Status
 
+Physical Server 2022 OPPO test package is assembled by CI on the `server-2022-oppo` branch.
+
 Working and in daily use with **JBL Live 780NC** on Windows 11. Tested on a VirtualBox test stand and on a laptop with an Intel adapter:
 - an hour of stress under Driver Verifier;
 - sleep (Modern Standby) and headphones switched off mid-stream;

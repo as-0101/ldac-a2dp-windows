@@ -2,16 +2,17 @@
 ; LdacA2dp.inf - A2DP source profile driver (LDAC / SBC) for selected Bluetooth sinks.
 ;
 ; Binds by full hardware ID (service UUID + DeviceID VID/PID), which outranks the
-; generic BTHENUM\{0000110b-...} match used by BthA2dp and Alternative A2DP.
-; The device is also the headphones' audio endpoint (ACX render circuit
-; "Headphones0"), so it lives in the MEDIA class like Alternative A2DP.
+; generic BTHENUM\{0000110b-...} match used by the inbox service driver.
+; This INF installs on a BTHENUM service devnode, so its setup class and GUID
+; must match the Bluetooth enumerated devnode. ACX endpoint interfaces are
+; registered separately below.
 ; Test machines only until the driver is signed: requires "bcdedit /set testsigning on".
 ;
 
 [Version]
 Signature   = "$WINDOWS NT$"
-Class       = MEDIA
-ClassGuid   = {4d36e96c-e325-11ce-bfc1-08002be10318}
+Class       = Bluetooth
+ClassGuid   = {e0cbf06c-cd8b-4647-bb8a-263b43f0f974}
 Provider    = %ManufacturerName%
 CatalogFile = LdacA2dp.cat
 DriverVer   =
@@ -27,7 +28,12 @@ DefaultDestDir = 13
 LdacA2dp.sys = 1,,
 
 [Manufacturer]
-%ManufacturerName% = LdacA2dp,NT$ARCH$.10.0...22621
+%ManufacturerName% = LdacA2dp,NT$ARCH$.10.0...20348,NT$ARCH$.10.0...22621
+
+[LdacA2dp.NT$ARCH$.10.0...20348]
+; OPPO Enco Buds2 test target. This generic compatible ID is used only with
+; the per-instance SetupAPI installer and the driver's runtime Bluetooth-MAC guard.
+%LdacA2dp.DeviceDesc% = LdacA2dp_Device, BTHENUM\{0000110b-0000-1000-8000-00805f9b34fb}_GENERIC
 
 [LdacA2dp.NT$ARCH$.10.0...22621]
 ; JBL Live 780NC (DeviceID VID 0x02B0 from the SIG namespace, PID 0x0000)
