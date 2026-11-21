@@ -8,7 +8,7 @@ on:
 jobs:
   core:
     name: Protocol core, codecs, service, tests
-    runs-on: windows-latest
+    runs-on: windows-2022
     steps:
       - uses: actions/checkout@v5
       - name: Build and test (build.cmd)
@@ -37,7 +37,7 @@ jobs:
 
   driver:
     name: KMDF driver
-    runs-on: windows-latest
+    runs-on: windows-2022
     steps:
       - uses: actions/checkout@v5
       # The runner image has no WDK; take it (with ACX) from NuGet, see driver/Directory.Build.props.
