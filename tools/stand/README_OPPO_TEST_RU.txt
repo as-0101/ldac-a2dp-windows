@@ -44,6 +44,17 @@ the upgrade is refused. Import this package's test certificate and ensure test s
 is enabled before proceeding; restart after preparation. After the upgrade, restart
 again and capture DbgPrintEx with DebugView (Capture Kernel) or WinDbg.
 
+DIAGNOSTIC UPGRADE OF AN ALREADY INSTALLED LDAC DRIVER
+------------------------------------------------------
+If this device already uses an LDAC A2DP Project package (for example oem73.inf),
+do NOT run install-oppo.cmd: that command intentionally accepts only the inbox bth.inf.
+Use upgrade-oppo.cmd instead. It verifies the exact OPPO MAC, current service and
+manufacturer, single-A2DP-device condition, that the candidate is newer than the
+installed driver, and that its rank remains below inbox bth.inf. If any check fails,
+the upgrade is refused. Import this package's test certificate and ensure test signing
+is enabled before proceeding; restart after preparation. After the upgrade, restart
+again and capture DbgPrintEx with DebugView (Capture Kernel) or WinDbg.
+
 INSTALLATION
 ------------
 1. Confirm OPPO Enco Buds2 is paired and connected.
