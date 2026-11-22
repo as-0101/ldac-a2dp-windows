@@ -26,7 +26,7 @@ The next work can continue from CI artifact inspection and source comparison. As
 
 ## Updated continuation — 2026-11-22
 
-1. Finish CI #143 / run 45050062916 for PR #3. If the KMDF driver job succeeds, compare the generated driver package/INF with CI #133; if it fails, inspect the precise build error and keep PR #3 unmerged.
+1. CI #143 / run 45050062916 completed successfully. All 3 jobs passed; the Windows Driver variant generated a test package and unsigned driver. Compare the two variants only if a package-level difference becomes relevant; neither build proves physical class binding.
 2. Keep PR #3 draft and never merge it automatically. The A/B build only checks target-platform build/package effects, not runtime class binding.
 3. Preserve CI #133 and #143 artifacts with their artifact IDs and SHA-256 digests before the 2026-11-29 expiry.
 4. The strongest next discriminator remains a controlled physical-server load of the ACX 1.0 package, with a verified rollback package and Kernel Debug Output capture. Do not install or restart any device until the user explicitly authorizes the test.
