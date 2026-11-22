@@ -15,39 +15,32 @@ jobs:
     runs-on: windows-2022
     timeout-minutes: 20
     steps:
-      - name: Obtain portable WinDbg console tools
+      - name: Install Windows SDK Debugging Tools
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
           $root = Join-Path $env:RUNNER_TEMP 'acx-livekd'
           New-Item -ItemType Directory -Path $root -Force | Out-Null
 
-          $appInstallerPath = Join-Path $root 'windbg.appinstaller'
-          Invoke-WebRequest 'https://aka.ms/windbg/download' -OutFile $appInstallerPath
-          [xml]$appInstaller = Get-Content $appInstallerPath
-          $bundleNode = $appInstaller.SelectSingleNode("//*[local-name()='MainBundle']")
-          if (-not $bundleNode) { throw 'WinDbg appinstaller does not contain MainBundle' }
-          $bundleUrl = $bundleNode.GetAttribute('Uri')
-          if (-not $bundleUrl) { throw 'WinDbg appinstaller MainBundle Uri is empty' }
+          $setup = Join-Path $root 'winsdksetup.exe'
+          Invoke-WebRequest 'https://download.microsoft.com/download/9d2b0e7e-c04f-402c-8ce6-51f1e56028e8/KIT_BUNDLE_WINDOWSSDK_MEDIACREATION/winsdksetup.exe' -OutFile $setup
+          $setupLog = Join-Path $root 'winsdksetup.log'
+          $p = Start-Process -FilePath $setup -ArgumentList @('/features','OptionId.WindowsDesktopDebuggers','/quiet','/norestart','/log',$setupLog) -Wait -PassThru
+          "SDK_SETUP_EXIT=$($p.ExitCode)" | Out-File (Join-Path $root 'sdk-install.txt') -Encoding utf8
+          if ($p.ExitCode -ne 0 -and $p.ExitCode -ne 3010) { throw "Windows SDK Debugging Tools install failed: $($p.ExitCode)" }
 
-          $bundlePath = Join-Path $root 'windbg.msixbundle'
-          Invoke-WebRequest $bundleUrl -OutFile $bundlePath
-          $bundleZip = Join-Path $root 'windbg-bundle.zip'
-          Copy-Item $bundlePath $bundleZip
-          Expand-Archive -LiteralPath $bundleZip -DestinationPath (Join-Path $root 'bundle') -Force
-
-          $msix = Get-ChildItem (Join-Path $root 'bundle') -Filter '*.msix' -Recurse |
-            Where-Object { $_.Name -match 'x64' } | Sort-Object Length -Descending | Select-Object -First 1
-          if (-not $msix) { throw 'WinDbg x64 MSIX package not found in bundle' }
-
-          $msixZip = Join-Path $root 'windbg-x64.zip'
-          Copy-Item $msix.FullName $msixZip
-          $packageDir = Join-Path $root 'windbg-package'
-          Expand-Archive -LiteralPath $msixZip -DestinationPath $packageDir -Force
-          $kd = Get-ChildItem $packageDir -Filter 'kdX64.exe' -Recurse | Select-Object -First 1
-          if (-not $kd) { throw 'kdX64.exe not found in the official WinDbg x64 package' }
-          Write-Host "Portable KD: $($kd.FullName)"
-          "KD_PATH=$($kd.FullName)" | Out-File (Join-Path $root 'kd-path.txt') -Encoding utf8
+          $programFilesX86 = [Environment]::GetFolderPath('ProgramFilesX86')
+          $kdPath = Join-Path $programFilesX86 'Windows Kits\10\Debuggers\x64\kd.exe'
+          for ($i=0; $i -lt 60 -and -not (Test-Path $kdPath); $i++) { Start-Sleep -Seconds 2 }
+          if (-not (Test-Path $kdPath)) {
+            Get-ChildItem (Join-Path $programFilesX86 'Windows Kits\10\Debuggers') -Filter 'kd.exe' -Recurse -ErrorAction SilentlyContinue |
+              Select-Object -First 5 FullName | Format-Table -AutoSize
+            throw 'kd.exe not found after Windows SDK Debugging Tools installation'
+          }
+          $kdVersion = (Get-Item $kdPath).VersionInfo.FileVersion
+          "KD_PATH=$kdPath" | Out-File (Join-Path $root 'kd-path.txt') -Encoding utf8
+          "KD_VERSION=$kdVersion" | Out-File (Join-Path $root 'sdk-install.txt') -Append -Encoding utf8
+          Write-Host "KD: $kdPath ($kdVersion)"
 
       - name: Capture and inspect live kernel state
         shell: pwsh
