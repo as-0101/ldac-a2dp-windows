@@ -61,3 +61,5 @@ The exact ACX function count in the Server 2022 10.0.20348.3451 class module has
 
 | E-025 | CI #143 for the Windows Driver target-platform variant completed successfully; all 3 jobs passed; INF DriverVer 0.2.326.1734; signability and build reported 0 errors/warnings. | CONFIRMED | Run https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45050062916; KMDF job 137292983701; commit 6656e2d1fcda8d731f6795bd2e7a2950d5ba8309. |
 | E-026 | CI #133 and #143 test/unsigned-driver artifacts were copied to persistent Files Library. | CONFIRMED | Files Library IDs listed in PROJECT_STATE.md; directory ID 6b0318b95f648191802d868fc1be5e96. |
+
+| E-027 | Microsoft defines KmdfLibraryVersion as the KMDF framework version; it does not select the ACX class version. LdacA2dp's ACX version is selected by ACX_VERSION_MAJOR/MINOR and the acxstub.lib path in the project file. | CONFIRMED | Microsoft INF WDF directives: https://learn.microsoft.com/en-us/windows-hardware/drivers/wdf/specifying-wdf-directives-in-inf-files (KmdfLibraryVersion lines 248–253); LdacA2dp.vcxproj. |
