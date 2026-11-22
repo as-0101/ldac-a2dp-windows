@@ -5,10 +5,11 @@
 ## Required reading order
 
 1. [Current project state](docs/agent/PROJECT_STATE.md) — authoritative current status and next step.
-2. [Evidence register](docs/agent/EVIDENCE.md) — every important claim linked to logs, commits, CI and artifacts.
-3. [Knowledge graph](docs/agent/KNOWLEDGE_GRAPH.md) — causal chain, hypotheses and dependencies.
-4. [Decisions and experiments](docs/agent/DECISIONS_AND_EXPERIMENTS.md) — what was tested, excluded and why.
-5. [Next actions](docs/agent/NEXT_ACTIONS.md) — exact continuation sequence.
+2. [CI #133 package review](docs/agent/CI133_PACKAGE_REVIEW.md) — inspected ZIP, PDB comparison, ACX 1.0 API evidence, INF and OS-servicing caveat.
+3. [Evidence register](docs/agent/EVIDENCE.md) — every important claim linked to logs, commits, CI and artifacts.
+4. [Knowledge graph](docs/agent/KNOWLEDGE_GRAPH.md) — causal chain, hypotheses and dependencies.
+5. [Decisions and experiments](docs/agent/DECISIONS_AND_EXPERIMENTS.md) — what was tested, excluded and why.
+6. [Next actions](docs/agent/NEXT_ACTIONS.md) — exact continuation sequence.
 
 Full human-readable research journal and original evidence index:
 - [Notion research journal](https://app.notion.com/p/41f769fff636810fbd50c285bc3d33f6)
