@@ -70,6 +70,8 @@ jobs:
           New-ItemProperty -Path 'HKCU:\Software\Sysinternals\LiveKd' -Name EulaAccepted -PropertyType DWord -Value 1 -Force | Out-Null
 
           $kdPath = (Get-Content -LiteralPath (Join-Path $root 'kd-path.txt') -Raw).Trim().Substring(8)
+          $env:PATH = "$(Split-Path -Parent $kdPath);$env:PATH"
+          Write-Host "KD directory added to PATH: $(Split-Path -Parent $kdPath)"
           New-Item -ItemType Directory -Path 'C:\Symbols' -Force | Out-Null
           $env:_NT_SYMBOL_PATH = 'srv*C:\Symbols*https://msdl.microsoft.com/download/symbols'
           $dump = Join-Path $root 'server2022-live.dmp'
@@ -84,9 +86,10 @@ jobs:
           if (-not (Test-Path $dump)) { throw 'LiveKD reported success but dump file is missing' }
           "DUMP_SIZE=$((Get-Item $dump).Length)" | Out-File (Join-Path $root 'result.txt') -Append -Encoding utf8
 
-          $cmd = '.symfix C:\Symbols; .reload /f Wdf01000.sys; .reload /f Acx01000.sys; lmvm Acx01000; !wdfldr; !wdfkd.wdfldr Acx01000.sys; q'
+          $cmdFile = Join-Path $root 'inspect-wdfldr.txt'
+          @('.symfix C:\Symbols', '.reload /f Wdf01000.sys', '.reload /f Acx01000.sys', 'lmvm Acx01000', '!wdfldr', '!wdfkd.wdfldr Acx01000.sys', 'q') | Set-Content -LiteralPath $cmdFile -Encoding ascii
           Write-Host 'Opening saved live dump with KD and querying WDF/ACX class module.'
-          & $kdPath -z $dump -y $env:_NT_SYMBOL_PATH -logo $log -c $cmd
+          & $kdPath -z $dump -y $env:_NT_SYMBOL_PATH -logo $log -cf $cmdFile
           $kdExit = $LASTEXITCODE
           "KD_EXIT=$kdExit" | Out-File (Join-Path $root 'result.txt') -Append -Encoding utf8
           if (Test-Path $log) { Get-Content $log }
