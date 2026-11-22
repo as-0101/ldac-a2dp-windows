@@ -75,8 +75,10 @@ jobs:
           $kdPath = (Get-Content -LiteralPath (Join-Path $root 'kd-path.txt') -Raw).Trim().Substring(8)
           $kdDir = Split-Path -Parent $kdPath
           $env:PATH = "$kdDir;$env:PATH"
-          Copy-Item -LiteralPath $livekd.FullName -Destination (Join-Path $kdDir 'livekd.exe') -Force
+          $livekdInKdDir = Join-Path $kdDir 'livekd.exe'
+          Copy-Item -LiteralPath $livekd.FullName -Destination $livekdInKdDir -Force
           Write-Host "LiveKD and KD are colocated in: $kdDir"
+          $livekd = Get-Item -LiteralPath $livekdInKdDir
           New-Item -ItemType Directory -Path 'C:\Symbols' -Force | Out-Null
           $env:_NT_SYMBOL_PATH = 'srv*C:\Symbols*https://msdl.microsoft.com/download/symbols'
           $dump = Join-Path $root 'server2022-live.dmp'
