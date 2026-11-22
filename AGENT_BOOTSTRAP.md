@@ -50,3 +50,7 @@ Read [docs/agent/SAMPLE_COMPARISON.md](docs/agent/SAMPLE_COMPARISON.md) for the 
 
 Current A/B branch: [experiment/acx10-windowsdriver-platform](https://github.com/as-0101/ldac-a2dp-windows/tree/experiment/acx10-windowsdriver-platform), draft [PR #3](https://github.com/as-0101/ldac-a2dp-windows/pull/3), CI #143 run 45050062916 completed successfully; all three jobs passed. Artifacts are preserved in the Files Library; see PROJECT_STATE.md.
 
+
+## Physical test safety
+
+Before any server-side test, read [PHYSICAL_TEST_RUNBOOK.md](docs/agent/PHYSICAL_TEST_RUNBOOK.md). CI #133 / Universal / ACX 1.0 is the isolated first candidate. The package's prepare script changes certificate stores, debug-print registry and BCD testsigning; it requires reboot. The upgrade tool has explicit gates. Rollback selects inbox bth.inf, not the previous CI #126 package. Nothing has been run on the physical server.
