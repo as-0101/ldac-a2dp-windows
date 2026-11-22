@@ -119,3 +119,15 @@ The exact ACX function count in the Server 2022 10.0.20348.3451 class module has
 | E-050 | A more recently serviced hosted Server 2022 image (UBR 5870, KB5070761) has Acx01000.sys 10.0.20348.5866 and ACX CLASS_MODULE v1.0. | CONFIRMED | Metadata run #12 / 45057605446 and class query run #10 / 45057090987 | Physical host UBR 5761 / Acx01000.sys 10.0.20348.3451 also has class v1.0. OS update is not supported as a route to ACX 1.1 on current evidence; file version is not class version. |
 | E-051 | CI #133 ACX 1.0 package preflight succeeds on a disposable Server 2022 runner: DriverVer 0.2.326.1634, expected SYS hash, expected test certificate, BCD testsigning Yes, DevGen available. | CONFIRMED | Preflight run #1 / 45058127024, artifact 14768550673 | A safe hosted load test can proceed without changing the physical host or BCD. |
 | E-052 | Hosted ACX 1.0 load test job was added to build run #230 / 45058265287. | IN PROGRESS at this evidence timestamp | Commit 86a1d46aa7c4bc3561e96ded77442b03b34789f0 | Wait for PnP and ACX client-list result; no success/failure conclusion yet. |
+
+
+## Evidence additions — 2026-11-22 (reorganization audit)
+
+| ID | Claim | Status | Environment | Source / interpretation |
+|---|---|---|---|---|
+| E-053 | ACX 1.0 candidate still fails PnP start when Acx01000 is explicitly RUNNING before install. | CONFIRMED negative result | VM_TEST | CI #248 / run 45060225420, commit 3d1d5d7e179da3379013b10f9863066200c459b6; report artifact 14769048266. Synthetic SWD device selected oem13.inf / 0.2.326.1922; Code 37 / 0xC000000D; Event 219; no DriverEntry evidence. |
+| E-054 | CI #248 candidate package version is 0.2.326.1922. | CONFIRMED | STATIC_ANALYSIS + VM_TEST | Report preflight.json and SetupAPI log. Corrects an older PROJECT_STATE line that said 0.2.326.1920. |
+| E-055 | WDK 26100.6584 ACX 1.0 and 1.1 stubs encode distinct class-bind descriptors. | CONFIRMED | STATIC_ANALYSIS | CI #255 / run 45060819535, artifact 14769755224: ACX 1.0 = 1.0 / 210 functions / 62 structures; ACX 1.1 = 1.1 / 221 / 62. |
+| E-056 | CI #246 candidate SYS contains ACX 1.0 / 210 / 62 descriptor. | CONFIRMED | STATIC_ANALYSIS | CI #255 report parses actual SYS descriptor. This rules out accidental ACX 1.1 stub descriptor in that binary, not all possible WDF/ACX bind metadata incompatibilities. |
+| E-057 | Simple ACX 1.1-vs-1.0 version mismatch alone explains the bind failure. | REFUTED as sufficient explanation | VM_TEST | E-053: ACX 1.0 candidate still fails with same ProblemStatus after ACX service was started. Other bind metadata/runtime invariants remain unresolved. |
+| E-058 | CI #255 ACX stub inspection workflow #1 produced a complete library/header report. | REFUTED | BUILD_ONLY | Run 45060793775 failed because the script assumed the NuGet WDK package had an Include directory; no artifact uploaded. Later successful CI #255 used a corrected approach. |
