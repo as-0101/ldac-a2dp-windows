@@ -197,6 +197,37 @@ if ($acxStubItem.Length -ne 1362352 -or $acxStubHash -ne '9846617F4DFB2B5C60A33F
 $acxHeaderHash = (Get-FileHash -LiteralPath $acxHeaderPath -Algorithm SHA256).Hash
 $wdfDriverEntryHash = (Get-FileHash -LiteralPath $wdfDriverEntryLibPath -Algorithm SHA256).Hash
 $wdfLdrHash = (Get-FileHash -LiteralPath $wdfLdrLibPath -Algorithm SHA256).Hash
+
+$wdfHeaderScanPath = Join-Path $reportRoot 'wdf-class-bind-header-scan.txt'
+$headerRoots = @(
+    (Join-Path $toolchain.DdkIncludePath 'wdf'),
+    (Join-Path $toolchain.DdkIncludePath 'acx')
+) | Where-Object { Test-Path -LiteralPath $_ }
+$headerFiles = foreach ($root in $headerRoots) {
+    Get-ChildItem -LiteralPath $root -Filter '*.h' -File -Recurse -ErrorAction SilentlyContinue
+}
+$headerMatches = @($headerFiles | Select-String -Pattern 'WDF_CLASS_BIND_INFO2?|WDF_CLASS_EXTENSION_DESCRIPTOR|WDF_CLASS_LIBRARY_INFO|WDF_CLASS_VERSION' -Context 2,8 -ErrorAction SilentlyContinue)
+if ($headerMatches.Count -gt 0) {
+    $headerReport = foreach ($match in $headerMatches) {
+        @(
+            "FILE=$($match.Path)"
+            "LINE=$($match.LineNumber)"
+            $match.Context.PreContext
+            $match.Line
+            $match.Context.PostContext
+            ''
+        )
+    }
+    $headerReport | Set-Content -LiteralPath $wdfHeaderScanPath -Encoding utf8
+} else {
+    'NO_PUBLIC_WDK_HEADER_MATCH_FOR_WDF_CLASS_BIND_TYPES' | Set-Content -LiteralPath $wdfHeaderScanPath -Encoding utf8
+}
+$wdfHeaderScan = [ordered]@{
+    SearchRoots = @($headerRoots)
+    HeaderFileCount = @($headerFiles).Count
+    MatchCount = $headerMatches.Count
+    Report = 'wdf-class-bind-header-scan.txt'
+}
 $driverVer = [regex]::Match($infText, '(?im)^\s*DriverVer\s*=\s*(.+)$').Groups[1].Value.Trim()
 $manifest = [ordered]@{
     Experiment = 'ACX 1.0 Microsoft AudioCodec sample-derived bind probe'
@@ -229,6 +260,15 @@ $manifest = [ordered]@{
         Length = $acxStubItem.Length
         SHA256 = $acxStubHash
     }
+    AcxStubDescriptor = [ordered]@{
+        MajorVersion = 1
+        MinorVersion = 0
+        FunctionCount = 210
+        StructureCount = 62
+        DescriptorSizeBytes = 120
+        SourceArtifact = 'CI #255 artifact 14769755224; exact stub hash asserted above'
+    }
+    WdfClassBindHeaderScan = $wdfHeaderScan
     AcxHeader = [ordered]@{
         Path = $acxHeaderPath
         SHA256 = $acxHeaderHash

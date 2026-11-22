@@ -115,29 +115,50 @@ function Restore-WdfServiceDiagnostics([object]$Snapshot,[System.Collections.Gen
     }
 }
 
-function Invoke-LiveKdDump([string]$Phase,[string[]]$Commands) {
+function Invoke-LiveKdDump([string]$Phase,[string[]]$Commands,[switch]$FullMirror) {
     $kdPath = $env:KD_PATH
     $liveKdPath = $env:LIVEKD_PATH
     if (-not $kdPath -or -not (Test-Path -LiteralPath $kdPath)) { throw 'KD_PATH missing or kd.exe absent.' }
     if (-not $liveKdPath -or -not (Test-Path -LiteralPath $liveKdPath)) { throw 'LIVEKD_PATH missing or livekd.exe absent.' }
     if (-not $env:_NT_SYMBOL_PATH) { throw '_NT_SYMBOL_PATH is not set.' }
 
-    $dump = Join-Path $privateRoot "$Phase-native.dmp"
     $captureLog = Join-Path $reportRoot "$Phase-livekd-capture.txt"
     $commandFile = Join-Path $privateRoot "$Phase-kd-commands.txt"
     $kdLog = Join-Path $reportRoot "$Phase-kd-output.txt"
     $Commands | Set-Content -LiteralPath $commandFile -Encoding ascii
 
-    $liveMode = 'native-live-dump'
-    $liveOutput = & $liveKdPath -o $dump -ml 2>&1
-    $liveExit = $LASTEXITCODE
-    if ($liveExit -ne 0 -or -not (Test-Path -LiteralPath $dump)) {
+    if ($FullMirror) {
         $liveMode = 'mirror-all-regions-0x3FFF'
-        Remove-Item -LiteralPath $dump -Force -ErrorAction SilentlyContinue
+        $dump = Join-Path $privateRoot "$Phase-mirror.dmp"
         $liveOutput = & $liveKdPath -o $dump '-m0x3FFF' 2>&1
         $liveExit = $LASTEXITCODE
+    } else {
+        $liveMode = 'native-live-dump'
+        $dump = Join-Path $privateRoot "$Phase-native.dmp"
+        $liveOutput = & $liveKdPath -o $dump -ml 2>&1
+        $liveExit = $LASTEXITCODE
+        if ($liveExit -ne 0 -or -not (Test-Path -LiteralPath $dump)) {
+            $liveMode = 'mirror-all-regions-0x3FFF-fallback'
+            Remove-Item -LiteralPath $dump -Force -ErrorAction SilentlyContinue
+            $dump = Join-Path $privateRoot "$Phase-mirror.dmp"
+            $liveOutput = & $liveKdPath -o $dump '-m0x3FFF' 2>&1
+            $liveExit = $LASTEXITCODE
+        }
     }
-    "LiveKD_MODE=$liveMode" | Set-Content -LiteralPath $captureLog -Encoding utf8
+    if ($liveOutput) { $liveOutput | Out-File -LiteralPath $captureLog -Encoding utf8 }
+    $dumpLength = 0
+    $dumpHash = $null
+    if (Test-Path -LiteralPath $dump) {
+        $dumpItem = Get-Item -LiteralPath $dump
+        $dumpLength = [long]$dumpItem.Length
+        $dumpHash = (Get-FileHash -LiteralPath $dump -Algorithm SHA256).Hash
+    }
+    @(
+        "LiveKD_MODE=$liveMode"
+        "LiveKD_EXIT_CODE=$liveExit"
+        "DUMP_LENGTH_BYTES=$dumpLength"
+        "DUMP_SHA256=$dumpHash"
+    ) | Set-Content -LiteralPath $captureLog -Encoding utf8
     if ($liveOutput) { $liveOutput | Out-File -LiteralPath $captureLog -Append -Encoding utf8 }
     if ($liveExit -ne 0 -or -not (Test-Path -LiteralPath $dump)) { throw "LiveKD $Phase capture failed: $liveExit ($liveMode)" }
 
@@ -152,6 +173,11 @@ function Invoke-LiveKdDump([string]$Phase,[string[]]$Commands) {
         "KD_EXIT_CODE=$kdExit" | Set-Content -LiteralPath (Join-Path $reportRoot "$Phase-kd-exit.txt") -Encoding utf8
     }
     $content = Get-Content -LiteralPath $kdLog -Raw
+    $missingPageCount = [regex]::Matches($content, '(?im)Page\s+[\da-f]+\s+not present in the dump file').Count
+    "KD_MISSING_DUMP_PAGE_COUNT=$missingPageCount" | Out-File -LiteralPath $captureLog -Append -Encoding utf8
+    if ($missingPageCount -gt 0) {
+        "MISSING_DUMP_PAGES=$missingPageCount" | Set-Content -LiteralPath (Join-Path $reportRoot "$Phase-missing-dump-pages.txt") -Encoding utf8
+    }
     Remove-Item -LiteralPath $dump -Force -ErrorAction SilentlyContinue
     return $content
 }
@@ -429,6 +455,13 @@ try {
         '!wdfkd.wdflogdump Acx01000 -d',
         'x Wdf01000!*WdfLdrDbgPrintOn*',
         'dd Wdf01000!WdfLdrDbgPrintOn L1',
+        'x Wdf01000!*Class*',
+        'dt Wdf01000!WDF_CLASS_BIND_INFO',
+        'dt Wdf01000!WDF_CLASS_BIND_INFO2',
+        'dt Wdf01000!WDF_CLASS_EXTENSION_DESCRIPTOR',
+        'dt Wdf01000!WDF_CLASS_LIBRARY_INFO',
+        'dt Wdf01000!WDF_CLASS_VERSION',
+        'dt Wdf01000!_CLASS_MODULE',
         '!dbgprint',
         'x Acx01000!*AcxFunctionCount*',
         'x Acx01000!*AcxStructureCount*',
@@ -437,7 +470,14 @@ try {
         'x Acx01000!*Acx_BIND_INFO*',
         'q'
     )
-    $preLog = Invoke-LiveKdDump -Phase 'preinstall' -Commands $preCommands
+    $preLog = Invoke-LiveKdDump -Phase 'preinstall' -Commands $preCommands -FullMirror
+    $preCaptureText = Get-Content -LiteralPath (Join-Path $reportRoot 'preinstall-livekd-capture.txt') -Raw
+    $preCaptureMode = [regex]::Match($preCaptureText, '(?im)^LiveKD_MODE=(?<value>.+)$').Groups['value'].Value.Trim()
+    $preDumpHash = [regex]::Match($preCaptureText, '(?im)^DUMP_SHA256=(?<value>.+)$').Groups['value'].Value.Trim()
+    $preDumpLength = [regex]::Match($preCaptureText, '(?im)^DUMP_LENGTH_BYTES=(?<value>\d+)$').Groups['value'].Value.Trim()
+    $preMissingPageCount = [regex]::Match($preCaptureText, '(?im)^KD_MISSING_DUMP_PAGE_COUNT=(?<value>\d+)$').Groups['value'].Value.Trim()
+    $preWdfIfrLines = @($preLog -split '\r?\n' | Where-Object { $_ -match '(?i)(wdflogdump|FxStub|BindClasses|VersionBindClass|InitTypes|WdfVersionBindClass|AcxAudioCodecProbe|Acx01000|STATUS_INVALID_PARAMETER|0xC000000D|Error events encountered in logs)' })
+    $preWdfIfrLines | Set-Content -LiteralPath (Join-Path $reportRoot 'preinstall-wdf-ifr-lines.txt') -Encoding utf8
     $classModuleMatch = [regex]::Match($preLog, '(?ims)CLASS_MODULE.{0,1200}?^\s*Version\s+v?1\.0')
     $missingDumpPage = ($preLog -match '(?i)Page\s+[\da-f]+\s+not present in the dump file')
     $wdfRuntimeVisible = ($preLog -match '(?is)LIBRARY_MODULE.{0,500}?\n\s*Version\s+v?1\.33')
@@ -462,6 +502,11 @@ try {
         WdfRuntimeVersionVisible = $wdfRuntimeVisible
         WdfClientVersionVisible = $wdfClientVisible
         MissingDumpPageObserved = $missingDumpPage
+        LiveKdCaptureMode = $preCaptureMode
+        LiveKdDumpSHA256 = $preDumpHash
+        LiveKdDumpLengthBytes = if ($preDumpLength) { [long]$preDumpLength } else { $null }
+        MissingDumpPageCount = if ($preMissingPageCount) { [int]$preMissingPageCount } else { $null }
+        WdfIfrLineCount = $preWdfIfrLines.Count
         AcxServiceWasRunningBeforeProbe = $state.AcxWasRunning
         AcxServiceStartedByProbe = $state.AcxStartedByProbe
     }
@@ -647,9 +692,14 @@ try {
     $wdfMatch = [regex]::Match($postLog, 'AcxAudioCodecProbe: WdfDriverCreate STATUS=0x(?<status>[0-9A-Fa-f]{8})')
     $acxMatch = [regex]::Match($postLog, 'AcxAudioCodecProbe: AcxDriverInitialize STATUS=0x(?<status>[0-9A-Fa-f]{8})')
     $deviceAddSeen = $postLog -match 'AcxAudioCodecProbe: EvtDeviceAdd REACHED'
-    $wdfIfrLines = @($postLog -split '\r?\n' | Where-Object { $_ -match '(?i)(wdflogdump|FxStub|BindClasses|VersionBindClass|InitTypes|WdfVersionBindClass|AcxAudioCodecProbe|Acx01000|STATUS_INVALID_PARAMETER|0xC000000D)' })
+    $postWdfIfrLines = @($postLog -split '\r?\n' | Where-Object { $_ -match '(?i)(wdflogdump|FxStub|BindClasses|VersionBindClass|InitTypes|WdfVersionBindClass|AcxAudioCodecProbe|Acx01000|STATUS_INVALID_PARAMETER|0xC000000D|Error events encountered in logs)' })
+    $postWdfIfrLines | Set-Content -LiteralPath (Join-Path $reportRoot 'postinstall-wdf-ifr-lines.txt') -Encoding utf8
+    $wdfIfrLines = @(
+        @($preWdfIfrLines | ForEach-Object { "PREINSTALL: $_" })
+        @($postWdfIfrLines | ForEach-Object { "POSTINSTALL: $_" })
+    )
     $wdfIfrLines | Set-Content -LiteralPath (Join-Path $reportRoot 'wdf-ifr-lines.txt') -Encoding utf8
-    $wdfBindDebugLines = @($wdfIfrLines | Where-Object { $_ -match '(?i)(FxStub|BindClasses|VersionBindClass|InitTypes|WdfVersionBindClass|STATUS_INVALID_PARAMETER|0xC000000D)' })
+    $wdfBindDebugLines = @($postWdfIfrLines | Where-Object { $_ -match '(?i)(FxStub|BindClasses|VersionBindClass|InitTypes|WdfVersionBindClass|STATUS_INVALID_PARAMETER|0xC000000D)' })
     $wdfBindDebugLines | Set-Content -LiteralPath (Join-Path $reportRoot 'wdf-bind-debug-lines.txt') -Encoding utf8
     $wdfBindFailureLine = $wdfBindDebugLines | Where-Object { $_ -match '(?i)(returned status|STATUS_INVALID_PARAMETER|0xC000000D|bind.*fail|fail.*bind)' } | Select-Object -First 1
     $wdfIfrFailureLine = $wdfIfrLines | Where-Object { $_ -match '(?i)(returned status|STATUS_INVALID_PARAMETER|0xC000000D|bind.*fail|fail.*bind)' } | Select-Object -First 1
@@ -699,6 +749,12 @@ try {
         PreinstallClassVersionCaptureStatus = $classModuleStatus
         PreinstallWdfRuntimeVisible = $wdfRuntimeVisible
         PreinstallWdfClientVisible = $wdfClientVisible
+        PreinstallLiveKdCaptureMode = $preCaptureMode
+        PreinstallLiveKdDumpSHA256 = $preDumpHash
+        PreinstallLiveKdDumpLengthBytes = if ($preDumpLength) { [long]$preDumpLength } else { $null }
+        PreinstallMissingDumpPageCount = if ($preMissingPageCount) { [int]$preMissingPageCount } else { $null }
+        PreinstallWdfIfrLines = $preWdfIfrLines
+        PostinstallWdfIfrLines = $postWdfIfrLines
         WdfBindDebugLines = $wdfBindDebugLines
         WdfBindFailureLine = $wdfBindFailureLine
         WdfIfrLines = $wdfIfrLines
