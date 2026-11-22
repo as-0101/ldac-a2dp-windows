@@ -57,6 +57,81 @@ function Invoke-LiveKdDump([string]$Phase,[string[]]$Commands) {
     return $content
 }
 
+function Get-WdfLoaderDiagnosticsSnapshot {
+    $keyPath = 'HKLM:\SYSTEM\CurrentControlSet\Control\Wdf\Kmdf\Diagnostics'
+    $keyExisted = Test-Path -LiteralPath $keyPath
+    $valueExisted = $false
+    $originalValue = $null
+    $originalKind = $null
+    if ($keyExisted) {
+        $key = Get-Item -LiteralPath $keyPath
+        $valueExisted = $key.GetValueNames() -contains 'DbgPrintOn'
+        if ($valueExisted) {
+            $originalKind = [string]$key.GetValueKind('DbgPrintOn')
+            if ($originalKind -ne 'DWord') {
+                throw "Existing WDF DbgPrintOn value has unexpected registry type: $originalKind. Refusing to overwrite it."
+            }
+            $originalValue = [int]$key.GetValue('DbgPrintOn')
+        }
+    }
+    return [ordered]@{
+        KeyPath = $keyPath
+        KeyExisted = $keyExisted
+        ValueExisted = $valueExisted
+        OriginalValue = $originalValue
+        OriginalKind = $originalKind
+        EnabledByProbe = $false
+    }
+}
+
+function Restore-WdfLoaderDiagnostics([object]$Diagnostics,[System.Collections.IDictionary]$Cleanup,[System.Collections.Generic.List[string]]$Errors,[System.Collections.Generic.List[string]]$Warnings) {
+    if (-not $Diagnostics -or -not $Diagnostics.EnabledByProbe) { return }
+    $keyPath = [string]$Diagnostics.KeyPath
+    try {
+        if ($Diagnostics.ValueExisted) {
+            if (-not (Test-Path -LiteralPath $keyPath)) { New-Item -Path $keyPath -Force | Out-Null }
+            New-ItemProperty -LiteralPath $keyPath -Name 'DbgPrintOn' -PropertyType DWord -Value ([int]$Diagnostics.OriginalValue) -Force | Out-Null
+        } elseif (Test-Path -LiteralPath $keyPath) {
+            Remove-ItemProperty -LiteralPath $keyPath -Name 'DbgPrintOn' -ErrorAction SilentlyContinue
+        }
+
+        if (-not $Diagnostics.KeyExisted -and (Test-Path -LiteralPath $keyPath)) {
+            $key = Get-Item -LiteralPath $keyPath
+            if ($key.ValueCount -eq 0 -and $key.SubKeyCount -eq 0) {
+                Remove-Item -LiteralPath $keyPath -Force
+            } else {
+                $Warnings.Add('WDF Diagnostics key was created by the probe but contains other data; the key was preserved after removing DbgPrintOn.')
+            }
+        }
+
+        $keyExistsAfter = Test-Path -LiteralPath $keyPath
+        $valueExistsAfter = $false
+        $valueAfter = $null
+        if ($keyExistsAfter) {
+            $key = Get-Item -LiteralPath $keyPath
+            $valueExistsAfter = $key.GetValueNames() -contains 'DbgPrintOn'
+            if ($valueExistsAfter) { $valueAfter = [int]$key.GetValue('DbgPrintOn') }
+        }
+        if ($Diagnostics.ValueExisted) {
+            $restored = $valueExistsAfter -and ($valueAfter -eq [int]$Diagnostics.OriginalValue)
+        } else {
+            $restored = -not $valueExistsAfter
+        }
+        if ($restored) {
+            $Cleanup.WdfDbgPrintOnRestored = $true
+            $Cleanup.WdfDiagnosticsKeyExistedBefore = [bool]$Diagnostics.KeyExisted
+            $Diagnostics.EnabledByProbe = $false
+            $Diagnostics.RestoredAtUtc = [DateTime]::UtcNow.ToString('o')
+            $Diagnostics.RestoredValue = if ($Diagnostics.ValueExisted) { [int]$Diagnostics.OriginalValue } else { $null }
+        } else {
+            $Errors.Add('WDF DbgPrintOn registry value did not return to its original state.')
+        }
+        $Diagnostics | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $reportRoot 'wdf-diagnostics-restored.json') -Encoding utf8
+    } catch {
+        $Errors.Add("WDF loader diagnostics restore failed: $($_.Exception.Message)")
+    }
+}
+
 function Invoke-Cleanup([switch]$Strict) {
     $errors = [System.Collections.Generic.List[string]]::new()
     $warnings = [System.Collections.Generic.List[string]]::new()
@@ -149,6 +224,10 @@ function Invoke-Cleanup([switch]$Strict) {
         } else {
             $cleanup.AcxServiceWasNotStartedByProbe = $true
             $cleanup.AcxServiceRestored = $true
+        }
+
+        if ($state.WdfDiagnostics) {
+            Restore-WdfLoaderDiagnostics -Diagnostics $state.WdfDiagnostics -Cleanup $cleanup -Errors $errors -Warnings $warnings
         }
 
     }
@@ -252,6 +331,23 @@ try {
         throw 'Runner is not already in testsigning mode. No BCD change or device creation will be attempted.'
     }
 
+    # Enable the documented KMDF loader diagnostics only on this disposable hosted runner.
+    # DbgPrintOn causes WDF to emit driver-load and framework-bind messages to the kernel debugger.
+    $state.WdfDiagnostics = Get-WdfLoaderDiagnosticsSnapshot
+    $state.WdfDiagnostics.EnabledByProbe = $true
+    $state.WdfDiagnostics | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $reportRoot 'wdf-diagnostics-before.json') -Encoding utf8
+    Save-State $state
+    if (-not $state.WdfDiagnostics.KeyExisted) {
+        New-Item -Path $state.WdfDiagnostics.KeyPath -Force | Out-Null
+    }
+    New-ItemProperty -LiteralPath $state.WdfDiagnostics.KeyPath -Name 'DbgPrintOn' -PropertyType DWord -Value 1 -Force | Out-Null
+    $dbgPrintOn = [int](Get-ItemPropertyValue -LiteralPath $state.WdfDiagnostics.KeyPath -Name 'DbgPrintOn' -ErrorAction Stop)
+    if ($dbgPrintOn -ne 1) { throw "WDF DbgPrintOn did not enable (observed $dbgPrintOn)." }
+    $state.WdfDiagnostics.EnabledValue = $dbgPrintOn
+    $state.WdfDiagnostics.EnabledAtUtc = [DateTime]::UtcNow.ToString('o')
+    $state.WdfDiagnostics | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $reportRoot 'wdf-diagnostics-enabled.json') -Encoding utf8
+    Save-State $state
+
     $serviceBefore = & sc.exe query Acx01000 2>&1
     $serviceBeforeExit = $LASTEXITCODE
     $serviceBeforeText = $serviceBefore -join [Environment]::NewLine
@@ -290,6 +386,7 @@ try {
         '!wdfldr',
         '!wdfkd.wdfldr Acx01000.sys',
         '!wdfldr acx01000',
+        '!dbgprint',
         'x Acx01000!*AcxFunctionCount*',
         'x Acx01000!*AcxStructureCount*',
         'x Acx01000!*AcxMinimumVersionRequired*',
@@ -484,8 +581,9 @@ try {
     $wdfMatch = [regex]::Match($postLog, 'AcxAudioCodecProbe: WdfDriverCreate STATUS=0x(?<status>[0-9A-Fa-f]{8})')
     $acxMatch = [regex]::Match($postLog, 'AcxAudioCodecProbe: AcxDriverInitialize STATUS=0x(?<status>[0-9A-Fa-f]{8})')
     $deviceAddSeen = $postLog -match 'AcxAudioCodecProbe: EvtDeviceAdd REACHED'
-    $wdfBindDebugLines = @($postLog -split '\r?\n' | Where-Object { $_ -match 'FxStub|BindClasses|InitTypes|WdfVersionBindClass|AcxAudioCodecProbe:' })
+    $wdfBindDebugLines = @($postLog -split '\r?\n' | Where-Object { $_ -match 'FxStub|BindClasses|VersionBindClass|InitTypes|WdfVersionBindClass|AcxAudioCodecProbe:' })
     $wdfBindDebugLines | Set-Content -LiteralPath (Join-Path $reportRoot 'wdf-bind-debug-lines.txt') -Encoding utf8
+    $wdfBindFailureLine = $wdfBindDebugLines | Where-Object { $_ -match '(?i)(returned status|status\s+0xC000000D|0xC000000D)' } | Select-Object -First 1
     $wdfStatus = if ($wdfMatch.Success) { '0x' + $wdfMatch.Groups['status'].Value.ToUpperInvariant() } else { $null }
     $acxStatus = if ($acxMatch.Success) { '0x' + $acxMatch.Groups['status'].Value.ToUpperInvariant() } else { $null }
 
@@ -501,8 +599,11 @@ try {
     } elseif ($driverEntrySeen -and $wdfStatus -eq '0x00000000' -and $acxStatus -eq '0x00000000') {
         $classification = 'DRIVERENTRY_AND_ACX_INITIALIZE_SUCCEEDED; EvtDeviceAdd marker not observed.'
         $firstStage = 'After AcxDriverInitialize; EvtDeviceAdd not observed'
+    } elseif ($problemStatusHex -eq '0xC000000D' -and $wdfBindFailureLine) {
+        $classification = "NO_DRIVERENTRY_MARKER; PnP reports STATUS_INVALID_PARAMETER; WDF loader trace: $wdfBindFailureLine"
+        $firstStage = $wdfBindFailureLine
     } elseif ($problemStatusHex -eq '0xC000000D') {
-        $classification = 'NO_DRIVERENTRY_MARKER; PnP reports STATUS_INVALID_PARAMETER. Failure is before DriverEntry; WDF/ACX internal substage is not exposed unless !dbgprint contains a loader marker.'
+        $classification = 'NO_DRIVERENTRY_MARKER; PnP reports STATUS_INVALID_PARAMETER. Failure is before DriverEntry; WDF/ACX internal substage is not exposed even with DbgPrintOn.'
         $firstStage = 'Pre-DriverEntry WDF/ACX load/bind stage; internal substage not exposed'
     } else {
         $classification = 'INCONCLUSIVE; candidate INF selected, but debugger output has no decisive DriverEntry/ACX status marker.'
@@ -527,6 +628,8 @@ try {
         PreinstallWdfRuntimeVisible = $wdfRuntimeVisible
         PreinstallWdfClientVisible = $wdfClientVisible
         WdfBindDebugLines = $wdfBindDebugLines
+        WdfBindFailureLine = $wdfBindFailureLine
+        WdfDiagnostics = $state.WdfDiagnostics
         CertificateThumbprint = $cert.Thumbprint
         SignTool = $signTool.FullName
         RepositoryCommit = $env:GITHUB_SHA
