@@ -2,6 +2,12 @@
 #include <wdf.h>
 #include <acx.h>
 
+// The official AudioCodec sample defines this in Samples/Shared/Public.h.
+// Keep only the section-placement macro needed by this minimal probe.
+#ifndef INIT_CODE_SEG
+#define INIT_CODE_SEG __declspec(code_seg("INIT"))
+#endif
+
 extern "C" DRIVER_INITIALIZE DriverEntry;
 EVT_WDF_DRIVER_DEVICE_ADD AcxAudioCodecProbeEvtDeviceAdd;
 EVT_WDF_DRIVER_UNLOAD AcxAudioCodecProbeEvtDriverUnload;
