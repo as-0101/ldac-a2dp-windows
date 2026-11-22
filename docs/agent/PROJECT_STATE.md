@@ -286,3 +286,20 @@ Full report: [2026-11-22-UBR5870-ACX10-HOSTED-PREFLIGHT.md](2026-11-22-UBR5870-A
 2. Only count the test if candidate INF was actually selected for the synthetic device and a load attempt occurred. An empty ACX ClientsList with no package selection/device start is not evidence.
 3. If pnputil does not select the candidate, inspect driver ranking and use an isolated CI-only SetupAPI selection path if needed; do not relax physical-host guards.
 4. Keep fix/server2022-acx-wdk-26100 unchanged (head 4571873b505c52a93db4c785fe3d083eabf8499e). Physical server remains unchanged: no certificate import, BCD change, driver install, device restart, rollback, reboot or OS update.
+
+## Continuation update — 2026-11-22 21:40 Kyiv
+
+### CI #246: first actual ACX 1.0 PnP install attempt
+- Run 45059761087, commit a0f16887e9241734d2c9b41903f77f850d18861c, workflow-level conclusion success. Hosted job created the SWD device and PnPUtil installed the candidate package on it; this was not a package-selection failure.
+- Test package artifact 14768758339, outer SHA-256 183d99aef49ac8e54d42b63d76d84b248e5fef3a1d36f2c281bc4525b9f16642. DriverVer 0.2.326.1917, ACX source 1.0, INF SHA-256 3D15A01E64DD74A59DDFE79AF934F8F9AF1E47350CB8CE1176511EFEFC100E32, SYS SHA-256 557A2F15AF6002F6EB2CCE0092D9689CC66CD2E97A5E4796FAF767ABDA3270A0, per-build certificate thumbprint 7F5222BB765A61F1B6EEDB6A55283BE5E5E12D24.
+- PnP selected oem13.inf, DriverVersion 0.2.326.1917, Provider LDAC A2DP Project, Service LdacA2dp. Device SWDDEVGENLDAC_A2DP_CI_TEST: CM_PROB_FAILED_DRIVER_ENTRY / Code 37, ProblemStatus 0xC000000D. System Kernel-PnP Event 219 reported LdacA2dp failed to load. Service LdacA2dp remained STOPPED (Win32 exit 1077).
+- Post-load mirror dump: no Acx01000.sys or LdacA2dp.sys in loaded-module list; WDF debugger could not find either; !dbgprint buffer empty. No DriverEntry evidence.
+- Critical caveat: this run did not start Acx01000 before installing the candidate. Thus the dump did not establish that ACX CLASS_MODULE v1.0 was active during the test. The 0xC000000D is concerning and matches the physical host, but this is not yet a conclusive rejection of ACX 1.0 compatibility.
+- Report artifact 14769346346, SHA-256 4816e9c80583597c546b720fa173f679271f8baf1d1981f85738ff4fe86f597e. DevGen removal returned 0x490; cleanup fallback is being added.
+
+### Next controlled test
+- Workflow commit 3d1d5d7e179da3379013b10f9863066200c459b6 starts Acx01000 explicitly on the disposable runner before pnputil, verifies RUNNING, records the runtime SYS version/hash and service state before/after, queries enabled Kernel-PnP event logs 219/227, and captures the SetupAPI install log.
+- Cleanup falls back to pnputil /remove-device if DevGen /remove fails, then checks whether the synthetic device remains.
+- CI #248 / run 45060225420 is queued for this exact revision. Poll it next. If Acx01000 remains active and CLASS_MODULE v1.0 is shown during the load attempt but the ACX 1.0 client still gets 0xC000000D before DriverEntry, the simple ACX-version mismatch hypothesis is insufficient; investigate the actual WDF bind metadata and service configuration. If DriverEntry appears, the previous hosted run was invalid because ACX runtime was not active.
+- Source check: current driver.c explicitly logs DriverEntry started, WdfDriverCreate, AcxDriverInitialize(ACX 1.0), AcxDriverIsVersionAvailable(1.0), and DriverEntry completed. The project file has a single ACX_VERSION_MAJOR=1 / ACX_VERSION_MINOR=0 property, include path and acxstub.lib path are parameterized by those values. build_driver.cmd comment still says ACX 1.1; it is stale documentation only and should be corrected on the experiment branch.
+- Physical host unchanged. No user-server certificate import, driver installation, BCD change, device restart, rollback, reboot, or OS update.
