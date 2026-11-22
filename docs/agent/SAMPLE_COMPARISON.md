@@ -13,7 +13,7 @@ Microsoft AudioCodec sample:
 - `KMDF_VERSION_MAJOR=1`, `KMDF_VERSION_MINOR=31`.
 - ACX include path and stub library are selected from the same version macros: `acx/km/$(ACX_VERSION_MAJOR).$(ACX_VERSION_MINOR)`.
 
-LdacA2dp baseline CI #126:
+LdacA2dp baseline successful GitHub Actions run #129 (legacy artifact filenames may say CI-126):
 - Also targeted ACX 1.1 and KMDF 1.31.
 - Physical Server 2022 host's WinDbg `!wdfldr Acx01000.sys` reported `CLASS_MODULE Version v1.0`; its WDF client version was 1.31.
 - Driver class bind failed before DriverEntry with `FxStubBindClasses / VersionBindClass class Acx → 0xC000000D`.
