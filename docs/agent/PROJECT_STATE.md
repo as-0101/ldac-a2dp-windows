@@ -303,3 +303,25 @@ Full report: [2026-11-22-UBR5870-ACX10-HOSTED-PREFLIGHT.md](2026-11-22-UBR5870-A
 - CI #248 / run 45060225420 is queued for this exact revision. Poll it next. If Acx01000 remains active and CLASS_MODULE v1.0 is shown during the load attempt but the ACX 1.0 client still gets 0xC000000D before DriverEntry, the simple ACX-version mismatch hypothesis is insufficient; investigate the actual WDF bind metadata and service configuration. If DriverEntry appears, the previous hosted run was invalid because ACX runtime was not active.
 - Source check: current driver.c explicitly logs DriverEntry started, WdfDriverCreate, AcxDriverInitialize(ACX 1.0), AcxDriverIsVersionAvailable(1.0), and DriverEntry completed. The project file has a single ACX_VERSION_MAJOR=1 / ACX_VERSION_MINOR=0 property, include path and acxstub.lib path are parameterized by those values. build_driver.cmd comment still says ACX 1.1; it is stale documentation only and should be corrected on the experiment branch.
 - Physical host unchanged. No user-server certificate import, driver installation, BCD change, device restart, rollback, reboot, or OS update.
+
+## Continuation update — 2026-11-22 21:45 Kyiv
+
+### CI #248: ACX service started before driver load; ACX 1.0 candidate still fails
+- Run 45060225420, commit 3d1d5d7e179da3379013b10f9863066200c459b6. The hosted job explicitly started Acx01000 and verified RUNNING before installing the candidate.
+- ACX runtime file on runner: 10.0.20348.5866, SHA-256 D10924E8B8F3E609EA696BFE4724B96460453D654DCBDEEC83E88D07214DA5D0. This is exactly the same file/hash as LiveKD baseline #15, where !wdfldr reported ACX CLASS_MODULE v1.0 and ACX's WDF client v1.31 over WDF runtime 1.33.
+- PnP selected the candidate oem13.inf (DriverVer 0.2.326.1920, provider LDAC A2DP Project, service LdacA2dp). SetupAPI confirms it outranked inbox bth.inf (rank 00FF2000 versus 00FF3001), and the device start was attempted.
+- Device still ended at Code 37 / CM_PROB_FAILED_DRIVER_ENTRY, ProblemStatus 0xC000000D. Kernel-PnP Event 219 reported the load failure. No Event 227 was found in the queried event logs.
+- After the failed attempt, Acx01000 service was STOPPED with Win32 exit 31 (0x1F); LdacA2dp also stopped. Post-load full mirror had neither module; WDF debugger could not find them; !dbgprint buffer empty. No DriverEntry evidence. ACX unload after failure is timing evidence only, not causality.
+- Cleanup: DevGen /remove failed; pnputil /remove-device fallback succeeded. Report artifact 14769048266, SHA-256 e2e3f177c85420886b6139ba4ef130d5a6df8beaaeb261c3a9685c7645b2a5bb. Test package artifact 14768714620, SHA-256 b1ac0c4bd52bc965e549de18c584655331e7c7d58cdc9a02acb35e17528f175c; unsigned driver artifact 14769077870, SHA-256 a021fbdd49e803e88f1e7860859d9299ab5112394b39e2204107e72d6400fbc8.
+
+### Interpretation
+- This is a valid negative test for the actual ACX 1.0 driver binary with Acx01000 active before PnP start. The simple ACX 1.1-versus-1.0 mismatch hypothesis is insufficient by itself: ACX 1.0 build still fails before DriverEntry.
+- INF/service registration and package selection are substantially demoted: SetupAPI selected the exact Bluetooth INF, created the LdacA2dp service, and attempted device start. DriverTargetPlatform is demoted by the CI #133/#143 artifact comparison. WDF 1.31 over runtime 1.33 is still not implicated by evidence.
+- Current source check: driver.c logs DriverEntry started, WdfDriverCreate, AcxDriverInitialize(ACX 1.0), AcxDriverIsVersionAvailable(1.0), and DriverEntry completed. The project has one ACX_VERSION_MAJOR=1 / ACX_VERSION_MINOR=0 property and parameterized 1.0 include/link paths. The binary contains the ACX 1.0 strings and matches CI #133 code except PE/debug metadata.
+
+### Next investigation
+1. Inspect the actual WDK 26100 ACX 1.0 and 1.1 acxstub.lib files from the restored WDK package: exact paths, SHA-256, size, archive members, symbol/object contents. Determine what class-bind metadata the 1.0 stub contributes; do not rely only on DDI table-name comparison.
+2. Build a minimal official-Microsoft-AudioCodec-sample-based ACX 1.0 bind probe (MEDIA class, KMDF 1.31) on the same hosted Server 2022 runtime. If it also fails with 0xC000000D, suspect WDK 26100 ACX 1.0 stub/runtime compatibility; if it binds, isolate our Bluetooth driver’s WDF/ACX bind metadata or INF-specific setup.
+3. Optionally capture a pre-install LiveKD dump in the same run to show CLASS_MODULE v1.0 immediately before the LDAC load attempt; current preinstall service/file check plus identical baseline hash is strong but indirect.
+4. Correct stale ACX 1.1 comment in build_driver.cmd on the ACX 1.0 experiment branch; it is documentation only.
+- Physical host remains unchanged: no certificate import, driver install, BCD change, device restart, rollback, reboot or OS update.
