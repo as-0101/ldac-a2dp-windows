@@ -65,9 +65,12 @@ Read [PHYSICAL_TEST_RUNBOOK.md](PHYSICAL_TEST_RUNBOOK.md) before any user-side a
 - Next blocker: read-only status pre-check for CI #133 / Universal / ACX 1.0. Do not execute preparation, certificate import, upgrade, device restart, rollback, BCD change or OS update.
 
 
-## LiveKD follow-up — 2026-11-22 20:44 Kyiv
+## Physical ACX 1.0 test — 2026-11-22 20:48 Kyiv
 
-1. Inspect the workflow run triggered by research commit 218b457e9df2bf7ccf58e4d4ad18e40c2bb8d383.
-2. Confirm whether !wdfldr acx01000 returns CLASS_MODULE Version v1.0 or v1.1 on the hosted Server 2022 image. Record the complete CLIENT_MODULE and CLASS_MODULE blocks, not only the version line.
-3. If the runner reports v1.1, record a host/runner difference; do not attribute it to a specific cumulative update without a controlled updated-image comparison. If it reports v1.0, the runner and physical host are aligned; continue investigating other binding inputs.
-4. The physical host remains unchanged. The CI #133 / Universal / ACX 1.0 package remains the first runtime candidate, gated by the read-only package pre-check and separate explicit authorization.
+1. Hosted Server 2022 run #10 is complete. The documented !wdfldr acx01000 query returned CLASS_MODULE Version v1.0, WDF 1.31, and CLIENT_MODULE WDF 1.31 bound to Wdf01000 runtime v1.33. This matches the physical host's earlier class v1.0 result.
+2. The leading explanation is now STRONGLY SUPPORTED: the active LDAC binary requests ACX 1.1 while the Server 2022 class module is ACX 1.0. The pre-DriverEntry STATUS_INVALID_PARAMETER is consistent with this mismatch; other bind metadata is not excluded.
+3. Next discriminating test: CI #133 / Universal / ACX 1.0 on the physical host. Before any install, obtain only the read-only status pre-check after extraction to C:\\LDAC-Test\\ACX10-Universal:
+
+   `& 'C:\\LDAC-Test\\ACX10-Universal\\oppo-driver-tool.exe' status 2>&1 | Tee-Object -FilePath "$env:USERPROFILE\\Desktop\\ldac-acx10-precheck.txt"`
+
+4. Do not run prepare/upgrade/install, import certificates, restart the device, change BCD, rollback or update the OS without separate explicit authorization. The rollback script selects inbox bth.inf, not the previous run #129 baseline package.
