@@ -1,7 +1,7 @@
-## Investigation update — 2026-11-22 19:35 Kyiv
+## Investigation update — 2026-11-22 20:15 Kyiv
 
 - The complete Notion research journal was re-read (18,840 characters); older status/action lists are historical and superseded by this snapshot and the current START HERE page.
-- The physical host's ACX class module is v1.0; the WDF client version is 1.31. Do not confuse ACX class version with WDF/KMDF version.
+- The physical host's ACX class module was previously observed as v1.0; the WDF client version was 1.31. The user has since launched WinDbg, but the current start page does not prove a live kernel attachment. Reconfirm `!wdfldr Acx01000.sys` in a genuine kernel-debugger session. Do not confuse ACX class version with WDF/KMDF version.
 - CI #133 proves the ACX 1.0 branch compiles, links and packages on a Windows Server 2022 runner using WDK/SDK NuGet 10.0.26100.6584. The project selects ACX 1.0 headers and acxstub.lib through ACX_VERSION_MINOR=0; the captured build log does not echo expanded paths, but compile/link success is consistent with that selection. CI #133 is not a physical bind test.
 - The LdacA2dp sources use none of the ACX 1.1-only DDIs listed in Microsoft's ACX version overview; scans of audio.c, driver.c and driver.h found no matches. CI #133 additionally compiles/links the full driver against the ACX 1.0 configuration.
 - The Microsoft AudioCodec sample uses ACX 1.1, KMDF 1.31 and DriverTargetPlatform=Windows Driver; LdacA2dp uses KMDF 1.31 and Universal. Microsoft lists Server 2022 as supported for Universal drivers too, so this difference is not a proven cause. A one-variable A/B branch changes only the target platform.
@@ -21,11 +21,14 @@ Achieve reliable Bluetooth A2DP audio playback using LDAC on the user's physical
 
 ## Target environment
 
-- OS: Windows Server 2022 Datacenter, build 20348.2849 (recorded in the Notion handoff).
+- OS: Windows Server 2022 Datacenter, build 20348, UBR 5761 (read directly from the physical host on 2026-11-22).
 - Headphones: OPPO Enco Buds2.
 - Target A2DP devnode instance ends with peer MAC `840F2A13E3E2`.
 - Last recorded active package after CI #126 upgrade: `oem75.inf`, driver version `0.2.325.1600`.
-- Last recorded device state: Problem Code 37 / `CM_PROB_FAILED_DRIVER_ENTRY`.
+- Last directly observed device state (2026-11-22): `CM_PROB_FAILED_DRIVER_ENTRY`, Problem Code 37; `Get-PnpDevice` reports Status `Error`.
+- `Acx01000.sys` file version: `10.0.20348.3451`. This is not the ACX class-module version.
+- BCD `testsigning` is already `Yes`; the Windows test-mode watermark is visible. Do not enable it again.
+- CI #133 package is extracted to `C:\LDAC-Test\ACX10-Universal`; INF version `0.2.326.1634` and driver SYS SHA-256 `435905e1553cb06d089f1477d1cff57c15bbeb84ef3141ca1b3b500a73898f3e` were verified. Read-only status reports the expected target instance, `oem75.inf`, and one present A2DP devnode.
 - No physical-server changes were made by the ACX 1.0 documentation/CI investigation.
 
 ## Root failure — confirmed
@@ -112,8 +115,8 @@ Detailed static review: [CI133_PACKAGE_REVIEW.md](CI133_PACKAGE_REVIEW.md).
 - Compared PDBs: CI #126 exposes 221 ACX `*TableIndex` symbols; CI #133 exposes 210. All 11 Microsoft-documented ACX 1.1-only DDI names occur in #126 and are absent from #133. All 36 ACX calls used by this project are present in the CI #133 PDB table. This is strong binary evidence of a genuine ACX 1.0 API/stub build.
 - Microsoft documents ACX 1.0 as pre-release (Windows 10 1903) and not recommended for new driver development; ACX 1.1 is the public release/current recommended version. Thus ACX 1.0 is a target-specific compatibility experiment, not a production-support claim.
 - Current INF uses Class=Bluetooth; old `docs/stage5-audio-options.md` saying MEDIA is stale. Microsoft Bluetooth profile driver docs support the Bluetooth class; do not change class without a separate test.
-- Current physical host last recorded as build 20348.2849 (2024-11). Microsoft has since published cumulative build 20348.5873 (2026-11-13). Whether servicing changes the ACX runtime version is UNKNOWN; treat OS servicing as a separate experiment and inspect `Acx01000.sys` file version / `!wdfldr` before deciding.
-- No package preparation, certificate import, BCD/testsigning change, device restart, driver installation, or OS update was performed.
+- Earlier handoff recorded build 20348.2849 (2024-11), but direct host inspection on 2026-11-22 reports build 20348 / UBR 5761 and `Acx01000.sys` file version 10.0.20348.3451. These direct observations supersede the older host snapshot. Whether further servicing changes the ACX runtime/class module is UNKNOWN; treat OS servicing as a separate experiment and inspect `Acx01000.sys` / `!wdfldr` before deciding.
+- No CI #133 package preparation, certificate import, BCD/testsigning change, device restart, driver installation, rollback, or OS update was performed. The already-existing `testsigning Yes` state was only read, not changed.
 
 
 ### CI #143 artifacts — persisted in Files Library
@@ -137,6 +140,6 @@ Detailed static review: [CI133_PACKAGE_REVIEW.md](CI133_PACKAGE_REVIEW.md).
 - The test package's prepare script imports a CI-generated certificate into LocalMachine Root and TrustedPublisher, enables IHVDRIVER debug output (0xF), and sets BCD testsigning on; reboot required. It is a system-changing step and has not been executed.
 - The upgrade tool requires an explicit confirmation token and checks exact OPPO MAC, single A2DP devnode, current LdacA2dp service/manufacturer, Server 2022 build 20348, candidate version and rank. It uses DiInstallDevice for the exact devnode.
 - The package rollback selects inbox bth.inf; it does not restore CI #126. After rollback, testsigning and the test certificate require separate cleanup.
-- See docs/agent/PHYSICAL_TEST_RUNBOOK.md. No physical-server action has been executed.
+- See docs/agent/PHYSICAL_TEST_RUNBOOK.md. The package was copied/extracted and read-only diagnostics were run on the physical host; no driver/system configuration change has been made as part of this CI #133 test.
 
 - Microsoft's official !acxkd sample shows CLIENT_MODULE WDF 1.31 over Wdf01000.sys runtime 1.33 with CLASS_MODULE ACX 1.1. This validates the observed WDF client/runtime pairing; the target's material difference is ACX CLASS_MODULE v1.0. Microsoft also warns that !acxkd has partial functionality under ACX 1.0.
