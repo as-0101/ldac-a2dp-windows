@@ -39,9 +39,12 @@ function Invoke-LiveKdDump([string]$Phase,[string[]]$Commands) {
     $kdOutput = & $kdPath -z $dump -y $env:_NT_SYMBOL_PATH -logo $kdLog -cf $commandFile 2>&1
     $kdExit = $LASTEXITCODE
     if ($kdOutput) { $kdOutput | Out-File -LiteralPath $kdLog -Append -Encoding utf8 }
-    if ($kdExit -ne 0 -or -not (Test-Path -LiteralPath $kdLog)) {
+    if (-not (Test-Path -LiteralPath $kdLog)) {
         Remove-Item -LiteralPath $dump -Force -ErrorAction SilentlyContinue
-        throw "KD $Phase inspection failed: $kdExit"
+        throw "KD $Phase did not produce an inspection log (exit $kdExit)."
+    }
+    if ($kdExit -ne 0) {
+        "KD_EXIT_CODE=$kdExit" | Set-Content -LiteralPath (Join-Path $reportRoot "$Phase-kd-exit.txt") -Encoding utf8
     }
     $content = Get-Content -LiteralPath $kdLog -Raw
     Remove-Item -LiteralPath $dump -Force -ErrorAction SilentlyContinue

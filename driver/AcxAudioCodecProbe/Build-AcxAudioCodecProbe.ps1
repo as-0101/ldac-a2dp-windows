@@ -30,26 +30,37 @@ if ($msbuildExit -ne 0) {
 }
 
 $buildText = Get-Content -LiteralPath $consoleLog -Raw
+if ($buildText -notmatch '(?im)^\s*WdkVersion:\s*10\.0\.26100\.0\s*$' -or
+    $buildText -notmatch '(?im)^\s*WdkAssemblyVersion:\s*10\.0\.26100\.6584\s*$') {
+    Get-Content -LiteralPath $consoleLog -Tail 240 | Write-Host
+    throw 'WDK build targets did not report exact WDK 10.0.26100.6584 assembly and 10.0.26100.0 build version.'
+}
 $toolchainMatch = [regex]::Match(
     $buildText,
-    '(?m)PROBE_TOOLCHAIN\|WDK_ASSEMBLY=(?<wdk>[^|]+)\|SDK=(?<sdk>[^|]+)\|ACX=(?<acx>[^|]+)\|KMDF=(?<kmdf>[^|]+)\|TARGET=(?<target>[^|]+)\|PLATFORM=(?<platform>[^\r\n]+)')
+    '(?m)PROBE_TOOLCHAIN\|WDK_NUGET_DIR=(?<nuget>[^|]+)\|DDK_INC_PATH=(?<inc>[^|]+)\|DDK_LIB_PATH=(?<lib>[^|]+)\|SDK=(?<sdk>[^|]+)\|ACX=(?<acx>[^|]+)\|KMDF=(?<kmdf>[^|]+)\|TARGET=(?<target>[^|]+)\|PLATFORM=(?<platform>[^\r\n]+)')
 if (-not $toolchainMatch.Success) { throw 'Build log did not contain the evaluated PROBE_TOOLCHAIN provenance marker.' }
 
 $toolchain = [pscustomobject]@{
-    WdkAssemblyVersion = $toolchainMatch.Groups['wdk'].Value.Trim()
+    WdkNuGetDir = $toolchainMatch.Groups['nuget'].Value.Trim()
+    DdkIncludePath = $toolchainMatch.Groups['inc'].Value.Trim()
+    DdkLibraryPath = $toolchainMatch.Groups['lib'].Value.Trim()
     WindowsTargetPlatformVersion = $toolchainMatch.Groups['sdk'].Value.Trim()
     AcxVersion = $toolchainMatch.Groups['acx'].Value.Trim()
     KmdfVersion = $toolchainMatch.Groups['kmdf'].Value.Trim()
     DriverTargetPlatform = $toolchainMatch.Groups['target'].Value.Trim()
     Platform = $toolchainMatch.Groups['platform'].Value.Trim()
 }
-if ($toolchain.WdkAssemblyVersion -ne '10.0.26100.6584' -or
+if ($toolchain.WdkNuGetDir -notmatch 'driver\\packages' -or
+    [string]::IsNullOrWhiteSpace($toolchain.DdkIncludePath) -or
+    [string]::IsNullOrWhiteSpace($toolchain.DdkLibraryPath) -or
+    $toolchain.DdkIncludePath -notmatch '10\.0\.26100\.0' -or
+    $toolchain.DdkLibraryPath -notmatch '10\.0\.26100\.0' -or
     $toolchain.WindowsTargetPlatformVersion -ne '10.0.26100.0' -or
     $toolchain.AcxVersion -ne '1.0' -or
     $toolchain.KmdfVersion -ne '1.31' -or
     $toolchain.DriverTargetPlatform -ne 'Windows Driver' -or
     $toolchain.Platform -ne 'x64') {
-    throw "Evaluated toolchain does not match the experiment contract: $($toolchain | ConvertTo-Json -Compress)"
+    throw "Evaluated WDK/SDK/ACX/KMDF properties do not match the experiment contract: $($toolchain | ConvertTo-Json -Compress)"
 }
 
 $repoBuildRoot = Join-Path $repoRoot 'build\AcxAudioCodecProbe'
@@ -66,6 +77,9 @@ if (-not $sys -or -not $infFile -or -not $pdbFile) {
     throw "Expected SYS, INF and PDB outputs. SYS=$([bool]$sys), INF=$([bool]$infFile), PDB=$([bool]$pdbFile)"
 }
 
+$catFile = Get-ChildItem -LiteralPath $repoBuildRoot -Filter 'AcxAudioCodecProbe.cat' -File -Recurse |
+    Where-Object { $_.FullName -notmatch '\\obj\\' } | Select-Object -First 1
+
 $packageFiles = @(
     @{ Source = $sys.FullName; Name = 'AcxAudioCodecProbe.sys' },
     @{ Source = $infFile.FullName; Name = 'AcxAudioCodecProbe.inf' },
@@ -75,19 +89,28 @@ foreach ($file in $packageFiles) {
     Copy-Item -LiteralPath $file.Source -Destination (Join-Path $packageRoot $file.Name) -Force
 }
 
-$kitsBin = Join-Path ([Environment]::GetFolderPath('ProgramFilesX86')) 'Windows Kits\10\bin'
-$inf2catCandidates = Get-ChildItem -LiteralPath $kitsBin -Filter 'Inf2Cat.exe' -File -Recurse -ErrorAction SilentlyContinue
-$inf2cat = $inf2catCandidates | Where-Object { $_.FullName -like '*\10.0.26100.0\x86\Inf2Cat.exe' } | Select-Object -First 1
-if (-not $inf2cat) { $inf2cat = $inf2catCandidates | Where-Object { $_.DirectoryName -like '*\x86' } | Select-Object -First 1 }
-if (-not $inf2cat) { $inf2cat = $inf2catCandidates | Select-Object -First 1 }
-if (-not $inf2cat) { throw 'Inf2Cat.exe not found in installed Windows Kits.' }
-$inf2catLog = Join-Path $buildRoot 'inf2cat-server2022.log'
-$inf2catOutput = & $inf2cat.FullName "/driver:$packageRoot" /os:Server2022_X64 2>&1
-$inf2catExit = $LASTEXITCODE
-$inf2catOutput | Out-File -LiteralPath $inf2catLog -Encoding utf8
-if ($inf2catExit -ne 0) { throw "Inf2Cat Server2022_X64 failed with exit code $inf2catExit." }
 $catPath = Join-Path $packageRoot 'AcxAudioCodecProbe.cat'
-if (-not (Test-Path -LiteralPath $catPath)) { throw 'Inf2Cat did not produce AcxAudioCodecProbe.cat.' }
+$inf2catPath = 'WDK build output catalog'
+$inf2catVersion = $null
+$inf2catExit = 0
+if ($catFile) {
+    Copy-Item -LiteralPath $catFile.FullName -Destination $catPath -Force
+} else {
+    $kitsBin = Join-Path ([Environment]::GetFolderPath('ProgramFilesX86')) 'Windows Kits\10\bin'
+    $inf2catCandidates = Get-ChildItem -LiteralPath $kitsBin -Filter 'Inf2Cat.exe' -File -Recurse -ErrorAction SilentlyContinue
+    $inf2cat = $inf2catCandidates | Where-Object { $_.FullName -like '*\10.0.26100.0\x86\Inf2Cat.exe' } | Select-Object -First 1
+    if (-not $inf2cat) { $inf2cat = $inf2catCandidates | Where-Object { $_.DirectoryName -like '*\x86' } | Select-Object -First 1 }
+    if (-not $inf2cat) { $inf2cat = $inf2catCandidates | Select-Object -First 1 }
+    if (-not $inf2cat) { throw 'Inf2Cat.exe not found in installed Windows Kits.' }
+    $inf2catPath = $inf2cat.FullName
+    $inf2catVersion = $inf2cat.VersionInfo.FileVersion
+    $inf2catLog = Join-Path $buildRoot 'inf2cat-server2022.log'
+    $inf2catOutput = & $inf2cat.FullName "/driver:$packageRoot" /os:Server2022_X64 2>&1
+    $inf2catExit = $LASTEXITCODE
+    $inf2catOutput | Out-File -LiteralPath $inf2catLog -Encoding utf8
+    if ($inf2catExit -ne 0) { throw "Inf2Cat Server2022_X64 failed with exit code $inf2catExit." }
+}
+if (-not (Test-Path -LiteralPath $catPath)) { throw 'No catalog was produced by the WDK build or Inf2Cat fallback.' }
 
 $packageInf = Join-Path $packageRoot 'AcxAudioCodecProbe.inf'
 $infText = Get-Content -LiteralPath $packageInf -Raw
@@ -137,9 +160,11 @@ $manifest = [ordered]@{
     WorkflowRunId = $env:GITHUB_RUN_ID
     WorkflowRunNumber = $env:GITHUB_RUN_NUMBER
     Toolchain = $toolchain
+    WdkVersionFromBuildLog = '10.0.26100.0'
+    WdkAssemblyVersionFromBuildLog = '10.0.26100.6584'
     DriverVer = $driverVer
-    Inf2CatPath = $inf2cat.FullName
-    Inf2CatVersion = $inf2cat.VersionInfo.FileVersion
+    Inf2CatPath = $inf2catPath
+    Inf2CatVersion = $inf2catVersion
     Inf2CatServer2022ExitCode = $inf2catExit
     InfVerifPath = $infVerif.FullName
     InfVerifVersion = $infVerif.VersionInfo.FileVersion
@@ -155,7 +180,7 @@ if ($env:GITHUB_STEP_SUMMARY) {
         '### ACX sample-derived probe build',
         '',
         "- Commit: $env:GITHUB_SHA",
-        "- WDK assembly: $($toolchain.WdkAssemblyVersion)",
+        "- WDK assembly: 10.0.26100.6584 (from WDK build target log)",
         "- SDK target: $($toolchain.WindowsTargetPlatformVersion)",
         "- ACX / KMDF: $($toolchain.AcxVersion) / $($toolchain.KmdfVersion)",
         "- Target platform: $($toolchain.DriverTargetPlatform)",

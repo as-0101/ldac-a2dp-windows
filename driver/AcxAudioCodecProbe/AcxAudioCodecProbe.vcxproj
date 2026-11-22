@@ -20,6 +20,8 @@
     <KMDF_VERSION_MAJOR>1</KMDF_VERSION_MAJOR>
     <KMDF_VERSION_MINOR>31</KMDF_VERSION_MINOR>
   </PropertyGroup>
+  <!-- Explicit fallback for C++ driver projects if the automatic Directory.Build.props import is suppressed. -->
+  <Import Project="..\Directory.Build.props" Condition="('$(DDK_INC_PATH)' == '' Or '$(DDK_LIB_PATH)' == '') and Exists('..\Directory.Build.props')" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <TargetVersion>Windows10</TargetVersion>
@@ -58,8 +60,14 @@
     <FilesToPackage Include="$(TargetPath)" />
   </ItemGroup>
   <Target Name="VerifyAcxAudioCodecProbeToolchain" BeforeTargets="PrepareForBuild">
-    <Error Condition="'$(WdkAssemblyVersion)' != '10.0.26100.6584'"
-           Text="Wrong WDK assembly: expected 10.0.26100.6584, got '$(WdkAssemblyVersion)'. The driver/Directory.Build.props NuGet import must be active." />
+    <Error Condition="'$(WdkNuGetDir)' == ''"
+           Text="driver/Directory.Build.props was not imported; pinned WDK NuGet path is unavailable." />
+    <Error Condition="'$(DDK_INC_PATH)' == '' Or '$(DDK_LIB_PATH)' == ''"
+           Text="WDK include/library paths are empty; the pinned WDK NuGet props did not initialize." />
+    <Error Condition="'$(DDK_INC_PATH)' != '' And !$([System.String]::Copy('$(DDK_INC_PATH)').Contains('10.0.26100.0'))"
+           Text="WDK include path does not target 10.0.26100.0: '$(DDK_INC_PATH)'." />
+    <Error Condition="'$(DDK_LIB_PATH)' != '' And !$([System.String]::Copy('$(DDK_LIB_PATH)').Contains('10.0.26100.0'))"
+           Text="WDK library path does not target 10.0.26100.0: '$(DDK_LIB_PATH)'." />
     <Error Condition="'$(WindowsTargetPlatformVersion)' != '10.0.26100.0'"
            Text="Wrong SDK/WDK target platform version: expected 10.0.26100.0, got '$(WindowsTargetPlatformVersion)'." />
     <Error Condition="'$(ACX_VERSION_MAJOR)' != '1' Or '$(ACX_VERSION_MINOR)' != '0'"
@@ -71,7 +79,7 @@
     <Error Condition="'$(DriverTargetPlatform)' != 'Windows Driver'"
            Text="This sample-derived probe must use the official sample's Windows Driver target platform." />
     <Message Importance="High"
-             Text="PROBE_TOOLCHAIN|WDK_ASSEMBLY=$(WdkAssemblyVersion)|SDK=$(WindowsTargetPlatformVersion)|ACX=$(ACX_VERSION_MAJOR).$(ACX_VERSION_MINOR)|KMDF=$(KMDF_VERSION_MAJOR).$(KMDF_VERSION_MINOR)|TARGET=$(DriverTargetPlatform)|PLATFORM=$(Platform)" />
+             Text="PROBE_TOOLCHAIN|WDK_NUGET_DIR=$(WdkNuGetDir)|DDK_INC_PATH=$(DDK_INC_PATH)|DDK_LIB_PATH=$(DDK_LIB_PATH)|SDK=$(WindowsTargetPlatformVersion)|ACX=$(ACX_VERSION_MAJOR).$(ACX_VERSION_MINOR)|KMDF=$(KMDF_VERSION_MAJOR).$(KMDF_VERSION_MINOR)|TARGET=$(DriverTargetPlatform)|PLATFORM=$(Platform)" />
   </Target>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>

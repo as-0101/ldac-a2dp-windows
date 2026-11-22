@@ -30,8 +30,9 @@ The pinned upstream sample commit itself uses WDK NuGet 10.0.28000.2526 and ACX 
 - ACX: 1.0.
 - KMDF client: 1.31.
 - Target platform: Windows Driver.
-- The project is under driver/AcxAudioCodecProbe so MSBuild discovers driver/Directory.Build.props. The MSBuild target hard-fails unless the evaluated WDK assembly and other properties match exactly.
-- The package is cataloged for Server2022_X64 with Inf2Cat, then must pass InfVerif /w before any runtime test.
+- The project is under driver/AcxAudioCodecProbe, beneath driver/Directory.Build.props, and includes a conditional explicit fallback import if automatic Directory.Build.props import is suppressed.
+- The MSBuild target hard-fails unless the pinned NuGet path is active, DDK include/library paths target 10.0.26100.0, SDK target matches, ACX is 1.0, KMDF is 1.31, architecture is x64, and target platform is Windows Driver.
+- After build, the script requires the WDK targets to report WdkVersion 10.0.26100.0 and WdkAssemblyVersion 10.0.26100.6584 in the catalog-attribute output. It preserves the WDK-generated catalog or uses Inf2Cat Server2022_X64 as a fallback, then requires InfVerif /w to pass before runtime testing.
 
 ## Runtime prerequisites and safety
 
@@ -66,6 +67,7 @@ Microsoft's ACX version table labels ACX 1.0 pre-release and lists Windows 10 ve
 - Driver target platforms: https://learn.microsoft.com/en-us/windows-hardware/drivers/develop/building-a-driver
 - InfVerif /w: https://learn.microsoft.com/en-us/windows-hardware/drivers/develop/validating-universal-drivers
 - DevGen ROOT/SWD semantics: https://learn.microsoft.com/en-us/windows-hardware/drivers/devtest/devgen-command-syntax
+- DbgPrintEx filtering and default component mask: https://learn.microsoft.com/en-us/windows-hardware/drivers/debugger/reading-and-filtering-debugging-messages
 - Pinned Microsoft Driver.cpp: https://github.com/microsoft/Windows-driver-samples/blob/d49bb7d72f3651952b2b6e4ad28d14fe2247eb69/audio/Acx/Samples/AudioCodec/Driver/Driver.cpp
 - Pinned Microsoft AudioCodec.vcxproj: https://github.com/microsoft/Windows-driver-samples/blob/d49bb7d72f3651952b2b6e4ad28d14fe2247eb69/audio/Acx/Samples/AudioCodec/Driver/AudioCodec.vcxproj
 - Pinned Microsoft AudioCodec.inf: https://github.com/microsoft/Windows-driver-samples/blob/d49bb7d72f3651952b2b6e4ad28d14fe2247eb69/audio/Acx/Samples/AudioCodec/Driver/AudioCodec.inf
