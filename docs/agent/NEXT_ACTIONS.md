@@ -1,17 +1,15 @@
-# Current continuation — 2026-11-23 (WDF IFR diagnostic pass)
+# Current continuation — 2026-11-23 (CI #15 complete; CI #16 full-mirror follow-up)
 
-**Current status:** CI #13 and #14 prove that a minimal Microsoft AudioCodec-derived ACX 1.0 client reaches hosted Server 2022 PnP but fails with Code 37 / `0xC000000D` before DriverEntry. This is not specific to LDAC's original INF topology. CI #15 is running with per-driver WDF IFR logging.
+**Current status:** CI #15 / run `45082965356` completed its build and hosted runtime harness. The minimal AudioCodec-derived ACX 1.0 client still fails PnP Code 37 / `0xC000000D` before DriverEntry. The test is a confirmed negative bind result, not a successful driver load.
 
-1. Inspect [CI #15 / run 45082965356](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45082965356), commit `488ae8104eec960370c0887e07136a3e9e3846b5`. Confirm WDF `VerboseOn=1` / `LogPages=16` were applied to the sample and (when Acx01000 was stopped) to Acx01000 before service start; verify restoration and temporary probe-service cleanup.
-2. Inspect the native LiveKD `-ml` dump output and `!wdfkd.wdflogdump` records for Acx01000, AcxAudioCodecProbe and WDF. Look specifically for `FxStubBindClasses`, `VersionBindClass`, `InitTypes`, `STATUS_INVALID_PARAMETER` and `0xC000000D`.
-3. If an IFR record identifies the first failing stage, compare that exact WDK 26100 ACX 1.0 stub path/descriptor with the hosted Server 2022 Acx01000 class module. Preserve module versions, hashes and symbol evidence.
-4. CI #14's global `DbgPrintOn` registry write is not a valid post-boot diagnostic: Wdf01000.sys reads `WdfLdrDbgPrintOn` in its DriverEntry at boot. Do not repeat it. If CI #15 IFR is insufficient, use a live KD session (runtime global enable) or ETW capture.
-5. Only after the exact stage is known, consider an older-WDK ACX 1.0 control build. ACX 1.0 is documented as pre-release for Windows 10 1903 / KMDF 1.29; Server 2022 is not listed in the ACX 1.0 support table. Do not assume the tested tuple is supported.
-6. Keep the physical server unchanged. No driver installation, certificate changes, BCD/security changes, device restart, rollback or OS update. All current runtime work is on disposable GitHub-hosted Server 2022.
+1. Inspect [CI #16 / run 45084678951](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45084678951), commit `9da48c3ecd5921f8cab47888325b156dc9a536f3`. Verify the full LiveKD `-m0x3FFF` preinstall mirror, dump hash/size/page count, WDF class-bind type queries, WDK header scan, and cleanup.
+2. Compare runtime PDB/type information and `!wdfldr` output with the pinned WDK ACX 1.0 stub: descriptor size 0x78 (120 bytes), version 1.0, 210 functions / 62 structures. The Server 2022 ACX class's actual function/structure counts remain unknown.
+3. Preserve the distinction between physical debug evidence and hosted CI: the physical trace identifies `WdfVersionBindClass` returning `0xC000000D`; CI #15 reproduced the same PnP failure but its native dump did not expose the class-module record. Do not claim CI #15 directly captured the failing call.
+4. The CI #15 raw preinstall dump contains WDF IFR entries for `Acx01000`; the probe itself has no WDF IFR because it never loaded. CI #16 now extracts preinstall and postinstall IFR separately. Do not interpret an empty probe IFR as evidence of no failure.
+5. If CI #16 still cannot expose runtime class-bind fields, the next discriminator is a hosted-only local-kernel-debugging experiment with boot-time WDF loader diagnostics, or a controlled older-WDK ACX 1.0 comparison. Do not repeat CI #14's post-boot `DbgPrintOn` registry write; Wdf01000 reads it during startup.
+6. Keep the physical server unchanged: no driver installation, certificate changes, BCD/security changes, device restart, rollback or OS update. No user action is currently required.
 
-Artifacts for CI #13 and #14 are preserved in `/LDAC Project/Incoming/` and indexed in `research/ARTIFACT_INDEX.md`. Earlier continuation blocks below remain historical.
-
-
+CI #15 artifacts are durably preserved in `/LDAC Project/Incoming/` and indexed in `research/ARTIFACT_INDEX.md`. Microsoft documents ACX 1.0 as pre-release for Windows 10 1903 / KMDF 1.29; Server 2022 is not listed.
 ---
 
 ## Current continuation — 2026-11-22 20:28 Kyiv
