@@ -72,7 +72,7 @@ One-line PowerShell command:
 Start-Process -FilePath 'C:\\LDAC-Test\\ACX10-Universal\\rollback-oppo.cmd' -Verb RunAs -Wait
 ```
 
-Important: rollback-oppo.cmd selects the inbox bth.inf driver for the exact OPPO A2DP devnode. It does **not** restore the previous CI #126 LdacA2dp package (historically oem75.inf / 0.2.325.1600). This is a fallback to the inbox Bluetooth Audio Sink Service, not a bit-for-bit restoration of the pre-test driver state. Confirm the resulting active INF, service and device status after restart. If restoring the old LDAC package is required, that needs a separately preserved and verified CI #126 package and a separately planned recovery procedure; do not assume rollback-oppo.cmd does this.
+Important: rollback-oppo.cmd selects the inbox bth.inf driver for the exact OPPO A2DP devnode. It does **not** restore the previous WDK 26100 baseline LdacA2dp package from successful run #129 (historically oem75.inf / 0.2.325.1600). This is a fallback to the inbox Bluetooth Audio Sink Service, not a bit-for-bit restoration of the pre-test driver state. Confirm the resulting active INF, service and device status after restart. If restoring the old LDAC package is required, that needs a separately preserved and verified run #129 baseline package (some legacy Library filenames still say CI-126) and a separately planned recovery procedure; do not assume rollback-oppo.cmd does this.
 
 The preparation script does not automatically undo test signing or remove the certificate. After confirming the inbox driver is active, remove only the CI #133 certificate by its verified thumbprint and disable test signing with this one-line command:
 
