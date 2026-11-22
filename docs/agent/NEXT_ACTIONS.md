@@ -2,7 +2,7 @@
 
 **Current blocker:** finish the hosted LiveKD debugger experiment without changing the physical server.
 
-1. Inspect CI #6 (`45054673989`) and CI #7 (`45054866734`). CI #5 (`45054287408`) proved that LiveKD `-ml -o` captures a native kernel dump and KD opens it, but `!wdfkd.wdfldr` could not resolve `wdfldr!WdfLdrGlobals` from public symbols.
+1. CI #6 (`45054673989`) and #7 (`45054866734`) were cancelled; their logs show KD command-line usage rather than a class query. CI #8 (`45056354003`) failed because LiveKD could not find kd.exe and created no dump. Workflow fix commit `02dcde601f08e1e52ac9cf073dbf99b6e0e0a8a3` is not yet verified by CI. CI #5 remains the only successful capture; public WDF symbols still blocked class enumeration.
 2. Do not infer the runner's ACX class version from `Acx01000.sys` file version `10.0.20348.5866`. The physical host's previously recorded class version is ACX 1.0.
 3. If a fresh physical-host snapshot is needed, prepare a corrected LiveKD-based capture using the user's existing debugger/symbol environment. No BCD changes, driver installation, device restart, or OS update.
 4. Do not ask the user to repeat the completed `status` pre-check; the package is extracted and the one-A2DP / `oem75.inf` / Code 37 baseline is confirmed.
@@ -22,9 +22,15 @@ Previous action lists below are historical snapshots; this section is the curren
 6. Interpret only the first actual failing stage. If DriverEntry is reached, the next layer is `WdfDriverCreate`, then `AcxDriverInitialize`, then ACX device/circuit initialization. Do not jump directly to Bluetooth protocol debugging.
 7. Update this state, evidence register, experiment record and Notion journal with exact observed data. Keep the journal append-only.
 
-## No user action required now
+## One read-only user action needed
 
-The next work can continue from CI artifact inspection and source comparison. Ask the user only if a physical-server test becomes necessary.
+The latest PnP properties already confirm the active driver and failure status. To validate the extracted CI #133 candidate package before any proposed physical test, request only this read-only status command (no prepare/upgrade/restart/rollback):
+
+```powershell
+& 'C:\\LDAC-Test\\ACX10-Universal\\oppo-driver-tool.exe' status 2>&1 | Tee-Object -FilePath "$env:USERPROFILE\\Desktop\\ldac-acx10-precheck.txt"
+```
+
+Do not proceed to any system-changing operation without separate explicit authorization.
 
 
 ## New work after package review
@@ -47,4 +53,13 @@ The next work can continue from CI artifact inspection and source comparison. As
 
 ## Physical test runbook
 
-Read [PHYSICAL_TEST_RUNBOOK.md](PHYSICAL_TEST_RUNBOOK.md) before any user-side action. First request only the read-only status output after the CI #133 package is extracted to C:\\LDAC-Test\\ACX10-Universal. Do not ask the user to run prepare/upgrade until explicit authorization. The package's rollback returns to inbox bth.inf, not CI #126.
+Read [PHYSICAL_TEST_RUNBOOK.md](PHYSICAL_TEST_RUNBOOK.md) before any user-side action. First request only the read-only status output after the CI #133 package is extracted to C:\\LDAC-Test\\ACX10-Universal. Do not ask the user to run prepare/upgrade until explicit authorization. The package's rollback returns to inbox bth.inf, not the successful run #129 WDK 26100 baseline package.
+
+
+## Continuation correction — 2026-11-22 20:37 Kyiv
+
+- Successful WDK 26100.6584 ACX 1.1 baseline is GitHub Actions run #129, ID 44922058650, commit 4571873b505c52a93db4c785fe3d083eabf8499e. Actual run #126, ID 44922013678, failed without artifacts. Existing Library names CI-126-* are legacy labels for run #129 artifacts; use run #129 in new references.
+- Latest physical PnP output: LdacA2dp / oem75.inf / DriverVer 0.2.325.1600 / Code 37 / ProblemStatus 0xC000000D. The version matches run #129, so WDK 26100 pinning alone did not resolve the start failure.
+- Read [2026-11-22 run #129 / PnP / LiveKD update](2026-11-22-RUN129-PNP-LIVEKD-UPDATE.md) for exact artifact hashes, run IDs and confidence status.
+- Root-cause status: ACX class-version mismatch remains SUPPORTED, not proven. INF/service selection, Bluetooth class, Universal target and WDF 1.31/runtime 1.33 are not leading suspects.
+- Next blocker: read-only status pre-check for CI #133 / Universal / ACX 1.0. Do not execute preparation, certificate import, upgrade, device restart, rollback, BCD change or OS update.
