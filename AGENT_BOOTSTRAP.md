@@ -42,3 +42,10 @@ The physical Server 2022 host reports ACX class module 1.0, while the previous d
 - BLOCKED: cannot proceed without user-side access/action.
 
 If any source conflicts with this snapshot, do not silently choose. Record the conflict, compare timestamps and exact commits, then update this file only after resolving it.
+
+## New comparison reference — 2026-11-22
+
+Read [docs/agent/SAMPLE_COMPARISON.md](docs/agent/SAMPLE_COMPARISON.md) for the detailed comparison with Microsoft's official ACX AudioCodec sample, the ACX 1.0 API scan, INF/service analysis, target-platform A/B branch, and ETW unload timeline.
+
+Current A/B branch: [experiment/acx10-windowsdriver-platform](https://github.com/as-0101/ldac-a2dp-windows/tree/experiment/acx10-windowsdriver-platform), draft [PR #3](https://github.com/as-0101/ldac-a2dp-windows/pull/3), CI #143 run 45050062916 (driver job was still running at snapshot).
+
