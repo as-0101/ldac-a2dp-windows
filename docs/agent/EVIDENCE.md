@@ -103,3 +103,10 @@ The exact ACX function count in the Server 2022 10.0.20348.3451 class module has
 | E-046 | Hosted Server 2022 LiveKD run #9 captured a native dump, KD opened it, and Acx01000 symbols loaded. Wdf01000 runtime is v1.33; an unnamed WDF client v1.31 has the exact Acx01000 image base and size. | CONFIRMED | [Run #9](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45056585788), artifact 14768155168 | Confirms the WDF client/runtime pairing on the hosted runner; does not reveal ACX CLASS_MODULE version. |
 | E-047 | Microsoft documents !wdfldr acx01000 as the query that displays both CLIENT_MODULE and CLASS_MODULE, including the ACX Version field. | CONFIRMED | [Microsoft !acxkd documentation](https://learn.microsoft.com/en-us/windows-hardware/drivers/debuggercmds/-acxkd), example at lines 167–190 | The run #9 command !wdfkd.wdfldr Acx01000.sys is not equivalent and returned “Unable to find the specified WDF driver”. |
 | E-048 | Research workflow commit 218b457e9df2bf7ccf58e4d4ad18e40c2bb8d383 adds the exact !wdfldr acx01000 command to the KD command file. | CONFIRMED commit; UNTESTED CI | [Commit 218b457](https://github.com/as-0101/ldac-a2dp-windows/commit/218b457e9df2bf7ccf58e4d4ad18e40c2bb8d383) | Await the corresponding workflow run before treating the hosted ACX class version as known. |
+
+
+## Evidence additions — 2026-11-22 20:48 Kyiv
+
+| ID | Claim | Status | Source | Interpretation |
+|---|---|---|---|---|
+| E-049 | Hosted Server 2022 run #10 reports ACX CLASS_MODULE Version v1.0, WDF Version v1.31, and CLIENT_MODULE Acx01000.sys WDF v1.31 bound to Wdf01000.sys runtime v1.33. | CONFIRMED | [Run #10](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45057090987), artifact 14768205866 | Independently matches the physical host's earlier ACX class v1.0 / WDF 1.31 / runtime 1.33 output. Strongly supports ACX 1.1 client versus ACX 1.0 class mismatch as the leading cause; not a complete proof of all binding metadata. |
