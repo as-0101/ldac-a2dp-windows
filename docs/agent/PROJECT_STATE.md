@@ -253,3 +253,36 @@ Full report: [2026-11-22-UBR5870-ACX10-HOSTED-PREFLIGHT.md](2026-11-22-UBR5870-A
 - Follow-up changed preflight to parse the actual four-part DriverVer and verify ACX_VERSION_MAJOR=1 / ACX_VERSION_MINOR=0. Latest branch commit [4072681ae7d68c4dd9aabd34d613a3fa2f15487b](https://github.com/as-0101/ldac-a2dp-windows/commit/4072681ae7d68c4dd9aabd34d613a3fa2f15487b).
 - Corrected run [#243](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45059251135) is in progress; three build jobs passed and hosted-load job reached WDK tool discovery at last observation. Await result before deciding next correction.
 - Physical host remains unchanged: no driver install, certificate import, BCD change, device restart, rollback, or OS update.
+
+## Continuation update — 2026-11-22 21:30 Kyiv
+
+### New hosted runtime baseline and official documentation
+- LiveKD run #15: https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45058924588, commit d12012c29d8b35b4bac23e84d43fa00ebedebb6d, artifact 14768915976 (SHA-256 d3545973de7d13d2d864172c790cfcfecaf65fddb344b1e3ddab21aa2027a580). On hosted Server 2022 build 20348 / UBR 5870, Acx01000.sys 10.0.20348.5866 and WDF runtime 1.33; !wdfldr acx01000 showed ACX CLIENT_MODULE WDF 1.31 and CLASS_MODULE version 1.0. Full LiveKD mirror and KD inspection succeeded. This is hosted-runner evidence, not a refresh of the physical host.
+- Microsoft ACX Version Information: ACX 1.1 is current/recommended; ACX 1.0 is pre-release and not recommended for new driver development. Microsoft says the ACX version range is specified at compile time and the driver fails to load if the runtime lacks the required range. This strongly supports, but does not yet prove, ACX 1.1 client versus ACX 1.0 class module as the reason for pre-DriverEntry STATUS_INVALID_PARAMETER. https://learn.microsoft.com/en-us/windows-hardware/drivers/audio/acx-version-overview
+- Microsoft target-platform docs explicitly list Universal driver support on Windows Server 2022 and say any driver target category can call DDIs documented as Universal. https://learn.microsoft.com/en-us/windows-hardware/drivers/develop/target-platforms
+- Microsoft !acxkd docs say ACX debugger extension functionality is partial under ACX 1.0. Use !wdfkd.wdfldr / !wdfldr acx01000 for the decisive binding/version query. https://learn.microsoft.com/en-us/windows-hardware/drivers/debuggercmds/-acxkd
+
+### Artifact-level comparison: DriverTargetPlatform is demoted
+- CI #133 Universal package artifact 14763242251, outer SHA-256 f3414c19042e51488c9a5a9b00e133eb5a1af26b16ed75b3b1bb96fb34ade1ad, SYS SHA-256 435905e1553cb06d089f1477d1cff57c15bbeb84ef3141ca1b3b500a73898f3e.
+- CI #143 Windows Driver package artifact 14764868818, outer SHA-256 a82e4fd60cec5ed17eaff3e4a0897cf4b8181674e4a5933da380565ac5e4f757, SYS SHA-256 27ec20f477735d5271ffc70955fcae051647b788c4b7abecfd48ba577b237fa0.
+- Both SYS files are 60,928 bytes with identical section sizes, SizeOfImage 0x15000, entry point 0xA380, and imports. Only 24 bytes differ, all PE timestamp/checksum and debug/PDB metadata; no code-section difference. The two INF files are 5,030 bytes and byte-identical after normalizing the generated DriverVer line.
+- CI #243's ACX 1.0 / Universal SYS is likewise identical to CI #133 except those 24 build/debug metadata bytes; its INF is identical after DriverVer normalization. Therefore the hosted candidate carries the same code as the original CI #133 physical-test candidate; only generated build metadata and per-build catalog signature/certificate differ.
+- Result: DriverTargetPlatform Universal -> Windows Driver did not materially change the SYS or INF in these builds. It is very unlikely to explain FxStubBindClasses. Do not spend another runtime run on this variable absent contrary evidence.
+
+### Hosted ACX 1.0 load-probe attempts
+- CI #230 / run 45058265287, commit 86a1d46aa7c4bc3561e96ded77442b03b34789f0: build/package succeeded, but preflight failed because generated DriverVer was 0.2.326.1901, not stale pinned 0.2.326.1634. No cert import, DevGen, driver install or load attempt.
+- Corrected preflight in commit 4072681ae7d68c4dd9aabd34d613a3fa2f15487b; it parses DriverVer and asserts ACX 1.0 source. CI #243 / run 45059251135 built package DriverVer 0.2.326.1912, SYS SHA-256 c9db4758bb39a2f4196d429daa83030a3a715db61c9583034cee4fea77a4a6c9. Preflight passed version/source assertions but failed because workflow pinned the certificate thumbprint to CI #133's old value.
+- tools/stand/package-oppo-test.ps1 calls New-SelfSignedCertificate on each build, so each package has a new SHA-1 thumbprint. CI #243's expected-subject self-signed cert had thumbprint 36244BA5976015FBAEC9A795A7447021C41F6831; this is normal per-build variation. CI #243 report artifact 14769201114, SHA-256 67b767c6ed629c4ea940aa2e66498e7ae1b1088affbc82aa9311e6efc06c510d. It contains no ACX or LDAC module because install was skipped; it is not a driver test result.
+- Commit da1beefc54454d85aa6aa59429860f49cb4b63f7 removes unnecessary WDK NuGet restore from hosted test job, locates preinstalled DevGen, enables IHVDRIVER DbgPrint on disposable runner, adds !dbgprint, and fixes DevGen removal to use actual instance ID. CI #245 / run 45059537525 also stopped at stale thumbprint check before device creation.
+- Latest correction commit a0f16887e9241734d2c9b41903f77f850d18861c: validate exact certificate subject/self-signed issuer/validity, record dynamic thumbprint, verify it again before import, and remove that exact thumbprint during cleanup. CI #246 https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45059761087 is running this version; no load result yet.
+
+### Microsoft AudioCodec sample comparison
+- Official sample AudioCodec.vcxproj blob 0cdc9e6154c6340d384c8b07550d6ecf11a2e6d3: ACX 1.1, KMDF 1.31, DriverTargetPlatform=Windows Driver, acxstub.lib from ACX 1.1.
+- AudioCodec.inf blob 0bc5fe2314b32e30e13827e3d421911048d8f579: Class=MEDIA, KmdfService and KmdfLibraryVersion. Our Bluetooth driver should remain Class=Bluetooth; sample's MEDIA class is not a template for BTHENUM.
+- Driver.cpp blob 452b0d99eaf24451d965bd1b0f3ef140417e6d98 calls WdfDriverCreate before AcxDriverInitialize, matching our DriverEntry order. Current failure is before DriverEntry, so later function-body ordering cannot explain it.
+
+### Exact next action
+1. Poll CI #246 / run 45059761087, wait for the ACX 1.0 driver load on disposable Server 2022 runner job, and inspect preflight JSON, DevGen output, pnputil result, PnP properties, Kernel-PnP 219/227, WDF binding output and !dbgprint.
+2. Only count the test if candidate INF was actually selected for the synthetic device and a load attempt occurred. An empty ACX ClientsList with no package selection/device start is not evidence.
+3. If pnputil does not select the candidate, inspect driver ranking and use an isolated CI-only SetupAPI selection path if needed; do not relax physical-host guards.
+4. Keep fix/server2022-acx-wdk-26100 unchanged (head 4571873b505c52a93db4c785fe3d083eabf8499e). Physical server remains unchanged: no certificate import, BCD change, driver install, device restart, rollback, reboot or OS update.
