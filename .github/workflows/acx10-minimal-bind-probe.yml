@@ -1,0 +1,82 @@
+name: acx10-minimal-bind-probe
+on:
+  push:
+    branches: [experiment/acx10-minimal-bind-probe]
+  workflow_dispatch:
+jobs:
+  build-and-probe:
+    runs-on: windows-2022
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - name: Restore WDK 10.0.26100.6584
+        shell: pwsh
+        run: nuget restore driver\packages.config -PackagesDirectory driver\packages
+      - name: Build minimal ACX 1.0 driver
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $vs = & $vswhere -latest -products '*' -requires Microsoft.Component.MSBuild -property installationPath
+          if (-not $vs) { throw 'Visual Studio MSBuild not found.' }
+          $msbuild = Join-Path $vs 'MSBuild\Current\Bin\MSBuild.exe'
+          & $msbuild research\acx10-minimal-bind-probe\AcxBindProbe.vcxproj /m /p:Configuration=Release /p:Platform=x64 /v:minimal
+          if ($LASTEXITCODE -ne 0) { throw "MSBuild failed: $LASTEXITCODE" }
+          $sys = Get-ChildItem build\AcxBindProbe -Filter AcxBindProbe.sys -Recurse | Select-Object -First 1
+          if (-not $sys) { throw 'AcxBindProbe.sys not produced.' }
+          Get-FileHash $sys.FullName -Algorithm SHA256 | Format-List | Out-String | Set-Content build\AcxBindProbe\sys-hash.txt
+          Copy-Item $sys.FullName research\acx10-minimal-bind-probe\AcxBindProbe.sys
+      - name: Build catalog, sign package, and run disposable Server 2022 bind test
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $root = Join-Path $env:RUNNER_TEMP 'acx10-minimal-bind-probe'
+          New-Item -ItemType Directory -Path $root -Force | Out-Null
+          $pkg = Join-Path $root 'package'
+          New-Item -ItemType Directory -Path $pkg -Force | Out-Null
+          Copy-Item research\acx10-minimal-bind-probe\AcxBindProbe.inf $pkg
+          Copy-Item research\acx10-minimal-bind-probe\AcxBindProbe.sys $pkg
+          $kits = Join-Path "${env:ProgramFiles(x86)}" 'Windows Kits\10'
+          $inf2cat = Get-ChildItem (Join-Path $kits 'bin') -Filter Inf2Cat.exe -Recurse | Where-Object FullName -Match '\\x64\\Inf2Cat.exe$' | Select-Object -First 1
+          $signtool = Get-ChildItem (Join-Path $kits 'bin') -Filter signtool.exe -Recurse | Where-Object FullName -Match '\\x64\\signtool.exe$' | Select-Object -First 1
+          if (-not $inf2cat -or -not $signtool) { throw 'Inf2Cat or SignTool not found in Windows Kits.' }
+          & $inf2cat.FullName /driver:$pkg /os:Server2022_X64
+          if ($LASTEXITCODE -ne 0) { throw "Inf2Cat failed: $LASTEXITCODE" }
+          $cert = New-SelfSignedCertificate -Type CodeSigningCert -Subject 'CN=ACX 1.0 Minimal Bind Probe CI Only' -CertStoreLocation 'Cert:\LocalMachine\My' -KeyUsage DigitalSignature -KeyLength 2048 -HashAlgorithm SHA256
+          $pfx = Join-Path $root 'probe.pfx'; $cer = Join-Path $pkg 'probe.cer'
+          $pwd = ConvertTo-SecureString 'CI-ONLY-ephemeral-2026' -AsPlainText -Force
+          Export-PfxCertificate -Cert $cert -FilePath $pfx -Password $pwd | Out-Null
+          Export-Certificate -Cert $cert -FilePath $cer | Out-Null
+          & $signtool.FullName sign /fd SHA256 /f $pfx /p 'CI-ONLY-ephemeral-2026' (Join-Path $pkg 'AcxBindProbe.cat')
+          if ($LASTEXITCODE -ne 0) { throw "Catalog signing failed: $LASTEXITCODE" }
+          Import-Certificate -FilePath $cer -CertStoreLocation 'Cert:\LocalMachine\Root' | Out-Null
+          Import-Certificate -FilePath $cer -CertStoreLocation 'Cert:\LocalMachine\TrustedPublisher' | Out-Null
+          $bcd = & bcdedit.exe /enum '{current}' 2>&1
+          if (($bcd -join "`n") -notmatch 'testsigning\s+Yes') { throw 'Disposable runner is not in testsigning mode; refusing driver load.' }
+          $devgen = Get-ChildItem $kits -Filter devgen.exe -Recurse | Where-Object FullName -Match '\\x64\\devgen.exe$' | Select-Object -First 1
+          if (-not $devgen) { throw 'DevGen.exe missing.' }
+          $start = Get-Date
+          & $devgen.FullName /add /bus ROOT /instanceid ACX_BIND_PROBE_CI /hardwareid ROOT\AcxBindProbe 2>&1 | Tee-Object (Join-Path $root 'devgen-add.txt')
+          if ($LASTEXITCODE -ne 0) { throw "DevGen root device creation failed: $LASTEXITCODE" }
+          & pnputil.exe /add-driver (Join-Path $pkg 'AcxBindProbe.inf') /install 2>&1 | Tee-Object (Join-Path $root 'pnputil-install.txt')
+          "PNPUTIL_EXIT=$LASTEXITCODE" | Set-Content (Join-Path $root 'result.txt')
+          Start-Sleep -Seconds 5
+          Get-PnpDevice -PresentOnly -ErrorAction SilentlyContinue | Where-Object InstanceId -Like '*ACX_BIND_PROBE_CI*' | Format-List * | Out-File (Join-Path $root 'pnp-device.txt')
+          Get-WinEvent -FilterHashtable @{LogName='System';StartTime=$start} -ErrorAction SilentlyContinue | Where-Object ProviderName -Match 'Kernel-PnP' | Select-Object TimeCreated,Id,Message | Format-List | Out-File (Join-Path $root 'kernel-pnp.txt')
+          sc.exe query Acx01000 2>&1 | Out-File (Join-Path $root 'acx-service.txt')
+          sc.exe query AcxBindProbe 2>&1 | Out-File (Join-Path $root 'probe-service.txt')
+          "INF_SHA256=$((Get-FileHash (Join-Path $pkg 'AcxBindProbe.inf') -Algorithm SHA256).Hash)" | Add-Content (Join-Path $root 'result.txt')
+          "SYS_SHA256=$((Get-FileHash (Join-Path $pkg 'AcxBindProbe.sys') -Algorithm SHA256).Hash)" | Add-Content (Join-Path $root 'result.txt')
+          "CAT_SHA256=$((Get-FileHash (Join-Path $pkg 'AcxBindProbe.cat') -Algorithm SHA256).Hash)" | Add-Content (Join-Path $root 'result.txt')
+          "CERT_THUMBPRINT=$($cert.Thumbprint)" | Add-Content (Join-Path $root 'result.txt')
+          & $devgen.FullName /remove ACX_BIND_PROBE_CI /subtree 2>&1 | Out-File (Join-Path $root 'cleanup.txt')
+          foreach ($store in @('Cert:\LocalMachine\Root','Cert:\LocalMachine\TrustedPublisher')) { Get-ChildItem $store | Where-Object Thumbprint -EQ $cert.Thumbprint | Remove-Item -Force }
+          Get-ChildItem $root -File | ForEach-Object { Get-Content $_.FullName -ErrorAction SilentlyContinue }
+      - name: Upload probe report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acx10-minimal-bind-probe-report
+          path: ${{ runner.temp }}\acx10-minimal-bind-probe\**
+          if-no-files-found: warn
+          retention-days: 14
