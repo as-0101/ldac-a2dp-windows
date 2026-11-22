@@ -1,3 +1,18 @@
+# Current continuation — 2026-11-22 (after CI #255)
+
+**Current blocker:** ACX 1.0 driver still fails before DriverEntry on hosted Server 2022 even when Acx01000 is explicitly RUNNING. The simple ACX class-version mismatch hypothesis is not sufficient.
+
+1. Build a minimal ACX 1.0 client derived from Microsoft's official AudioCodec sample, using the same WDK 10.0.26100.6584, KMDF 1.31, and hosted Windows Server 2022 runtime. Keep INF topology intentionally simple (MEDIA/root-enumerated sample topology) and instrument the exact first failing stage.
+2. Capture pre-install `!wdfldr acx01000` and relevant runtime/client bind metadata; capture PnP/Kernel-PnP and debugger output after install. Ensure the ACX runtime remains running at the time the driver is started.
+3. If minimal sample binds, compare its WDF/ACX bind descriptor and DriverEntry sequence with LDAC; isolate project-specific descriptor, build settings, or initialization metadata. If it fails identically, investigate WDK 26100 ACX 1.0 stub versus Server 2022 ACX 1.0 runtime compatibility.
+4. Correct stale comment in `build_driver.cmd` on the experimental branch only if still present; do not change production code as part of documentation reorganization.
+5. Preserve CI #248 report (artifact 14769048266, digest e2e3f177c85420886b6139ba4ef130d5a6df8beaaeb261c3a9685c7645b2a5bb) and CI #255 stub report (artifact 14769755224, digest 8d23900221ae823eeb4044f9d7ca8169c7b5491cd512a323e65ed418a27ba5ce) before GitHub artifact expiry.
+6. Do not ask for or perform physical server changes. No driver install, certificate changes, BCD changes, device restart, rollback or OS update. Physical testing remains a separate authorization-gated decision.
+
+See [BUILD_REGISTRY](../../research/BUILD_REGISTRY.md), [TEST_MATRIX](../../research/TEST_MATRIX.md), and [ARTIFACT_INDEX](../../research/ARTIFACT_INDEX.md). The earlier next-action sections below are retained as history and are superseded by this block.
+
+---
+
 ## Current continuation — 2026-11-22 20:28 Kyiv
 
 **Current blocker:** finish the hosted LiveKD debugger experiment without changing the physical server.
