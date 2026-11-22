@@ -3,7 +3,7 @@
 ### WDF class-binding stage
 - The preserved diagnostic is `FxStubBindClasses: VersionBindClass WDF_CLASS_BIND_INFO ..., class Acx, returned status 0xC000000D`. It names the `WdfVersionBindClass` path, not a `ClientBindClass` failure message.
 - Microsoft's WDF source header `fxldr.h` describes `WdfVersionBindClass` as loading/referencing the class extension and linking it into the framework library list. The public WDF source repository does not include the WdfLdr implementation; the exact internal check returning `STATUS_INVALID_PARAMETER` remains unknown.
-- ACX class-version mismatch remains the leading explanation (physical host class module Version 1.0 versus CI #126 client built against ACX 1.1). CI #133 ACX 1.0 is the isolated experiment; physical binding remains untested.
+- ACX class-version mismatch remains the leading explanation (physical host class module Version 1.0 versus the successful run #129 client built against ACX 1.1). CI #133 ACX 1.0 is the isolated experiment; physical binding remains untested.
 
 ### Ruled out or demoted
 - KMDF 1.31 client / WDF runtime 1.33 is supported by Microsoft's KMDF version history; the official `!acxkd` example shows the same client/runtime pair. Do not treat this as the cause.
@@ -22,7 +22,7 @@
 - `Acx01000` is stopped by default on the hosted runner; `sc.exe start Acx01000` succeeded on the disposable runner only.
 - CI #5 [45054287408](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45054287408), commit `40d40d4b0300b708388c25f83e3fb2bc00c7b19e`, successfully captured a native LiveKD `-ml` dump and opened it with KD. `!wdfkd.wdfldr` could not resolve `wdfldr!WdfLdrGlobals` and required private WDF type information from the public symbol set; no runner `CLASS_MODULE` version was returned.
 - Run #4 report 14767070902 is in Files Library at `/Bluetooth LDAC Research/Artifacts/ACX-runtime-LiveKD-run4-report.zip` (Library ID `libfile_1c51ba296db8819195bef7905d6b0bb2`). Run #5 report 14766509597 is at `/Bluetooth LDAC Research/Artifacts/ACX-runtime-LiveKD-run5-report.zip` (Library ID `libfile_f6b3dc250e70819180b85bfe0f78d3df`).
-- Diagnostic branch: [research/acx-runtime-livekd](https://github.com/as-0101/ldac-a2dp-windows/tree/research/acx-runtime-livekd), latest workflow commit `d30bc2cdccc5bcea16059505ef444393701dac0a`. CI #6 [45054673989](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45054673989) and CI #7 [45054866734](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45054866734) are still running at this snapshot. Full build workflows passed; no driver source or production branch changed.
+- Diagnostic branch: [research/acx-runtime-livekd](https://github.com/as-0101/ldac-a2dp-windows/tree/research/acx-runtime-livekd), latest workflow-only fix commit [02dcde601f08e1e52ac9cf073dbf99b6e0e0a8a3](https://github.com/as-0101/ldac-a2dp-windows/commit/02dcde601f08e1e52ac9cf073dbf99b6e0e0a8a3). CI #6/#7 were cancelled; CI #8 failed because LiveKD could not find kd.exe and did not create the expected dump. The fix commit has no observed CI run yet. No driver source or production branch changed.
 
 ### Debugger safety correction
 - The earlier `Launch-WinDbg-Kernel.bat` launches WinDbg with `-kl` only. It does not configure local kernel debugging. Microsoft requires BCD `debug on`, local `dbgsettings`, and a reboot for `-kl`; do not run it as-is or enable BCD debugging on the physical host without separate authorization.
@@ -62,7 +62,7 @@ Achieve reliable Bluetooth A2DP audio playback using LDAC on the user's physical
 - OS: Windows Server 2022 Datacenter, build 20348, UBR 5761 (read directly from the physical host on 2026-11-22).
 - Headphones: OPPO Enco Buds2.
 - Target A2DP devnode instance ends with peer MAC `840F2A13E3E2`.
-- Last recorded active package after CI #126 upgrade: `oem75.inf`, driver version `0.2.325.1600`.
+- Last recorded active package after successful run #129 build: `oem75.inf`, driver version `0.2.325.1600`.
 - Last directly observed device state (2026-11-22): `CM_PROB_FAILED_DRIVER_ENTRY`, Problem Code 37; `Get-PnpDevice` reports Status `Error`.
 - `Acx01000.sys` file version: `10.0.20348.3451`. This is not the ACX class-module version.
 - BCD `testsigning` is already `Yes`; the Windows test-mode watermark is visible. Do not enable it again.
@@ -83,7 +83,7 @@ WinDbg `!wdfldr Acx01000.sys` on the physical host showed:
 - WDF client version: 1.31.
 - ACX `CLASS_MODULE Version`: 1.0.
 
-The prior driver build in CI #126 requested ACX 1.1:
+The prior driver build in successful run #129 requested ACX 1.1:
 - `ACX_VERSION_MAJOR=1`, `ACX_VERSION_MINOR=1`;
 - include path resolves to `acx/km/1.1`;
 - link dependency resolves to `acx/km/1.1/acxstub.lib`.
@@ -137,7 +137,7 @@ The CI job log does show a Windows Server 2022 build runner (10.0.20348), NuGet 
 
 - [Notion research journal](https://app.notion.com/p/41f769fff636810fbd50c285bc3d33f6)
 - [Notion handoff and artifact index](https://app.notion.com/p/420769fff636812ab023c0fb67c66a5a)
-- [CI #126 — ACX 1.1 / WDK 26100 baseline](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/44922058650)
+- [GitHub Actions run #129 — ACX 1.1 / WDK 26100 baseline](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/44922058650)
 - [CI #133 — ACX 1.0 experiment](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45044497961)
 - [Draft PR #2](https://github.com/as-0101/ldac-a2dp-windows/pull/2)
 - [Microsoft !acxkd documentation](https://learn.microsoft.com/windows-hardware/drivers/debuggercmds/-acxkd)
@@ -150,7 +150,7 @@ Detailed static review: [CI133_PACKAGE_REVIEW.md](CI133_PACKAGE_REVIEW.md).
 
 - Inspected nested test ZIP and compared its `LdacA2dp.sys` byte-for-byte with the CI #133 unsigned artifact; they are identical.
 - Package INF DriverVer: `0.2.326.1634`; SYS SHA-256: `435905e1553cb06d089f1477d1cff57c15bbeb84ef3141ca1b3b500a73898f3e`.
-- Compared PDBs: CI #126 exposes 221 ACX `*TableIndex` symbols; CI #133 exposes 210. All 11 Microsoft-documented ACX 1.1-only DDI names occur in #126 and are absent from #133. All 36 ACX calls used by this project are present in the CI #133 PDB table. This is strong binary evidence of a genuine ACX 1.0 API/stub build.
+- Compared PDBs: successful run #129 exposes 221 ACX `*TableIndex` symbols; CI #133 exposes 210. All 11 Microsoft-documented ACX 1.1-only DDI names occur in run #129 and are absent from #133. All 36 ACX calls used by this project are present in the CI #133 PDB table. This is strong binary evidence of a genuine ACX 1.0 API/stub build.
 - Microsoft documents ACX 1.0 as pre-release (Windows 10 1903) and not recommended for new driver development; ACX 1.1 is the public release/current recommended version. Thus ACX 1.0 is a target-specific compatibility experiment, not a production-support claim.
 - Current INF uses Class=Bluetooth; old `docs/stage5-audio-options.md` saying MEDIA is stale. Microsoft Bluetooth profile driver docs support the Bluetooth class; do not change class without a separate test.
 - Earlier handoff recorded build 20348.2849 (2024-11), but direct host inspection on 2026-11-22 reports build 20348 / UBR 5761 and `Acx01000.sys` file version 10.0.20348.3451. These direct observations supersede the older host snapshot. Whether further servicing changes the ACX runtime/class module is UNKNOWN; treat OS servicing as a separate experiment and inspect `Acx01000.sys` / `!wdfldr` before deciding.
@@ -177,7 +177,7 @@ Detailed static review: [CI133_PACKAGE_REVIEW.md](CI133_PACKAGE_REVIEW.md).
 - First candidate is CI #133 / Universal / ACX 1.0 because it isolates ACX version while keeping the original target platform. Do not use CI #143 for the first runtime test because it also changes DriverTargetPlatform.
 - The test package's prepare script imports a CI-generated certificate into LocalMachine Root and TrustedPublisher, enables IHVDRIVER debug output (0xF), and sets BCD testsigning on; reboot required. It is a system-changing step and has not been executed.
 - The upgrade tool requires an explicit confirmation token and checks exact OPPO MAC, single A2DP devnode, current LdacA2dp service/manufacturer, Server 2022 build 20348, candidate version and rank. It uses DiInstallDevice for the exact devnode.
-- The package rollback selects inbox bth.inf; it does not restore CI #126. After rollback, testsigning and the test certificate require separate cleanup.
+- The package rollback selects inbox bth.inf; it does not restore the successful run #129 WDK 26100 baseline package. After rollback, testsigning and the test certificate require separate cleanup.
 - See docs/agent/PHYSICAL_TEST_RUNBOOK.md. The package was copied/extracted and read-only diagnostics were run on the physical host; no driver/system configuration change has been made as part of this CI #133 test.
 
 - Microsoft's official !acxkd sample shows CLIENT_MODULE WDF 1.31 over Wdf01000.sys runtime 1.33 with CLASS_MODULE ACX 1.1. This validates the observed WDF client/runtime pairing; the target's material difference is ACX CLASS_MODULE v1.0. Microsoft also warns that !acxkd has partial functionality under ACX 1.0.
@@ -187,6 +187,19 @@ Detailed static review: [CI133_PACKAGE_REVIEW.md](CI133_PACKAGE_REVIEW.md).
 
 - Fresh physical PnP properties for the OPPO A2DP devnode: `oem75.inf`, driver `0.2.325.1600`, service `LdacA2dp`, Code 37 / `CM_PROB_FAILED_DRIVER_ENTRY`, and `DEVPKEY_Device_ProblemStatus=3221225485=0xC000000D (STATUS_INVALID_PARAMETER)`. This matches the earlier WDF class-bind status but does not alone prove the ACX-version mismatch.
 - CI #6 (run 45054673989) and CI #7 (run 45054866734) were cancelled. LiveKD did start ACX on the disposable hosted runner and create a native live dump, but the interactive KD stage never produced WDF/ACX output; the uploaded report's debugger log contained only the log-open marker. Do not count these runs as class-version evidence.
-- Corrected `.github/workflows/acx-runtime-livekd.yml` on research branch, commit `0d7d26b75e2f7b7fc498dc2fdfca1eb14d3e6db1`: LiveKD now writes a native dump via `-ml -o`, then KD separately opens it via `-z`. CI #8 run 45056354003 was in progress at this update.
+- A further workflow-only correction was committed on research/acx-runtime-livekd as `02dcde601f08e1e52ac9cf073dbf99b6e0e0a8a3`: it adds the KD directory to PATH and uses a command file (-cf) for the separate KD inspection. No CI run has yet verified this change. CI #8 run 45056354003 failed: LiveKD reported Error finding kd.exe and the expected dump was not created; report artifact 14767208063.
 - Microsoft documents `!wdfkd.wdfldr [DriverName]` in Wdfkd.dll; explicit `.load wdfkd.dll` may be needed. References: https://learn.microsoft.com/en-us/windows-hardware/drivers/debuggercmds/-wdfkd-wdfldr and https://learn.microsoft.com/en-us/windows-hardware/drivers/wdf/debugger-extensions-for-kmdf-drivers.
 - Physical host remains unchanged: no driver install, cert import, BCD change, device restart, rollback, or OS update. CI #133 / Universal / ACX 1.0 remains first physical candidate, but installation still requires separate explicit authorization.
+
+
+## Run provenance correction and current continuation — 2026-11-22 20:37 Kyiv
+
+The successful WDK 26100.6584 ACX 1.1 baseline is GitHub Actions run #129, ID 44922058650, commit 4571873b505c52a93db4c785fe3d083eabf8499e. Actual workflow run #126 is ID 44922013678, commit ee417569fb4f7d14779af2597bc383b0ee53041a, and failed without artifacts. Existing Files Library filenames beginning CI-126 are legacy/mislabelled filenames for artifacts from run #129; use run #129 in new references. The PDB count of 221 ACX table-index symbols belongs to run #129.
+
+Latest physical PnP properties: LdacA2dp / oem75.inf / DriverVer 0.2.325.1600 / ProblemCode 37 / ProblemStatus 0xC000000D. The DriverVer matches the successful run #129 build, but the installed SYS hash has not been compared. The successful WDK 26100 build and continuing error demote WDK pinning alone as the fix.
+
+Latest full analysis: [2026-11-22 run #129 / PnP / LiveKD update](2026-11-22-RUN129-PNP-LIVEKD-UPDATE.md). It contains the exact run/artifact IDs, hashes, CI #6–#8 results, Library IDs and next action.
+
+Current root-cause assessment: ACX class version mismatch (driver 1.1 versus physical host class 1.0) remains SUPPORTED, not proven. INF/service selection, Bluetooth setup class, Universal target and KMDF 1.31/runtime 1.33 are not leading suspects.
+
+Next action: read-only status pre-check for CI #133 / Universal / ACX 1.0 after extraction to C:\\LDAC-Test\\ACX10-Universal. No prepare, certificate import, upgrade, device restart, rollback, BCD change, driver change or OS update without separate explicit authorization.
