@@ -15,27 +15,45 @@ jobs:
     runs-on: windows-2022
     timeout-minutes: 20
     steps:
-      - name: Install WinDbg
+      - name: Obtain portable WinDbg console tools
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          winget install --id Microsoft.WinDbg --exact --silent --accept-source-agreements --accept-package-agreements
-          if ($LASTEXITCODE -ne 0) { throw "WinDbg installation failed with exit code $LASTEXITCODE" }
-          $windbg = (Get-Command WinDbgX.exe -ErrorAction SilentlyContinue).Source
-          if (-not $windbg) {
-            $pkg = Get-AppxPackage -Name Microsoft.WinDbg | Sort-Object Version -Descending | Select-Object -First 1
-            if ($pkg) { $windbg = Join-Path $pkg.InstallLocation 'WinDbgX.exe' }
-          }
-          if (-not $windbg -or -not (Test-Path $windbg)) { throw 'WinDbgX.exe not found after installation' }
-          "WINDBG=$windbg" | Out-File "$env:RUNNER_TEMP\windbg-path.txt" -Encoding utf8
-          Write-Host "WinDbg: $windbg"
+          $root = Join-Path $env:RUNNER_TEMP 'acx-livekd'
+          New-Item -ItemType Directory -Path $root -Force | Out-Null
+
+          $appInstallerPath = Join-Path $root 'windbg.appinstaller'
+          Invoke-WebRequest 'https://aka.ms/windbg/download' -OutFile $appInstallerPath
+          [xml]$appInstaller = Get-Content $appInstallerPath
+          $bundleNode = $appInstaller.SelectSingleNode("//*[local-name()='MainBundle']")
+          if (-not $bundleNode) { throw 'WinDbg appinstaller does not contain MainBundle' }
+          $bundleUrl = $bundleNode.GetAttribute('Uri')
+          if (-not $bundleUrl) { throw 'WinDbg appinstaller MainBundle Uri is empty' }
+
+          $bundlePath = Join-Path $root 'windbg.msixbundle'
+          Invoke-WebRequest $bundleUrl -OutFile $bundlePath
+          $bundleZip = Join-Path $root 'windbg-bundle.zip'
+          Copy-Item $bundlePath $bundleZip
+          Expand-Archive -LiteralPath $bundleZip -DestinationPath (Join-Path $root 'bundle') -Force
+
+          $msix = Get-ChildItem (Join-Path $root 'bundle') -Filter '*.msix' -Recurse |
+            Where-Object { $_.Name -match 'x64' } | Sort-Object Length -Descending | Select-Object -First 1
+          if (-not $msix) { throw 'WinDbg x64 MSIX package not found in bundle' }
+
+          $msixZip = Join-Path $root 'windbg-x64.zip'
+          Copy-Item $msix.FullName $msixZip
+          $packageDir = Join-Path $root 'windbg-package'
+          Expand-Archive -LiteralPath $msixZip -DestinationPath $packageDir -Force
+          $kd = Get-ChildItem $packageDir -Filter 'kdX64.exe' -Recurse | Select-Object -First 1
+          if (-not $kd) { throw 'kdX64.exe not found in the official WinDbg x64 package' }
+          Write-Host "Portable KD: $($kd.FullName)"
+          "KD_PATH=$($kd.FullName)" | Out-File (Join-Path $root 'kd-path.txt') -Encoding utf8
 
       - name: Capture and inspect live kernel state
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
           $root = Join-Path $env:RUNNER_TEMP 'acx-livekd'
-          New-Item -ItemType Directory -Path $root -Force | Out-Null
 
           $os = Get-CimInstance Win32_OperatingSystem
           $cv = Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion'
@@ -50,6 +68,18 @@ jobs:
           [pscustomobject]@{OS=$os.Caption;Version=$os.Version;Build=$os.BuildNumber;UBR=$cv.UBR;Drivers=$sys;HotFixes=(Get-HotFix | Sort-Object InstalledOn -Descending | Select-Object -First 8 HotFixID,InstalledOn)} |
             ConvertTo-Json -Depth 6 | Set-Content (Join-Path $root 'system-info.json') -Encoding utf8
 
+          $service = Get-CimInstance Win32_SystemDriver -Filter "Name='Acx01000'"
+          if ($service -and -not $service.Started) {
+            Write-Host 'Attempting to start the inbox ACX class-extension service on this disposable hosted runner only...'
+            & sc.exe start Acx01000
+            "SC_START_EXIT=$LASTEXITCODE" | Out-File (Join-Path $root 'service-start.txt') -Encoding utf8
+            Start-Sleep -Seconds 3
+          } elseif ($service) {
+            'ACX service already started' | Out-File (Join-Path $root 'service-start.txt') -Encoding utf8
+          } else {
+            'ACX service not registered' | Out-File (Join-Path $root 'service-start.txt') -Encoding utf8
+          }
+
           $zip = Join-Path $root 'LiveKD.zip'
           Invoke-WebRequest 'https://download.sysinternals.com/files/LiveKD.zip' -OutFile $zip
           Expand-Archive -LiteralPath $zip -DestinationPath (Join-Path $root 'livekd') -Force
@@ -59,28 +89,39 @@ jobs:
           New-Item -Path 'HKCU:\Software\Sysinternals\LiveKd' -Force | Out-Null
           New-ItemProperty -Path 'HKCU:\Software\Sysinternals\LiveKd' -Name EulaAccepted -PropertyType DWord -Value 1 -Force | Out-Null
 
-          $windbg = (Get-Content "$env:RUNNER_TEMP\windbg-path.txt" -Raw).Trim().Substring(7)
+          $dump = Join-Path $root 'kernel-live.dmp'
+          Write-Host 'Capturing a native kernel live dump with Sysinternals LiveKD...'
+          & $livekd.FullName -ml -o $dump
+          $livekdExit = $LASTEXITCODE
+          "LIVEKD_EXIT=$livekdExit" | Out-File (Join-Path $root 'result.txt') -Encoding utf8
+          if ($livekdExit -ne 0 -or -not (Test-Path $dump)) { throw "LiveKD dump capture failed, exit=$livekdExit" }
+          $dumpInfo = Get-Item $dump
+          Write-Host "Kernel dump size: $($dumpInfo.Length)"
+
+          $kdPath = (Get-Content (Join-Path $root 'kd-path.txt' -Raw)).Trim().Substring(8)
           $log = Join-Path $root 'wdfldr-output.txt'
           $cmd = '.symfix C:\Symbols; .reload /f; !wdfkd.wdfldr Acx01000.sys; q'
-          Write-Host "Running LiveKD native live-dump mode and querying ACX class binding..."
-          & $livekd.FullName -k $windbg -ml -logo $log -c $cmd
-          $exit = $LASTEXITCODE
-          Write-Host "LiveKD/WinDbg exit code: $exit"
-          if (Test-Path $log) {
-            Write-Host '----- WDF/ACX debugger output -----'
-            Get-Content $log
-            Write-Host '----- end debugger output -----'
-          } else {
-            Write-Warning 'WinDbg did not create the expected log file'
+          Write-Host 'Running KD against the live dump and querying ACX class binding...'
+          Push-Location (Split-Path $kdPath)
+          try {
+            & $kdPath -z $dump -c $cmd 2>&1 | Tee-Object -FilePath $log
+            $kdExit = $LASTEXITCODE
+          } finally {
+            Pop-Location
           }
-          "LIVEKD_EXIT=$exit" | Out-File (Join-Path $root 'result.txt') -Encoding utf8
-          if ($exit -ne 0) { throw "LiveKD/WinDbg failed with exit code $exit" }
+          "KD_EXIT=$kdExit" | Out-File (Join-Path $root 'result.txt') -Append -Encoding utf8
+          if (-not (Test-Path $log)) { throw 'KD did not create debugger output' }
+          if ((Get-Content $log -Raw) -notmatch 'CLASS_MODULE') {
+            Write-Warning 'No CLASS_MODULE block was found; preserve the debugger output for diagnosis.'
+          }
 
       - name: Upload text report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: acx-runtime-livekd-report
-          path: \${{ runner.temp }}/acx-livekd/*.txt
+          path: |
+            ${{ runner.temp }}/acx-livekd/*.txt
+            ${{ runner.temp }}/acx-livekd/*.json
           if-no-files-found: warn
           retention-days: 7
