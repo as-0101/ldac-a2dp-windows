@@ -123,3 +123,8 @@ Microsoft's documented query is !wdfldr acx01000. Commit 218b457e9df2bf7ccf58e4d
 ## ACX class version confirmed — 2026-11-22 20:48 Kyiv
 
 Read [the run #10 analysis](docs/agent/2026-11-22-LIVEKD-RUN10-ACX-VERSION.md). Hosted Server 2022 run #10 reports ACX CLASS_MODULE Version v1.0, WDF 1.31, bound to Wdf01000 runtime v1.33. This matches the physical host's earlier CLASS_MODULE v1.0 / WDF 1.31 / runtime 1.33 output. The leading ACX 1.1 client versus ACX 1.0 class mismatch is strongly supported, not yet fully proven. The next step is the read-only pre-check for CI #133 / ACX 1.0; no system-changing action is authorized.
+
+
+## UBR 5870 and hosted ACX 1.0 test — 2026-11-22 21:02 Kyiv
+
+Read [the UBR 5870 / ACX 1.0 preflight report](docs/agent/2026-11-22-UBR5870-ACX10-HOSTED-PREFLIGHT.md). A more recently serviced Server 2022 runner (UBR 5870, KB5070761) still has ACX CLASS_MODULE v1.0, matching the physical host at UBR 5761. The runner has test signing enabled and DevGen available. A separate hosted load test is running in build run #230 / 45058265287. Inspect it before asking for physical installation. No physical server changes.
