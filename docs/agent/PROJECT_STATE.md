@@ -181,3 +181,12 @@ Detailed static review: [CI133_PACKAGE_REVIEW.md](CI133_PACKAGE_REVIEW.md).
 - See docs/agent/PHYSICAL_TEST_RUNBOOK.md. The package was copied/extracted and read-only diagnostics were run on the physical host; no driver/system configuration change has been made as part of this CI #133 test.
 
 - Microsoft's official !acxkd sample shows CLIENT_MODULE WDF 1.31 over Wdf01000.sys runtime 1.33 with CLASS_MODULE ACX 1.1. This validates the observed WDF client/runtime pairing; the target's material difference is ACX CLASS_MODULE v1.0. Microsoft also warns that !acxkd has partial functionality under ACX 1.0.
+
+
+## Continuation update — 2026-11-22 18:40 Kyiv
+
+- Fresh physical PnP properties for the OPPO A2DP devnode: `oem75.inf`, driver `0.2.325.1600`, service `LdacA2dp`, Code 37 / `CM_PROB_FAILED_DRIVER_ENTRY`, and `DEVPKEY_Device_ProblemStatus=3221225485=0xC000000D (STATUS_INVALID_PARAMETER)`. This matches the earlier WDF class-bind status but does not alone prove the ACX-version mismatch.
+- CI #6 (run 45054673989) and CI #7 (run 45054866734) were cancelled. LiveKD did start ACX on the disposable hosted runner and create a native live dump, but the interactive KD stage never produced WDF/ACX output; the uploaded report's debugger log contained only the log-open marker. Do not count these runs as class-version evidence.
+- Corrected `.github/workflows/acx-runtime-livekd.yml` on research branch, commit `0d7d26b75e2f7b7fc498dc2fdfca1eb14d3e6db1`: LiveKD now writes a native dump via `-ml -o`, then KD separately opens it via `-z`. CI #8 run 45056354003 was in progress at this update.
+- Microsoft documents `!wdfkd.wdfldr [DriverName]` in Wdfkd.dll; explicit `.load wdfkd.dll` may be needed. References: https://learn.microsoft.com/en-us/windows-hardware/drivers/debuggercmds/-wdfkd-wdfldr and https://learn.microsoft.com/en-us/windows-hardware/drivers/wdf/debugger-extensions-for-kmdf-drivers.
+- Physical host remains unchanged: no driver install, cert import, BCD change, device restart, rollback, or OS update. CI #133 / Universal / ACX 1.0 remains first physical candidate, but installation still requires separate explicit authorization.
