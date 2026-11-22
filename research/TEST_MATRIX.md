@@ -21,3 +21,8 @@ Stages are cumulative but independently reported. Status values use CONFIRMED/SU
 ## Test record requirements
 
 For every new test record: unique ID, local date/time, branch + commit + run ID, exact artifact IDs/hashes, OS build/UBR and runtime versions, VM vs physical environment, preconditions, procedure, expected/actual, logs, status, and next action. Do not combine OS servicing and driver changes in one experiment.
+
+| T-014 | Minimal Microsoft AudioCodec-derived ACX 1.0 client build | PASS (CI #10, #11, #13) | Not yet a bind result | CI runs 45077156403, 45077797657 | Same WDK 10.0.26100.6584, SDK 10.0.26100.0, KMDF 1.31; ACX 1.0 stub hash matches CI #255. |
+| T-015 | Hosted runtime preflight before root-enumerated PnP install | Harness-only failures in CI #10/#11; CI #13 pending | NO PnP attempt in #10/#11 | Runtime artifacts 14775099125 and 14776440518 | #10 stopped at SignTool /kp; #11 stopped at strict !wdfldr class-version preflight with missing dump page. Do not classify either as a driver bind failure. |
+| T-016 | Probe workflow script validation | FAIL (CI #12) | Not attempted | Run 45078310971 | PowerShell parser caught a malformed generated block; no device/certificate created. Fixed in commit 35e700a. |
+| T-017 | Hosted ACX 1.0 sample bind test | BUILD PASS; RUNTIME IN PROGRESS (CI #13) | Pending | Run 45078613003, runtime job 137381843080 | Next decisive test. Inspect PnP status, DriverEntry markers, !dbgprint and !wdfldr after completion. |

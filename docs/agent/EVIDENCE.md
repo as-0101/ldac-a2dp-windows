@@ -131,3 +131,31 @@ The exact ACX function count in the Server 2022 10.0.20348.3451 class module has
 | E-056 | CI #246 candidate SYS contains ACX 1.0 / 210 / 62 descriptor. | CONFIRMED | STATIC_ANALYSIS | CI #255 report parses actual SYS descriptor. This rules out accidental ACX 1.1 stub descriptor in that binary, not all possible WDF/ACX bind metadata incompatibilities. |
 | E-057 | Simple ACX 1.1-vs-1.0 version mismatch alone explains the bind failure. | REFUTED as sufficient explanation | VM_TEST | E-053: ACX 1.0 candidate still fails with same ProblemStatus after ACX service was started. Other bind metadata/runtime invariants remain unresolved. |
 | E-058 | CI #255 ACX stub inspection workflow #1 produced a complete library/header report. | REFUTED | BUILD_ONLY | Run 45060793775 failed because the script assumed the NuGet WDK package had an Include directory; no artifact uploaded. Later successful CI #255 used a corrected approach. |
+
+
+## E-059 — CI #10 sample-derived ACX 1.0 probe build
+- Workflow run 45077156403, experiment commit 39c8844798485d97f06f40ab3c90f5ab00491733.
+- Build succeeded with WDK 10.0.26100.6584, SDK 10.0.26100.0, KMDF 1.31, ACX 1.0, x64. Build artifact 14774844743; SHA-256 d79c6bf6ed04de54c3c073edfd8e91fcfbe9d98ac8537aef951f2d03dfd21dc7.
+- SYS SHA-256 815fbcd4505e4b7253bccae361cc0bbd3d91cafa994dfb268df32749b39fc415. Durable Library copy: /LDAC Project/Incoming/CI-10-ACX10-Sample-Probe-Build.zip.
+
+## E-060 — CI #10 hosted runtime preflight, no PnP attempt
+- Runtime artifact 14775099125; SHA-256 cb9bbc178c58cf7fe6681267c86151b34030b72e77fb0730e81b2230f5fd635b; Library copy: /LDAC Project/Incoming/CI-10-ACX10-Sample-Probe-Runtime-Preflight.zip.
+- Hosted OS: Windows Server 2022 Datacenter build 20348, UBR 5870, image 20261116.370.1. Acx01000.sys version 10.0.20348.5866, SHA-256 D10924E8B8F3E609EA696BFE4724B96460453D654DCBDEEC83E88D07214DA5D0. Wdf01000.sys version 1.33.20348.1, SHA-256 32C3A7A3E47765E3B20EC291E73E88664A56C30EA38EDC983F13A812075C943B.
+- Read-only BCD output showed testsigning Yes. LiveKD directly showed ACX CLASS_MODULE v1.0, WDF client 1.31 and WDF runtime 1.33. The run failed at SignTool verify /kp because the self-signed test certificate did not chain to a Microsoft root. TestAttempted=false; no root device was created and no PnP bind result exists.
+
+## E-061 — CI #11 exact build-input provenance
+- Workflow run 45077797657, experiment commit 98800f0a88717cc93ef491fb5dff622b6fc4ff25. Build succeeded; artifact 14775454304; SHA-256 7a40925a5b291fcef290a2a47e8f8036410b5f623562cdb3228d34652ee6033e.
+- SYS SHA-256 f8b3697b6b8a7a4a7fc5da134b3451e1dde1fad85e78e01efb59e6b8d12ae867; INF 5ea087bfde896a8d64fa9b203fb433caeb30e7144e2dc98bc8e9a23cc798e021; PDB aa64c6017f3677f6bf95b4daff973ca45df8389843bceeda110bb976bc02d97e.
+- Build manifest records ACX 1.0 stub length 1,362,352 and SHA-256 9846617F4DFB2B5C60A33FC531D53825562C6C8CE15B04013079CE74E6DFCF74, exactly matching the CI #255 stub artifact. acx.h SHA-256 91877A614618A3A726E376A6014B99431C9E4EF54A804E9B48F1F7F8680F19FA; WdfDriverEntry.lib SHA-256 101BF4D30BBF773AC46FF96352EBFDE88A88C834C29F67C10065488CFE2F475C; WdfLdr.lib SHA-256 AF708DE43A0975239F976BDF5F2596CC6FD7219A076643B2C6C98BDD6C4FF530.
+- Durable Library copy: /LDAC Project/Incoming/CI-11-ACX10-Sample-Probe-Build.zip.
+
+## E-062 — CI #11 runtime preflight, incomplete LiveKD view
+- Runtime artifact 14776440518; SHA-256 380638450711410885f785bb75d99feec19020a17ac46ee0cb05ce9e446e9c2d; Library copy: /LDAC Project/Incoming/CI-11-ACX10-Sample-Probe-Runtime-Preflight.zip.
+- The pre-install dump reported a missing page; !wdfldr still showed WDF runtime 1.33 and a WDF 1.31 client row whose image address matched Acx01000.sys. The class-module v1.0 detail was not readable in this particular bitmap dump; this is not evidence of a different runtime.
+- sc.exe query Acx01000 showed RUNNING before the probe. WMI Win32_SystemDriver.Started incorrectly returned false, so the old script misclassified the service as started by the probe and cleanup received STOP error 1061. No certificate or root device was created. The script now uses SCM query state and preserves incomplete LiveKD output as a warning.
+
+## E-063 — CI #12 harness syntax regression
+- Workflow run 45078310971, commit b74f7247017b4dcbe55b141604a5ae0073b4c0fd. PowerShell parser validation caught a malformed generated preflight block before runtime. No driver test, certificate or device creation occurred. The next commit restored the known-good script body and reapplied the changes in a shorter block.
+
+## E-064 — CI #13 current attempt
+- Workflow run 45078613003, experiment commit 35e700a3ecb74548b858f0479a1e15e31a2d110f. PowerShell validation and build passed; build job 137381366829 succeeded. Hosted runtime job 137381843080 was still in progress at the time of this update.

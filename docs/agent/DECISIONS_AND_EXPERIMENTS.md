@@ -88,3 +88,18 @@ Choose CI #133 / Universal / ACX 1.0 for the first runtime test because it isola
 - Related static check: CI #255 parsed the actual ACX 1.0 stub descriptor and CI #246 SYS descriptor (1.0 / 210 functions / 62 structures); accidental 1.1 descriptor selection is ruled out for that candidate.
 - Decision: do not attempt physical CI #133 installation as the next experiment. First test a minimal official AudioCodec-derived ACX 1.0 client on the same hosted Server 2022 runtime.
 - Report: artifact 14769048266, SHA-256 e2e3f177c85420886b6139ba4ef130d5a6df8beaaeb261c3a9685c7645b2a5bb. Stub report: artifact 14769755224, SHA-256 8d23900221ae823eeb4044f9d7ca8169c7b5491cd512a323e65ed418a27ba5ce.
+
+
+## D-009 — Use SignTool /pa for the self-signed test package preflight (2026-11-22)
+CI #10 proved that verify /kp rejects the probe's self-signed test certificate because it does not chain to a Microsoft root. Microsoft driver-installation documentation explicitly prescribes SignTool verify /v /pa Catalog.cat and SignTool verify /v /pa /c Catalog.cat DriverFile for PnP package verification. The probe now verifies CAT, SYS and INF with /pa; this is a harness correction, not a change to driver signing or the physical host.
+
+## D-010 — Use SCM query output for Acx01000 service state (2026-11-23)
+CI #11 showed sc.exe query Acx01000 = RUNNING while WMI Win32_SystemDriver.Started reported false. The probe now uses sc.exe query for before/start/cleanup decisions. It does not stop Acx01000 if it was already running before the probe.
+
+## D-011 — LiveKD class-module visibility is evidence, not a hard gate when the bitmap dump is incomplete (2026-11-23)
+CI #11's LiveKD mirror reported a missing page; !wdfldr still showed WDF runtime 1.33 and a WDF 1.31 client row associated with Acx01000, but could not display the class-module record. The same runtime file hashes match CI #10, which directly showed ACX class module 1.0. The probe now records missing-page limitations and proceeds when the pinned runtime files are present, instead of treating an incomplete debugger view as a driver failure.
+
+## E-009 — Microsoft AudioCodec-derived ACX 1.0 minimal client (2026-11-23)
+- Official source pinned at Microsoft Windows-driver-samples commit d49bb7d72f3651952b2b6e4ad28d14fe2247eb69; shared Public.h blob f1e9da3bd6101a503f620a31fa3d2ec471009161.
+- The official project defaults to ACX 1.1; the probe deliberately targets ACX 1.0, keeps KMDF 1.31 and reduces INF topology to MEDIA / root-enumerated ROOT\AudioCodec. DriverEntry mirrors WdfDriverCreate then AcxDriverInitialize; EvtDeviceAdd logs and returns STATUS_NOT_SUPPORTED to isolate bind/entry from full codec topology.
+- CI #11 build manifest proves the exact ACX 1.0 stub hash equals CI #255: 9846617F4DFB2B5C60A33FC531D53825562C6C8CE15B04013079CE74E6DFCF74. It also pins acx.h SHA-256 91877A614618A3A726E376A6014B99431C9E4EF54A804E9B48F1F7F8680F19FA, WdfDriverEntry.lib SHA-256 101BF4D30BBF773AC46FF96352EBFDE88A88C834C29F67C10065488CFE2F475C, and WdfLdr.lib SHA-256 AF708DE43A0975239F976BDF5F2596CC6FD7219A076643B2C6C98BDD6C4FF530.

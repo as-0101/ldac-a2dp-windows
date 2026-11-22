@@ -58,3 +58,10 @@ This index records durable locations and provenance. Exact hashes are only recor
 Incoming user instructions file is preserved separately: `LDAC_Project_Reorganization_Instructions.md`, Project file `file_000000003eb0821095a1edc72cc0d70e`, Library ID `libfile_cff6d57284248191805a6557030367ff`, 32,897 bytes, SHA-256 `a633dc1eeab5ac3929bba9006e73a7b4795592d93316fce0a4b0a6d77d701004`.
 
 The CI #248 report and both CI #248 package archives plus CI #255 stub archive are now durably saved in Library; GitHub artifact retention is no longer the only copy. ZIP originals are preserved unchanged.
+
+- **CI #10 ACX 1.0 sample probe build** — GitHub artifact 14774844743; SHA-256 d79c6bf6ed04de54c3c073edfd8e91fcfbe9d98ac8537aef951f2d03dfd21dc7; durable Library copy /LDAC Project/Incoming/CI-10-ACX10-Sample-Probe-Build.zip; Library file ID libfile_fbedf282d84081918ec9cbe9b9ed9094.
+- **CI #10 ACX 1.0 sample probe runtime preflight** — artifact 14775099125; SHA-256 cb9bbc178c58cf7fe6681267c86151b34030b72e77fb0730e81b2230f5fd635b; Library copy /LDAC Project/Incoming/CI-10-ACX10-Sample-Probe-Runtime-Preflight.zip; Library file ID libfile_c3566576a8ac8191af380d74f0f17a57.
+- **CI #11 ACX 1.0 sample probe build + manifest** — artifact 14775454304; SHA-256 7a40925a5b291fcef290a2a47e8f8036410b5f623562cdb3228d34652ee6033e; durable Library copy /LDAC Project/Incoming/CI-11-ACX10-Sample-Probe-Build.zip; Library file ID libfile_5b4bd62f5af4819191f72c3e2357d7f2.
+- **CI #11 ACX 1.0 sample probe runtime preflight** — artifact 14776440518; SHA-256 380638450711410885f785bb75d99feec19020a17ac46ee0cb05ce9e446e9c2d; Library copy /LDAC Project/Incoming/CI-11-ACX10-Sample-Probe-Runtime-Preflight.zip; Library file ID libfile_7d9bb98142b881919332288dc98b1b19.
+- Each Library copy was materialized and its SHA-256 matched the original GitHub artifact byte-for-byte.
+- CI #12 (run 45078310971) produced no probe artifact because PowerShell parser validation failed before build/runtime. CI #13 (run 45078613003) build artifact/runtime report are pending completion and will be indexed in the next update.

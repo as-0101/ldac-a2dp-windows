@@ -1,15 +1,14 @@
-# Current continuation — 2026-11-22 (after CI #255)
+# Current continuation — 2026-11-23 (ACX 1.0 sample-derived bind probe)
 
-**Current blocker:** ACX 1.0 driver still fails before DriverEntry on hosted Server 2022 even when Acx01000 is explicitly RUNNING. The simple ACX class-version mismatch hypothesis is not sufficient.
+**Current status:** the official-sample-derived ACX 1.0 probe builds with the exact pinned WDK/KMDF inputs. Two hosted runtime attempts stopped in test-harness preflight before PnP installation. CI #13 build is green; its hosted runtime job is still running.
 
-1. Build a minimal ACX 1.0 client derived from Microsoft's official AudioCodec sample, using the same WDK 10.0.26100.6584, KMDF 1.31, and hosted Windows Server 2022 runtime. Keep INF topology intentionally simple (MEDIA/root-enumerated sample topology) and instrument the exact first failing stage.
-2. Capture pre-install `!wdfldr acx01000` and relevant runtime/client bind metadata; capture PnP/Kernel-PnP and debugger output after install. Ensure the ACX runtime remains running at the time the driver is started.
-3. If minimal sample binds, compare its WDF/ACX bind descriptor and DriverEntry sequence with LDAC; isolate project-specific descriptor, build settings, or initialization metadata. If it fails identically, investigate WDK 26100 ACX 1.0 stub versus Server 2022 ACX 1.0 runtime compatibility.
-4. Correct stale comment in `build_driver.cmd` on the experimental branch only if still present; do not change production code as part of documentation reorganization.
-5. Preserve CI #248 report (artifact 14769048266, digest e2e3f177c85420886b6139ba4ef130d5a6df8beaaeb261c3a9685c7645b2a5bb) and CI #255 stub report (artifact 14769755224, digest 8d23900221ae823eeb4044f9d7ca8169c7b5491cd512a323e65ed418a27ba5ce) before GitHub artifact expiry.
-6. Do not ask for or perform physical server changes. No driver install, certificate changes, BCD changes, device restart, rollback or OS update. Physical testing remains a separate authorization-gated decision.
+1. Continue CI #13, run 45078613003, experiment branch commit 35e700a3ecb74548b858f0479a1e15e31a2d110f. Build job 137381366829 passed; runtime job 137381843080 is in progress. Inspect its artifact after completion.
+2. CI #10 directly exposed ACX CLASS_MODULE v1.0, WDF client 1.31 and WDF runtime 1.33. Its runtime attempt stopped at the incorrect SignTool /kp preflight before root-device creation. The harness now uses documented /pa PnP-installation verification for CAT, SYS and INF.
+3. CI #11 built successfully and recorded exact ACX/WDF link inputs. Its runtime preflight stopped because a LiveKD bitmap dump lacked a page needed by !wdfldr; the output still showed WDF runtime 1.33 and a WDF 1.31 client row associated with Acx01000. It also exposed that WMI Win32_SystemDriver.Started misreported the already-RUNNING service. The current script uses sc.exe query and records incomplete class-module output as a limitation, not a driver failure.
+4. If CI #13 reaches PnP: capture the exact first failure and post-install !dbgprint / !wdfldr output. If the sample reaches DriverEntry, compare its WDF/ACX binding metadata and DriverEntry sequence with LDAC. If it fails with Code 37 / 0xC000000D before DriverEntry, investigate the pinned WDK 26100 ACX 1.0 stub against the Server 2022 runtime.
+5. Do not change the physical server. No driver installation, certificate changes, BCD/security changes, device restart, rollback or OS update. All current experiments run on disposable GitHub-hosted Server 2022 runners.
 
-See [BUILD_REGISTRY](../../research/BUILD_REGISTRY.md), [TEST_MATRIX](../../research/TEST_MATRIX.md), and [ARTIFACT_INDEX](../../research/ARTIFACT_INDEX.md). The earlier next-action sections below are retained as history and are superseded by this block.
+Detailed experiment and hashes: [ACX 1.0 sample bind probe](../../research/ACX10_SAMPLE_BIND_PROBE.md). See BUILD_REGISTRY, TEST_MATRIX and ARTIFACT_INDEX. Earlier continuation blocks below remain historical.
 
 ---
 

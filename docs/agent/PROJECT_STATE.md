@@ -353,3 +353,16 @@ Full report: [2026-11-22-UBR5870-ACX10-HOSTED-PREFLIGHT.md](2026-11-22-UBR5870-A
 - CI #255 ACX stub metadata artifact 14769755224, digest 8d23900221ae823eeb4044f9d7ca8169c7b5491cd512a323e65ed418a27ba5ce. See [BUILD_REGISTRY](../../research/BUILD_REGISTRY.md) and [ARTIFACT_INDEX](../../research/ARTIFACT_INDEX.md).
 - CI #230/#243/#245 harness failures are not evidence of driver failure: #230 stopped on hardcoded version validation; #243/#245 failed in test harness setup. CI #248 is the first meaningful ACX 1.0 PnP start test.
 - Physical host remains unchanged. No driver installation, cert changes, BCD changes, restart, rollback or OS update.
+
+
+## 2026-11-23 — ACX 1.0 sample-derived bind probe: build proven, runtime preflight being hardened
+
+The separate experiment branch is experiment/acx10-sample-bind-probe-v2, current head 35e700a3ecb74548b858f0479a1e15e31a2d110f. The probe is derived from Microsoft's pinned AudioCodec sample commit d49bb7d72f3651952b2b6e4ad28d14fe2247eb69, but explicitly compiles against ACX 1.0 and KMDF 1.31. The INF is MEDIA / root-enumerated ROOT\AudioCodec; EvtDeviceAdd deliberately returns STATUS_NOT_SUPPORTED after logging.
+
+CI #10 and #11 both built the probe successfully with WDK 10.0.26100.6584 / SDK 10.0.26100.0. CI #11's manifest confirms the exact ACX 1.0 stub hash is 9846617F4DFB2B5C60A33FC531D53825562C6C8CE15B04013079CE74E6DFCF74, identical to CI #255. The manifest also pins the ACX header, WdfDriverEntry.lib and WdfLdr.lib hashes.
+
+Runtime attempt #10 did not reach PnP: SignTool /kp rejected the self-signed test certificate. This was corrected to documented /pa PnP-installation verification. Runtime attempt #11 did not reach PnP: LiveKD's bitmap dump lacked a page needed to display the ACX class-module record, and WMI misreported an already-running Acx01000 service. The current script uses SCM query state and records incomplete LiveKD output rather than failing the experiment. CI #12 caught a script parser regression before runtime; the current commit restores the known-good body and reapplies the fixes.
+
+CI #13 run 45078613003 on commit 35e700a3ecb74548b858f0479a1e15e31a2d110f: build job 137381366829 passed; hosted runtime job 137381843080 was in progress at update time. No PnP result is claimed yet.
+
+Durable artifacts and verified hashes are in ARTIFACT_INDEX. No physical server has been modified; all runtime work is on disposable GitHub-hosted Server 2022.

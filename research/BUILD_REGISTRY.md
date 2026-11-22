@@ -18,3 +18,8 @@ Status vocabulary: `BUILT`, `STATICALLY_VERIFIED`, `VM_TESTED`, `HARDWARE_TESTED
 - PDB correspondence requires GUID/Age or an explicit binary/PDB matching tool result; matching filename/version is insufficient.
 - CI artifact digests are for the downloaded artifact ZIP, not the inner SYS/INF/CAT.
 - Keep every run as its own row; append rather than merging results.
+
+| 10 | 39c8844798485d97f06f40ab3c90f5ab00491733 | WDK 10.0.26100.6584 / SDK 10.0.26100.0 / KMDF 1.31 / ACX 1.0 | x64, hosted Server 2022 | PASS | Artifact 14774844743; SHA-256 d79c6bf6ed04de54c3c073edfd8e91fcfbe9d98ac8537aef951f2d03dfd21dc7 | Probe SYS built; runtime preflight later stopped at incorrect SignTool /kp verification. |
+| 11 | 98800f0a88717cc93ef491fb5dff622b6fc4ff25 | WDK 10.0.26100.6584 / SDK 10.0.26100.0 / KMDF 1.31 / ACX 1.0 | x64, hosted Server 2022 | PASS | Artifact 14775454304; SHA-256 7a40925a5b291fcef290a2a47e8f8036410b5f623562cdb3228d34652ee6033e | Build manifest pins ACX stub and WDF link-library hashes; ACX stub hash matches CI #255 exactly. |
+| 12 | b74f7247017b4dcbe55b141604a5ae0073b4c0fd | Same pinned toolchain | x64, hosted Server 2022 | NOT BUILT | No probe artifact | PowerShell parser validation caught a script-construction regression before build/runtime. |
+| 13 | 35e700a3ecb74548b858f0479a1e15e31a2d110f | WDK 10.0.26100.6584 / SDK 10.0.26100.0 / KMDF 1.31 / ACX 1.0 | x64, hosted Server 2022 | BUILD PASS; runtime pending | Workflow run 45078613003; build job 137381366829 | Current SCM-state and LiveKD partial-view handling; hosted runtime job 137381843080 still in progress at update time. |
