@@ -94,3 +94,13 @@ Run #10 artifact 14768205866, SHA-256 aed85ff189ca817191383edb38945f69c27e50a868
 ## Next action
 
 The hosted class-version uncertainty is resolved: Server 2022 runner reports ACX class v1.0, matching the physical host. Next step is the read-only pre-check for the CI #133 / Universal / ACX 1.0 package. No driver installation, prepare, certificate import, upgrade, device restart, rollback, BCD change or OS update without separate explicit authorization.
+
+
+## Auxiliary runner metadata probe — 2026-11-22 20:53 Kyiv
+
+An optional follow-up intended to print the hosted runner's OS/UBR, ACX/WDF file hashes and BCD test-signing flags failed before creating a job:
+- Run #11 / ID 45057551731 on commit 3ee4c71aba04b3dd9e74f64bc24066695f12eeca failed because three PowerShell lines were not indented inside the YAML run block.
+- Corrected in workflow-only commit [b8256dd009bc8b289e17f64abd4300686380ae50](https://github.com/as-0101/ldac-a2dp-windows/commit/b8256dd009bc8b289e17f64abd4300686380ae50). No follow-up CI run has yet been observed; the optional OS/UBR/BCD snapshot remains unverified.
+- This does not affect the successful run #10 result: hosted Server 2022 ACX CLASS_MODULE v1.0 / WDF 1.31 / runtime 1.33, matching the physical host.
+
+The optional metadata probe is secondary. The next project blocker is the read-only status pre-check for the CI #133 / Universal / ACX 1.0 package. No physical host change is needed for this workflow.
