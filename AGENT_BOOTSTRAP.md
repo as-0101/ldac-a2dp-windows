@@ -1,3 +1,12 @@
+## Latest continuation — 2026-11-22
+
+- Exact failure stage: `VersionBindClass` for class `Acx`, status `0xC000000D`; ACX class-version mismatch remains the leading explanation, not a proven final root cause.
+- KMDF 1.31 / runtime 1.33 is supported; Universal is supported on Server 2022; Bluetooth setup class is correct for BTHENUM.
+- Hosted runner LiveKD `-ml` capture works, but `!wdfkd.wdfldr` could not resolve private WDF loader symbols. CI #6/#7 are still running.
+- Physical server remains unchanged: UBR 5761, ACX file 10.0.20348.3451, testsigning Yes, `oem75.inf` 0.2.325.1600, Code 37.
+- **Do not run the earlier `Launch-WinDbg-Kernel.bat` as-is:** it uses `-kl` and does not configure BCD local debugging. No BCD or driver changes are authorized.
+
+Read [ACX_RUNTIME_LIVEKD_PROBE.md](docs/agent/ACX_RUNTIME_LIVEKD_PROBE.md) for the current probe history.
 # LDAC project — agent bootstrap
 
 > Read this file first. Target context-recovery time: 2–3 minutes. Project scope: Windows Server 2022 Bluetooth A2DP / LDAC for OPPO Enco Buds2 only.

@@ -58,3 +58,20 @@ Append a dated record after each meaningful experiment. Record question, exact c
 ## D-006 — First physical test candidate
 
 Choose CI #133 / Universal / ACX 1.0 for the first runtime test because it isolates ACX version only and preserves the original Universal target. Do not use CI #143 as the first runtime candidate because it also changes DriverTargetPlatform. No server-side preparation or installation is authorized by this documentation decision.
+
+## Decision D-007 — avoid `-kl` until local debugging is already configured
+
+- **Decision:** Do not use the earlier `Launch-WinDbg-Kernel.bat` on the physical host as-is. It launches `-kl` only; Microsoft requires BCD `debug on`, local `dbgsettings`, and a reboot. Do not change BCD or suspend security controls without explicit authorization.
+- **Preferred alternative:** validate Sysinternals LiveKD `-ml` native live-dump capture on a disposable runner, then use it for a read-only host snapshot if needed. CI #5 confirmed capture and KD processing; WDF loader symbols remain a limitation.
+- **Status:** ACTIVE; LiveKD capture validated, `!wdfldr` symbol resolution still under investigation.
+
+## Experiment EXP-003 — hosted Server 2022 ACX runtime inspection
+
+- **Purpose:** determine whether a more-serviced Server 2022 runner has a different ACX class version, without touching the physical server.
+- **Branch:** `research/acx-runtime-livekd`; latest workflow commit `d30bc2cdccc5bcea16059505ef444393701dac0a`.
+- **Baseline:** hosted runner build 20348; `Acx01000.sys` file version 10.0.20348.5866; `Wdf01000.sys` 1.33.20348.1. ACX service is stopped by default; starting it succeeded on the disposable runner.
+- **CI #5:** run `45054287408`, commit `40d40d4b0300b708388c25f83e3fb2bc00c7b19e`, successful LiveKD dump capture and KD processing. `!wdfkd.wdfldr` could not resolve `wdfldr!WdfLdrGlobals` from public symbols; no class version was returned. Report artifact 14766509597 is preserved in Files Library.
+- **CI #6:** run `45054673989`, commit `e13cd43d66d13e7c341f7c81a64f1677a3aabfe4`, direct LiveKD `-k` path; in progress at snapshot.
+- **CI #7:** run `45054866734`, commit `d30bc2cdccc5bcea16059505ef444393701dac0a`, preconfigured `_NT_SYMBOL_PATH`; in progress at snapshot.
+- **Interpretation:** file-version difference is confirmed; ACX class-module version on the hosted runner remains UNKNOWN. Do not use file version as a proxy.
+- **Physical-server impact:** none. No driver installation, certificate import, BCD change, device restart, or OS update.

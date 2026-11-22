@@ -140,3 +140,13 @@ Microsoft's own !acxkd documentation shows a valid example with CLIENT_MODULE WD
 Microsoft also notes that the !acxkd extension has only partial functionality under ACX 1.0. If the ACX 1.0 test passes class binding, continue to rely on kernel debug output, breakpoints and Kernel-PnP events; do not treat missing !acxkd details as a driver failure.
 
 Reference: https://learn.microsoft.com/en-us/windows-hardware/drivers/debuggercmds/-acxkd (the sample !wdfldr output and ACX 1.0 debugger limitation).
+
+## WDF class-binding stage refinement — 2026-11-22
+
+The preserved failure string names `VersionBindClass WDF_CLASS_BIND_INFO`, class `Acx`, and `STATUS_INVALID_PARAMETER`. This is the WDF `WdfVersionBindClass` path, not a `ClientBindClass` failure message. Microsoft's WDF source header [fxldr.h](https://github.com/microsoft/Windows-Driver-Frameworks/blob/main/src/framework/shared/inc/private/common/fxldr.h) describes this API as loading/referencing the class extension and linking it into the framework library list. The public WDF source does not include the WdfLdr implementation, so the exact internal return condition remains unknown.
+
+Two candidate explanations are now demoted:
+- KMDF 1.31 versus runtime 1.33 is supported by Microsoft's [KMDF version history](https://learn.microsoft.com/en-us/windows-hardware/drivers/wdf/kmdf-version-history); the official [!acxkd example](https://learn.microsoft.com/en-us/windows-hardware/drivers/debuggercmds/-acxkd) shows the same client/runtime pair.
+- Universal is a supported Server 2022 target per [Target Platforms](https://learn.microsoft.com/en-us/windows-hardware/drivers/develop/target-platforms). CI #143's Windows Driver target is an alternate compile experiment, not proof that Universal caused the bind failure.
+
+The Bluetooth INF class remains appropriate for the BTHENUM profile device; MEDIA in the AudioCodec sample reflects its ROOT-enumerated audio-codec topology. The leading unresolved variable remains ACX class version (driver 1.1 versus host class 1.0).

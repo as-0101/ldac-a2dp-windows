@@ -76,3 +76,21 @@ Edges:
 - FACT-010 reduces priority of Universal-platform invalidity hypothesis.
 - FACT-011 qualifies the ACX 1.0 workaround as host-specific/experimental rather than generally supported.
 - EXP-002 tests whether changing only DriverTargetPlatform changes build/package behavior; it does not prove runtime class binding.
+
+## Added nodes — 2026-11-22
+
+- **FACT-012:** The saved failure is logged by `FxStubBindClasses` as `VersionBindClass` for class `Acx`, status `0xC000000D`.
+- **FACT-013:** Microsoft's WDF `fxldr.h` describes `WdfVersionBindClass` as the class-extension load/reference and client-link path; the WdfLdr implementation is not in the public source repository.
+- **FACT-014:** KMDF 1.31 client / runtime 1.33 is a supported pairing; not the generic cause.
+- **FACT-015:** Universal driver target is supported on Server 2022; platform label alone is not the cause.
+- **FACT-016:** Physical host `Acx01000.sys` file version is 10.0.20348.3451; hosted runner file version is 10.0.20348.5866. This is a binary-version difference, not proof of a class-version change.
+- **FACT-017:** On the disposable hosted runner, `Acx01000` was stopped by default and `sc start Acx01000` succeeded. LiveKD `-ml` captured a kernel dump, but public symbols did not expose `wdfldr!WdfLdrGlobals` for `!wdfkd.wdfldr`.
+- **HYP-003:** ACX class version mismatch (client 1.1 versus host class 1.0) is the leading explanation for the `WdfVersionBindClass` failure; exact internal status mapping remains unproven.
+
+### Edges
+- FACT-012 -> FACT-013: the log identifies the WDF class-binding API described by the Microsoft header.
+- FACT-012 -> HYP-003: the failure occurs at class binding, where the ACX version mismatch is relevant.
+- FACT-014 -| HYP-003: KMDF 1.31/1.33 is not the mismatch being investigated.
+- FACT-015 -| HYP-003: Universal is not an unsupported Server 2022 target.
+- FACT-016 -> EXP-003: newer runner binary prompted a separate servicing/class-version probe.
+- FACT-017 -> EXP-003: LiveKD capture works, but public WDF loader symbols block class-version enumeration.
