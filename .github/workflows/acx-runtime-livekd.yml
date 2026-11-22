@@ -81,21 +81,21 @@ jobs:
           $livekd = Get-Item -LiteralPath $livekdInKdDir
           New-Item -ItemType Directory -Path 'C:\Symbols' -Force | Out-Null
           $env:_NT_SYMBOL_PATH = 'srv*C:\Symbols*https://msdl.microsoft.com/download/symbols'
-          $dump = Join-Path $root 'server2022-live.dmp'
+          $dump = Join-Path $root 'server2022-mirror.dmp'
           $log = Join-Path $root 'wdfldr-output.txt'
           $captureLog = Join-Path $root 'livekd-capture.txt'
 
-          Write-Host 'Capturing native live kernel dump with LiveKD -ml -o; debugger will be started separately.'
-          & $livekd.FullName -o $dump -ml -b 2>&1 | Tee-Object -FilePath $captureLog
+          Write-Host 'Capturing consistent kernel mirror dump with LiveKD -m -o (default memory regions, including driver pages).'
+          & $livekd.FullName -o $dump -m -b 2>&1 | Tee-Object -FilePath $captureLog
           $captureExit = $LASTEXITCODE
           "LIVEKD_CAPTURE_EXIT=$captureExit" | Out-File (Join-Path $root 'result.txt') -Encoding utf8
-          if ($captureExit -ne 0) { throw "LiveKD capture failed: $captureExit" }
-          if (-not (Test-Path $dump)) { throw 'LiveKD reported success but dump file is missing' }
+          if ($captureExit -ne 0) { throw "LiveKD mirror capture failed: $captureExit" }
+          if (-not (Test-Path $dump)) { throw 'LiveKD reported success but mirror dump file is missing' }
           "DUMP_SIZE=$((Get-Item $dump).Length)" | Out-File (Join-Path $root 'result.txt') -Append -Encoding utf8
 
           $cmdFile = Join-Path $root 'inspect-wdfldr.txt'
-          @('.symfix C:\Symbols', '.reload /f Wdf01000.sys', '.reload /f Acx01000.sys', 'lmvm Acx01000', '!wdfldr', '!wdfldr acx01000', '!wdfkd.wdfldr Acx01000.sys', 'q') | Set-Content -LiteralPath $cmdFile -Encoding ascii
-          Write-Host 'Opening saved live dump with KD and querying WDF/ACX class module.'
+          @('.symfix C:\Symbols', '.reload /f Wdf01000.sys', '.reload /f Acx01000.sys', 'lmvm Acx01000', '!wdfkd.wdfldr Acx01000.sys', '!wdfldr acx01000', 'q') | Set-Content -LiteralPath $cmdFile -Encoding ascii
+          Write-Host 'Opening saved mirror dump with KD and querying ACX CLIENT_MODULE and CLASS_MODULE versions.'
           & $kdPath -z $dump -y $env:_NT_SYMBOL_PATH -logo $log -cf $cmdFile
           $kdExit = $LASTEXITCODE
           "KD_EXIT=$kdExit" | Out-File (Join-Path $root 'result.txt') -Append -Encoding utf8
