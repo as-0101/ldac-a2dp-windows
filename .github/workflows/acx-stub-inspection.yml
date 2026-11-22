@@ -1,0 +1,76 @@
+name: ACX stub metadata inspection
+
+on:
+  push:
+    branches:
+      - research/acx-stub-metadata
+  workflow_dispatch:
+
+jobs:
+  inspect:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Restore pinned WDK and SDK NuGet packages
+        shell: pwsh
+        run: nuget restore driver\packages.config -PackagesDirectory driver\packages
+
+      - name: Inspect ACX stub libraries and headers
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $out = Join-Path $env:RUNNER_TEMP 'acx-stub-inspection'
+          New-Item -ItemType Directory -Path $out -Force | Out-Null
+          $wdk = Join-Path $PWD 'driver\packages\Microsoft.Windows.WDK.x64.10.0.26100.6584'
+          if (-not (Test-Path $wdk)) { throw "WDK NuGet package not found: $wdk" }
+          $libs = @(Get-ChildItem -LiteralPath $wdk -Filter 'acxstub.lib' -File -Recurse)
+          if (-not $libs) { throw 'No acxstub.lib found in restored WDK package.' }
+          $inventory = foreach ($lib in $libs) {
+            [pscustomobject]@{
+              Path = $lib.FullName.Substring($wdk.Length).TrimStart('\','/')
+              Length = $lib.Length
+              SHA256 = (Get-FileHash -LiteralPath $lib.FullName -Algorithm SHA256).Hash
+              LastWriteTimeUtc = $lib.LastWriteTimeUtc.ToString('o')
+            }
+          }
+          $inventory | ConvertTo-Json -Depth 4 | Set-Content (Join-Path $out 'acxstub-inventory.json')
+          $dumpbin = Get-ChildItem 'C:\Program Files\Microsoft Visual Studio' -Filter dumpbin.exe -File -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.FullName -match '\\Hostx64\\x64\\dumpbin\.exe$' } | Select-Object -First 1
+          if (-not $dumpbin) { throw 'dumpbin.exe not found on hosted VS image.' }
+          "DUMPBIN=$($dumpbin.FullName)" | Set-Content (Join-Path $out 'toolchain.txt')
+          foreach ($lib in $libs) {
+            $tag = ($lib.FullName.Substring($wdk.Length).TrimStart('\','/') -replace '[\\/: ]','_')
+            & $dumpbin.FullName /headers $lib.FullName 2>&1 | Out-File (Join-Path $out "$tag.headers.txt") -Encoding utf8
+            & $dumpbin.FullName /linkermember:2 $lib.FullName 2>&1 | Out-File (Join-Path $out "$tag.linkermembers.txt") -Encoding utf8
+            & $dumpbin.FullName /symbols $lib.FullName 2>&1 | Out-File (Join-Path $out "$tag.symbols.txt") -Encoding utf8
+          }
+          $includeRoot = Join-Path $wdk 'Include'
+          $headers = @(Get-ChildItem -LiteralPath $includeRoot -Filter '*.h' -File -Recurse | Where-Object { $_.FullName -match '\\acx\\km\\1\.[01]\\' })
+          $headerInventory = foreach ($header in $headers) {
+            [pscustomobject]@{
+              Path = $header.FullName.Substring($includeRoot.Length).TrimStart('\','/')
+              Length = $header.Length
+              SHA256 = (Get-FileHash -LiteralPath $header.FullName -Algorithm SHA256).Hash
+            }
+          }
+          $headerInventory | ConvertTo-Json -Depth 4 | Set-Content (Join-Path $out 'acx-header-inventory.json')
+          foreach ($header in $headers) {
+            $relative = $header.FullName.Substring($includeRoot.Length).TrimStart('\','/') -replace '[\\/: ]','_'
+            Copy-Item -LiteralPath $header.FullName -Destination (Join-Path $out $relative)
+          }
+          @(
+            "WDK_PACKAGE=$wdk"
+            "ACXSTUB_COUNT=$($libs.Count)"
+            "ACX_HEADER_COUNT=$($headers.Count)"
+            "DUMPBIN=$($dumpbin.FullName)"
+          ) | Set-Content (Join-Path $out 'summary.txt')
+          Get-Content (Join-Path $out 'summary.txt')
+          Get-Content (Join-Path $out 'acxstub-inventory.json')
+
+      - name: Upload ACX stub inspection report
+        uses: actions/upload-artifact@v4
+        with:
+          name: acx-stub-metadata
+          path: ${{ runner.temp }}\acx-stub-inspection\*
+          if-no-files-found: error
+          retention-days: 14
