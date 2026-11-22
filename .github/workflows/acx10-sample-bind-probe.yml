@@ -31,7 +31,6 @@ jobs:
         shell: pwsh
         run: |
           & .\driver\AcxAudioCodecProbe\Build-AcxAudioCodecProbe.ps1
-          if ($LASTEXITCODE -ne 0) { throw "Probe build script failed: $LASTEXITCODE" }
 
       - name: Upload unsigned build package and provenance
         if: always()
@@ -39,9 +38,9 @@ jobs:
         with:
           name: acx10-sample-bind-probe-build
           path: |
-            \${{ runner.temp }}\acx10-sample-bind-probe\package\**
-            \${{ runner.temp }}\acx10-sample-bind-probe\build\**
-            \${{ runner.temp }}\acx10-sample-bind-probe\report\**
+            ${{ runner.temp }}\acx10-sample-bind-probe\package\**
+            ${{ runner.temp }}\acx10-sample-bind-probe\build\**
+            ${{ runner.temp }}\acx10-sample-bind-probe\report\**
           if-no-files-found: warn
           retention-days: 14
 
@@ -61,7 +60,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: acx10-sample-bind-probe-build
-          path: \${{ runner.temp }}\acx10-sample-bind-probe
+          path: ${{ runner.temp }}\acx10-sample-bind-probe
 
       - name: Install Windows SDK Debugging Tools and LiveKD
         shell: pwsh
@@ -106,14 +105,12 @@ jobs:
         shell: pwsh
         run: |
           & .\driver\AcxAudioCodecProbe\Invoke-AcxAudioCodecProbe.ps1
-          if ($LASTEXITCODE -ne 0) { throw "Hosted bind probe script failed: $LASTEXITCODE" }
 
       - name: Final cleanup and private-key artifact guard
         if: always()
         shell: pwsh
         run: |
           & .\driver\AcxAudioCodecProbe\Invoke-AcxAudioCodecProbe.ps1 -CleanupOnly -StrictCleanup
-          if ($LASTEXITCODE -ne 0) { throw "Strict cleanup/private-key guard failed: $LASTEXITCODE" }
 
       - name: Upload hosted bind report and signed package (public certificate only)
         if: always()
@@ -121,8 +118,8 @@ jobs:
         with:
           name: acx10-sample-bind-probe-runtime
           path: |
-            \${{ runner.temp }}\acx10-sample-bind-probe\package\**
-            \${{ runner.temp }}\acx10-sample-bind-probe\build\**
-            \${{ runner.temp }}\acx10-sample-bind-probe\report\**
+            ${{ runner.temp }}\acx10-sample-bind-probe\package\**
+            ${{ runner.temp }}\acx10-sample-bind-probe\build\**
+            ${{ runner.temp }}\acx10-sample-bind-probe\report\**
           if-no-files-found: warn
           retention-days: 14

@@ -24,7 +24,10 @@ $consoleLog = Join-Path $buildRoot 'msbuild-console.log'
 $msbuildOutput = & $msbuild $project '/t:Rebuild' '/m' '/p:Configuration=Release' '/p:Platform=x64' '/v:normal' 2>&1
 $msbuildExit = $LASTEXITCODE
 $msbuildOutput | Out-File -LiteralPath $consoleLog -Encoding utf8
-if ($msbuildExit -ne 0) { throw "MSBuild failed with exit code $msbuildExit. See $consoleLog" }
+if ($msbuildExit -ne 0) {
+    Get-Content -LiteralPath $consoleLog -Tail 240 | Write-Host
+    throw "MSBuild failed with exit code $msbuildExit. See $consoleLog"
+}
 
 $buildText = Get-Content -LiteralPath $consoleLog -Raw
 $toolchainMatch = [regex]::Match(
@@ -54,8 +57,9 @@ if (-not (Test-Path -LiteralPath $repoBuildRoot)) { throw "Build output director
 
 $sys = Get-ChildItem -LiteralPath $repoBuildRoot -Filter 'AcxAudioCodecProbe.sys' -File -Recurse |
     Where-Object { $_.FullName -notmatch '\\obj\\' } | Select-Object -First 1
-$infFile = Get-ChildItem -LiteralPath $repoBuildRoot -Filter 'AcxAudioCodecProbe.inf' -File -Recurse |
-    Select-Object -First 1
+$infCandidates = Get-ChildItem -LiteralPath $repoBuildRoot -Filter 'AcxAudioCodecProbe.inf' -File -Recurse
+$infFile = $infCandidates | Where-Object { $_.FullName -notmatch '\\obj\\' } | Select-Object -First 1
+if (-not $infFile) { $infFile = $infCandidates | Select-Object -First 1 }
 $pdbFile = Get-ChildItem -LiteralPath $repoBuildRoot -Filter 'AcxAudioCodecProbe.pdb' -File -Recurse |
     Select-Object -First 1
 if (-not $sys -or -not $infFile -or -not $pdbFile) {
