@@ -9,10 +9,11 @@ This is a disposable hosted-CI experiment to distinguish a general WDK 10.0.2610
 The source baseline is microsoft/Windows-driver-samples commit d49bb7d72f3651952b2b6e4ad28d14fe2247eb69:
 
 - AudioCodec Driver.cpp: WDF_OBJECT_ATTRIBUTES_INIT, WDF_DRIVER_CONFIG_INIT, unload callback, WdfDriverCreate, then ACX_DRIVER_CONFIG_INIT / AcxDriverInitialize.
-- AudioCodec.vcxproj: x64 KMDF driver, WindowsKernelModeDriver10.0 toolset, ACX 1.1, KMDF 1.31, Windows Driver target platform, WPP and SamplesCommon.lib.
+- AudioCodec.vcxproj: x64/ARM64 KMDF driver, WindowsKernelModeDriver10.0 toolset, ACX 1.1, KMDF 1.31, Windows Driver target platform, WPP and SamplesCommon.lib. It uses $(LatestTargetPlatformVersion) and does not pin a WDK NuGet version in the project file.
+- AudioCodec.sln also builds the shared audio/Acx/Samples/Common/SamplesCommon.vcxproj; the full sample includes helper code and WPP dependencies that are intentionally excluded from this minimal discriminator.
 - AudioCodec.inf: MEDIA class, root hardware ID ROOT\AudioCodec, KMDF service registration, and audio interface registrations.
 
-The pinned upstream sample commit itself uses WDK NuGet 10.0.28000.2526 and ACX 1.1. This experiment does not build the complete sample with that newer kit. It uses the sample's DriverEntry/WDF initialization sequence and MEDIA/root-enumerated INF topology, while compiling against the project's pinned WDK/SDK 10.0.26100.6584 and ACX 1.0 so the runtime comparison matches CI #248.
+The probe retains the sample's DriverEntry/WDF initialization sequence and MEDIA/root-enumerated INF identity, but does not build the complete sample solution. It compiles against the experiment's pinned WDK/SDK 10.0.26100.6584 and ACX 1.0 so the runtime comparison matches CI #248. The upstream project file itself does not establish a specific WDK NuGet package version.
 
 ## Deliberate reduction
 
@@ -23,14 +24,16 @@ The pinned upstream sample commit itself uses WDK NuGet 10.0.28000.2526 and ACX 
 
 ## Exact build contract
 
-- Runner: GitHub-hosted windows-2022 (Windows Server 2022).
+- Build runner: GitHub-hosted `windows-2025` (Windows Server 2025 + Visual Studio 2026); runtime runner: GitHub-hosted `windows-2022` (Windows Server 2022).
+- Microsoft WDK NuGet guidance currently lists Windows 11 or newer and Visual Studio 2026 with Desktop development with C++ plus the Windows Driver Kit component. The build job uses the Server 2025 / VS2026 image; Microsoft does not explicitly enumerate Server 2025 in that prerequisite sentence, so this remains an environment-documentation caveat.
+- The build invokes 64-bit MSBuild and adds the pinned WDK NuGet `c\bin\10.0.26100.0\x64` and `x86` tool directories to PATH; this is required for WDK tool discovery (including StampInf).
 - WDK NuGet assembly: 10.0.26100.6584.
 - SDK target: 10.0.26100.0.
 - Architecture: x64.
 - ACX: 1.0.
 - KMDF client: 1.31.
 - Target platform: Windows Driver.
-- The project is under driver/AcxAudioCodecProbe, beneath driver/Directory.Build.props, and includes a conditional explicit fallback import if automatic Directory.Build.props import is suppressed.
+- The project is under driver/AcxAudioCodecProbe, beneath driver/Directory.Build.props. The WDK props are imported explicitly before the C++/WDK targets; automatic Directory.Build.props import is disabled for this project to avoid duplicate imports. WDKContentRoot is normalized with a trailing separator for WDK target path concatenation.
 - The MSBuild target hard-fails unless the pinned NuGet path is active, DDK include/library paths target 10.0.26100.0, SDK target matches, ACX is 1.0, KMDF is 1.31, architecture is x64, and target platform is Windows Driver.
 - After build, the script requires the WDK targets to report WdkVersion 10.0.26100.0 and WdkAssemblyVersion 10.0.26100.6584 in the catalog-attribute output. It preserves the WDK-generated catalog or uses Inf2Cat Server2022_X64 as a fallback, then requires InfVerif /w to pass before runtime testing.
 

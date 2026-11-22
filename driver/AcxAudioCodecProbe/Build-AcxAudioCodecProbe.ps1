@@ -12,16 +12,29 @@ if (-not (Test-Path -LiteralPath $wdkPackage)) {
     throw "Pinned WDK NuGet package missing: $wdkPackage"
 }
 
+$wdkBinRoot = Join-Path $wdkPackage 'c\bin\10.0.26100.0'
+$wdkBinX64 = Join-Path $wdkBinRoot 'x64'
+$wdkBinX86 = Join-Path $wdkBinRoot 'x86'
+$stampInf = Join-Path $wdkBinX64 'stampinf.exe'
+if (-not (Test-Path -LiteralPath $stampInf)) {
+    throw "Pinned StampInf.exe missing from WDK NuGet package: $stampInf"
+}
+# WDK targets invoke StampInf by name. Make the exact NuGet tools discoverable.
+$env:Path = "$wdkBinX64;$wdkBinX86;$env:Path"
+
 $vswhere = Join-Path ([Environment]::GetFolderPath('ProgramFilesX86')) 'Microsoft Visual Studio\Installer\vswhere.exe'
 if (-not (Test-Path -LiteralPath $vswhere)) { throw 'vswhere.exe not found.' }
 $vsPath = & $vswhere -latest -products '*' -requires Microsoft.Component.MSBuild -property installationPath
 if (-not $vsPath) { throw 'Visual Studio MSBuild installation not found.' }
-$msbuild = Join-Path $vsPath 'MSBuild\Current\Bin\MSBuild.exe'
-if (-not (Test-Path -LiteralPath $msbuild)) { throw "MSBuild.exe missing: $msbuild" }
+$msbuild = Join-Path $vsPath 'MSBuild\Current\Bin\amd64\MSBuild.exe'
+if (-not (Test-Path -LiteralPath $msbuild)) { throw "64-bit MSBuild.exe is required for WDK tool discovery; missing: $msbuild" }
+$msbuildVersion = (Get-Item -LiteralPath $msbuild).VersionInfo.FileVersion
+$stampInfVersion = (Get-Item -LiteralPath $stampInf).VersionInfo.FileVersion
+$stampInfHash = (Get-FileHash -LiteralPath $stampInf -Algorithm SHA256).Hash
 
 $project = Join-Path $PSScriptRoot 'AcxAudioCodecProbe.vcxproj'
 $consoleLog = Join-Path $buildRoot 'msbuild-console.log'
-$msbuildOutput = & $msbuild $project '/t:Rebuild' '/m' '/p:Configuration=Release' '/p:Platform=x64' '/v:normal' 2>&1
+$msbuildOutput = & $msbuild $project '/t:Rebuild' '/m' '/nr:false' '/p:Configuration=Release' '/p:Platform=x64' '/v:normal' 2>&1
 $msbuildExit = $LASTEXITCODE
 $msbuildOutput | Out-File -LiteralPath $consoleLog -Encoding utf8
 if ($msbuildExit -ne 0) {
@@ -30,6 +43,7 @@ if ($msbuildExit -ne 0) {
 }
 
 $buildText = Get-Content -LiteralPath $consoleLog -Raw
+if ($buildText -notmatch '(?i)stampinf\.exe') { throw 'WDK build log did not record the StampInf tool invocation.' }
 if ($buildText -notmatch '(?im)^\s*WdkVersion:\s*10\.0\.26100\.0\s*$' -or
     $buildText -notmatch '(?im)^\s*WdkAssemblyVersion:\s*10\.0\.26100\.6584\s*$') {
     Get-Content -LiteralPath $consoleLog -Tail 240 | Write-Host
@@ -96,12 +110,106 @@ $inf2catExit = 0
 if ($catFile) {
     Copy-Item -LiteralPath $catFile.FullName -Destination $catPath -Force
 } else {
-    $kitsBin = Join-Path ([Environment]::GetFolderPath('ProgramFilesX86')) 'Windows Kits\10\bin'
-    $inf2catCandidates = Get-ChildItem -LiteralPath $kitsBin -Filter 'Inf2Cat.exe' -File -Recurse -ErrorAction SilentlyContinue
-    $inf2cat = $inf2catCandidates | Where-Object { $_.FullName -like '*\10.0.26100.0\x86\Inf2Cat.exe' } | Select-Object -First 1
-    if (-not $inf2cat) { $inf2cat = $inf2catCandidates | Where-Object { $_.DirectoryName -like '*\x86' } | Select-Object -First 1 }
-    if (-not $inf2cat) { $inf2cat = $inf2catCandidates | Select-Object -First 1 }
-    if (-not $inf2cat) { throw 'Inf2Cat.exe not found in installed Windows Kits.' }
+    $inf2catRoots = @(
+        $wdkPackage,
+        (Join-Path ([Environment]::GetFolderPath('ProgramFilesX86')) 'Windows Kits\10')
+    ) | Where-Object { Test-Path -LiteralPath $_ }
+    $inf2catCandidates = foreach ($root in $inf2catRoots) {
+        Get-ChildItem -LiteralPath $root -Filter 'Inf2Cat.exe' -File -Recurse -ErrorAction SilentlyContinue
+    }
+    $inf2cat = $inf2catCandidates | Where-Object { $_.FullName -match '\\10\.0\.26100\.0\\x86\\Inf2Cat\.exe    $inf2catPath = $inf2cat.FullName
+    $inf2catVersion = $inf2cat.VersionInfo.FileVersion
+    $inf2catLog = Join-Path $buildRoot 'inf2cat-server2022.log'
+    $inf2catOutput = & $inf2cat.FullName "/driver:$packageRoot" /os:Server2022_X64 2>&1
+    $inf2catExit = $LASTEXITCODE
+    $inf2catOutput | Out-File -LiteralPath $inf2catLog -Encoding utf8
+    if ($inf2catExit -ne 0) { throw "Inf2Cat Server2022_X64 failed with exit code $inf2catExit." }
+}
+if (-not (Test-Path -LiteralPath $catPath)) { throw 'No catalog was produced by the WDK build or Inf2Cat fallback.' }
+
+$packageInf = Join-Path $packageRoot 'AcxAudioCodecProbe.inf'
+$infText = Get-Content -LiteralPath $packageInf -Raw
+foreach ($required in @(
+    '(?im)^Class\s*=\s*MEDIA\s*$',
+    '(?i)ROOT\\AudioCodec',
+    '(?im)^KmdfLibraryVersion\s*=\s*1\.31\s*$'
+)) {
+    if ($infText -notmatch $required) { throw "Built INF failed sample-topology preflight: $required" }
+}
+
+$toolRoots = @(
+    $wdkPackage,
+    (Join-Path ([Environment]::GetFolderPath('ProgramFilesX86')) 'Windows Kits\10')
+) | Where-Object { Test-Path -LiteralPath $_ }
+$infVerifCandidates = foreach ($root in $toolRoots) {
+    Get-ChildItem -LiteralPath $root -Filter 'InfVerif.exe' -File -Recurse -ErrorAction SilentlyContinue
+}
+$infVerif = $infVerifCandidates | Where-Object { $_.FullName -like '*\10.0.26100.0\x86\InfVerif.exe' } | Select-Object -First 1
+if (-not $infVerif) { $infVerif = $infVerifCandidates | Where-Object { $_.FullName -like '*\x86\InfVerif.exe' } | Select-Object -First 1 }
+if (-not $infVerif) { $infVerif = $infVerifCandidates | Select-Object -First 1 }
+if (-not $infVerif) { throw 'InfVerif.exe not found in pinned WDK package or installed Windows Kits.' }
+
+$infVerifLog = Join-Path $buildRoot 'infverif-windows-driver.log'
+$infVerifOutput = & $infVerif.FullName /w $packageInf 2>&1
+$infVerifExit = $LASTEXITCODE
+$infVerifOutput | Out-File -LiteralPath $infVerifLog -Encoding utf8
+if ($infVerifExit -ne 0) { throw "InfVerif /w failed with exit code $infVerifExit. See $infVerifLog" }
+
+$hashes = [ordered]@{}
+foreach ($name in @('AcxAudioCodecProbe.sys','AcxAudioCodecProbe.inf','AcxAudioCodecProbe.cat','AcxAudioCodecProbe.pdb')) {
+    $path = Join-Path $packageRoot $name
+    $hashes[$name] = [pscustomobject]@{
+        Length = (Get-Item -LiteralPath $path).Length
+        SHA256 = (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash
+    }
+}
+$driverVer = [regex]::Match($infText, '(?im)^\s*DriverVer\s*=\s*(.+)$').Groups[1].Value.Trim()
+$manifest = [ordered]@{
+    Experiment = 'ACX 1.0 Microsoft AudioCodec sample-derived bind probe'
+    SourceSampleCommit = 'd49bb7d72f3651952b2b6e4ad28d14fe2247eb69'
+    SourceSampleDriverCppBlob = '452b0d99eaf24451d965bd1b0f3ef140417e6d98'
+    SourceSampleProjectBlob = '0cdc9e6154c6340d384c8b07550d6ecf11a2e6d3'
+    SourceSampleInfBlob = '0bc5fe2314b32e30e13827e3d421911048d8f579'
+    RepositoryCommit = $env:GITHUB_SHA
+    RepositoryRef = $env:GITHUB_REF_NAME
+    WorkflowRunId = $env:GITHUB_RUN_ID
+    WorkflowRunNumber = $env:GITHUB_RUN_NUMBER
+    Toolchain = $toolchain
+    WdkVersionFromBuildLog = '10.0.26100.0'
+    WdkAssemblyVersionFromBuildLog = '10.0.26100.6584'
+    DriverVer = $driverVer
+    MSBuildPath = $msbuild
+    MSBuildVersion = $msbuildVersion
+    StampInfPath = $stampInf
+    StampInfVersion = $stampInfVersion
+    StampInfSHA256 = $stampInfHash
+    Inf2CatPath = $inf2catPath
+    Inf2CatVersion = $inf2catVersion
+    Inf2CatServer2022ExitCode = $inf2catExit
+    InfVerifPath = $infVerif.FullName
+    InfVerifVersion = $infVerif.VersionInfo.FileVersion
+    InfVerifWindowsDriverExitCode = $infVerifExit
+    Files = $hashes
+}
+$manifestPath = Join-Path $reportRoot 'build-manifest.json'
+$manifest | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $manifestPath -Encoding utf8
+Write-Host ($manifest | ConvertTo-Json -Depth 8)
+
+if ($env:GITHUB_STEP_SUMMARY) {
+    @(
+        '### ACX sample-derived probe build',
+        '',
+        "- Commit: $env:GITHUB_SHA",
+        "- WDK assembly: 10.0.26100.6584 (from WDK build target log)",
+        "- SDK target: $($toolchain.WindowsTargetPlatformVersion)",
+        "- ACX / KMDF: $($toolchain.AcxVersion) / $($toolchain.KmdfVersion)",
+        "- Target platform: $($toolchain.DriverTargetPlatform)",
+        '- InfVerif /w: PASS',
+        "- SYS SHA-256: $($hashes['AcxAudioCodecProbe.sys'].SHA256)"
+    ) | Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY
+}
+ } | Select-Object -First 1
+    if (-not $inf2cat) { throw 'Pinned Inf2Cat.exe 10.0.26100.0 (x86) not found in WDK NuGet package or installed Windows Kits.' }
     $inf2catPath = $inf2cat.FullName
     $inf2catVersion = $inf2cat.VersionInfo.FileVersion
     $inf2catLog = Join-Path $buildRoot 'inf2cat-server2022.log'
