@@ -103,7 +103,21 @@ jobs:
           $cer = Get-ChildItem -LiteralPath $pkg -Filter 'ldac-a2dp-test.cer' -Recurse | Select-Object -First 1
           if (-not $inf -or -not $sys -or -not $cat -or -not $cer) { throw 'Required ACX 1.0 package files are missing.' }
           $infText = Get-Content -LiteralPath $inf.FullName -Raw
-          $driverVerMatch = [regex]::Match($infText, '(?im)^\s*DriverVer\s*=\s*[^,]+,\s*(?<version>\d+(?:\.\d+){3})\s*
+          $driverVerMatch = [regex]::Match($infText, '(?im)^\s*DriverVer\s*=\s*[^,]+,\s*(?<version>\d+(?:\.\d+){3})\s*$')
+          if (-not $driverVerMatch.Success) { throw 'Package INF has no valid four-part DriverVer.' }
+          $driverVersion = $driverVerMatch.Groups['version'].Value
+          $projectText = Get-Content -LiteralPath 'driver\LdacA2dp\LdacA2dp.vcxproj' -Raw
+          $acxMajorMatch = [regex]::Match($projectText, '<ACX_VERSION_MAJOR>\s*(\d+)\s*</ACX_VERSION_MAJOR>')
+          $acxMinorMatch = [regex]::Match($projectText, '<ACX_VERSION_MINOR>\s*(\d+)\s*</ACX_VERSION_MINOR>')
+          if (-not $acxMajorMatch.Success -or -not $acxMinorMatch.Success -or
+              $acxMajorMatch.Groups[1].Value -ne '1' -or $acxMinorMatch.Groups[1].Value -ne '0') {
+            throw 'This hosted-load workflow must build against ACX 1.0 (ACX_VERSION_MAJOR=1, ACX_VERSION_MINOR=0).'
+          }
+          $cert = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new($cer.FullName)
+          if ($cert.Subject -notmatch 'LDAC A2DP OPPO Physical Server 2022 Test Only' -or
+              $cert.Thumbprint -ne '4A4E17BFC74DBE7220CA0606763FB81BA85A947B') {
+            throw 'Unexpected ACX 1.0 test certificate subject or thumbprint.'
+          }
 
           $bcd = & bcdedit.exe /enum '{current}' 2>&1
           $bcd | Select-String -Pattern 'testsigning' | Out-File (Join-Path $root 'bcd-policy.txt') -Encoding utf8
@@ -206,144 +220,6 @@ jobs:
           if ($LASTEXITCODE -ne 0 -or -not (Test-Path $dump)) { throw 'LiveKD failed to create a kernel mirror dump.' }
           $cmdFile = Join-Path $root 'inspect-acx10-load.txt'
           @('.symfix C:\Symbols', '.reload /f Wdf01000.sys', '.reload /f Acx01000.sys', '.reload /f LdacA2dp.sys', 'lmvm LdacA2dp', '!wdfkd.wdfldr LdacA2dp.sys', '!wdfkd.wdfldr Acx01000.sys', '!wdfldr acx01000', 'q') | Set-Content -LiteralPath $cmdFile -Encoding ascii
-          $log = Join-Path $root 'wdfldr-after-load.txt'
-          & $kdPath -z $dump -y $env:_NT_SYMBOL_PATH -logo $log -cf $cmdFile
-          "KD_EXIT=$LASTEXITCODE" | Out-File (Join-Path $root 'install-result.txt') -Append -Encoding utf8
-          if (Test-Path $log) { Get-Content $log }
-
-      - name: Remove temporary software device
-        if: always()
-        shell: pwsh
-        continue-on-error: true
-        run: |
-          $root = Join-Path $env:RUNNER_TEMP 'acx10-hosted-load'
-          $devgenPathFile = Join-Path $root 'devgen-path.txt'
-          if (Test-Path $devgenPathFile) {
-            $devgenPath = (Get-Content -LiteralPath $devgenPathFile -Raw).Trim().Substring(12)
-            & $devgenPath /remove /instanceid LDAC_A2DP_CI_TEST 2>&1 | Tee-Object -FilePath (Join-Path $root 'devgen-remove.txt')
-          }
-
-      - name: Upload hosted ACX 1.0 load report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: acx10-hosted-load-report
-          path: |
-            ${{ runner.temp }}\acx10-hosted-load\*.txt
-            ${{ runner.temp }}\acx10-hosted-load\*.json
-          if-no-files-found: warn
-          retention-days: 7
-)
-          if (-not $driverVerMatch.Success) { throw 'Package INF has no valid four-part DriverVer.' }
-          $driverVersion = $driverVerMatch.Groups['version'].Value
-          $projectText = Get-Content -LiteralPath 'driver\LdacA2dp\LdacA2dp.vcxproj' -Raw
-          $acxMajorMatch = [regex]::Match($projectText, '<ACX_VERSION_MAJOR>\s*(\d+)\s*</ACX_VERSION_MAJOR>')
-          $acxMinorMatch = [regex]::Match($projectText, '<ACX_VERSION_MINOR>\s*(\d+)\s*</ACX_VERSION_MINOR>')
-          if (-not $acxMajorMatch.Success -or -not $acxMinorMatch.Success -or
-              $acxMajorMatch.Groups[1].Value -ne '1' -or $acxMinorMatch.Groups[1].Value -ne '0') {
-            throw 'This hosted-load workflow must build against ACX 1.0 (ACX_VERSION_MAJOR=1, ACX_VERSION_MINOR=0).'
-          }
-          $cert = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new($cer.FullName)
-          if ($cert.Subject -notmatch 'LDAC A2DP OPPO Physical Server 2022 Test Only' -or
-              $cert.Thumbprint -ne '4A4E17BFC74DBE7220CA0606763FB81BA85A947B') {
-            throw 'Unexpected ACX 1.0 test certificate subject or thumbprint.'
-          }
-
-          $bcd = & bcdedit.exe /enum '{current}' 2>&1
-          $bcd | Select-String -Pattern 'testsigning' | Out-File (Join-Path $root 'bcd-policy.txt') -Encoding utf8
-          if (($bcd -join [Environment]::NewLine) -notmatch 'testsigning\s+Yes') { throw 'Hosted runner is not in test-signing mode; driver load test is unsafe.' }
-
-          $toolRoots = @(
-            (Join-Path ([Environment]::GetFolderPath('ProgramFilesX86')) 'Windows Kits\10\Tools'),
-            (Join-Path $env:ProgramFiles 'Windows Kits\10\Tools'),
-            (Join-Path (Get-Location).Path 'driver\packages')
-          ) | Where-Object { Test-Path $_ }
-          $devgen = $null
-          if ($toolRoots) {
-            $devgen = Get-ChildItem -Path $toolRoots -Filter 'devgen.exe' -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.FullName -match '\\x64\\devgen\.exe$' } | Sort-Object FullName -Descending | Select-Object -First 1
-          }
-          $result = [pscustomobject]@{
-            PackageDriverVer = '0.2.326.1634'
-            InfSHA256 = (Get-FileHash $inf.FullName -Algorithm SHA256).Hash
-            SysSHA256 = (Get-FileHash $sys.FullName -Algorithm SHA256).Hash
-            CatSHA256 = (Get-FileHash $cat.FullName -Algorithm SHA256).Hash
-            CertificateThumbprint = $cert.Thumbprint
-            TestSigning = $true
-            DevGen = if ($devgen) { $devgen.FullName } else { 'NOT_FOUND' }
-          }
-          $result | ConvertTo-Json -Depth 4 | Tee-Object -FilePath (Join-Path $root 'preflight.json') | Write-Host
-          if (-not $devgen) { throw 'DevGen.exe not found in installed WDK tools; no driver install attempted.' }
-          "DEVGEN_PATH=$($devgen.FullName)" | Out-File (Join-Path $root 'devgen-path.txt') -Encoding utf8
-
-      - name: Import test certificate and create temporary BTHENUM software device
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $root = Join-Path $env:RUNNER_TEMP 'acx10-hosted-load'
-          $pkg = Join-Path $root 'package'
-          $cer = Get-ChildItem -LiteralPath $pkg -Filter 'ldac-a2dp-test.cer' -Recurse | Select-Object -First 1
-          $devgenPath = (Get-Content -LiteralPath (Join-Path $root 'devgen-path.txt') -Raw).Trim().Substring(12)
-          Import-Certificate -FilePath $cer.FullName -CertStoreLocation 'Cert:\LocalMachine\Root' | Out-Null
-          Import-Certificate -FilePath $cer.FullName -CertStoreLocation 'Cert:\LocalMachine\TrustedPublisher' | Out-Null
-          $hardwareId = 'BTHENUM\{0000110B-0000-1000-8000-00805F9B34FB}_LOCALMFG&0002'
-          $compatibleId = 'BTHENUM\{0000110B-0000-1000-8000-00805F9B34FB}_GENERIC'
-          & $devgenPath /add /bus SWD /instanceid LDAC_A2DP_CI_TEST /hardwareid $hardwareId /compatibleid $compatibleId 2>&1 | Tee-Object -FilePath (Join-Path $root 'devgen-add.txt')
-          $exit = $LASTEXITCODE
-          "DEVGEN_ADD_EXIT=$exit" | Out-File (Join-Path $root 'install-result.txt') -Encoding utf8
-          if ($exit -ne 0) { throw "DevGen failed to create the temporary software device: $exit" }
-
-      - name: Install ACX 1.0 driver package and capture PnP state
-        shell: pwsh
-        continue-on-error: true
-        run: |
-          $ErrorActionPreference = 'Continue'
-          $root = Join-Path $env:RUNNER_TEMP 'acx10-hosted-load'
-          $pkg = Join-Path $root 'package'
-          $inf = Get-ChildItem -LiteralPath $pkg -Filter 'LdacA2dp.inf' -Recurse | Select-Object -First 1
-          $start = Get-Date
-          & pnputil.exe /add-driver $inf.FullName /install 2>&1 | Tee-Object -FilePath (Join-Path $root 'pnputil-install.txt')
-          $pnputilExit = $LASTEXITCODE
-          "PNPUTIL_EXIT=$pnputilExit" | Out-File (Join-Path $root 'install-result.txt') -Append -Encoding utf8
-          Start-Sleep -Seconds 5
-          $device = Get-PnpDevice -Class Bluetooth -ErrorAction SilentlyContinue | Where-Object { $_.InstanceId -like 'SWD\LDAC_A2DP_CI_TEST*' -or $_.FriendlyName -eq 'LDAC A2DP Source' } | Select-Object -First 1
-          if ($device) {
-            $device | Format-List * | Out-File (Join-Path $root 'pnp-device.txt') -Encoding utf8
-            Get-PnpDeviceProperty -InstanceId $device.InstanceId -ErrorAction SilentlyContinue | Where-Object { $_.KeyName -match 'Problem|Service|DriverInf|DriverVersion|DriverProvider|Compatible' } | Format-List KeyName,Data | Out-File (Join-Path $root 'pnp-properties.txt') -Encoding utf8
-          } else {
-            'Synthetic LDAC device not found after pnputil install.' | Out-File (Join-Path $root 'pnp-device.txt') -Encoding utf8
-          }
-          & sc.exe query LdacA2dp 2>&1 | Out-File (Join-Path $root 'service-state.txt') -Encoding utf8
-          Get-WinEvent -FilterHashtable @{LogName='System';StartTime=$start} -ErrorAction SilentlyContinue | Where-Object { $_.ProviderName -match 'Kernel-PnP' -and $_.Id -in 219,227 } | Select-Object -First 20 TimeCreated,Id,LevelDisplayName,Message | Format-List | Out-File (Join-Path $root 'kernel-pnp-events.txt') -Encoding utf8
-
-      - name: Install Windows SDK Debugging Tools and inspect ACX class clients
-        if: always()
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $root = Join-Path $env:RUNNER_TEMP 'acx10-hosted-load'
-          $setup = Join-Path $root 'winsdksetup.exe'
-          Invoke-WebRequest 'https://download.microsoft.com/download/9d2b0e7e-c04f-402c-8ce6-51f1e56028e8/KIT_BUNDLE_WINDOWSSDK_MEDIACREATION/winsdksetup.exe' -OutFile $setup
-          $setupLog = Join-Path $root 'winsdksetup.log'
-          $p = Start-Process -FilePath $setup -ArgumentList @('/features','OptionId.WindowsDesktopDebuggers','/quiet','/norestart','/log',$setupLog) -Wait -PassThru
-          if ($p.ExitCode -ne 0 -and $p.ExitCode -ne 3010) { throw "Windows SDK Debugging Tools install failed: $($p.ExitCode)" }
-          $kdPath = Join-Path ([Environment]::GetFolderPath('ProgramFilesX86')) 'Windows Kits\10\Debuggers\x64\kd.exe'
-          if (-not (Test-Path $kdPath)) { throw 'kd.exe not found after SDK Debugging Tools installation.' }
-          $zip = Join-Path $root 'LiveKD.zip'
-          Invoke-WebRequest 'https://download.sysinternals.com/files/LiveKD.zip' -OutFile $zip
-          Expand-Archive -LiteralPath $zip -DestinationPath (Join-Path $root 'livekd') -Force
-          $livekd = Get-ChildItem (Join-Path $root 'livekd') -Filter livekd.exe -Recurse | Select-Object -First 1
-          if (-not $livekd) { throw 'LiveKD.exe not found.' }
-          New-Item -Path 'HKCU:\Software\Sysinternals\LiveKd' -Force | Out-Null
-          New-ItemProperty -Path 'HKCU:\Software\Sysinternals\LiveKd' -Name EulaAccepted -PropertyType DWord -Value 1 -Force | Out-Null
-          $env:PATH = "$(Split-Path -Parent $kdPath);$env:PATH"
-          New-Item -ItemType Directory -Path 'C:\Symbols' -Force | Out-Null
-          $env:_NT_SYMBOL_PATH = 'srv*C:\Symbols*https://msdl.microsoft.com/download/symbols'
-          $dump = Join-Path $root 'server2022-live.dmp'
-          $captureLog = Join-Path $root 'livekd-capture.txt'
-          & $livekd.FullName -o $dump -ml -b 2>&1 | Tee-Object -FilePath $captureLog
-          if ($LASTEXITCODE -ne 0 -or -not (Test-Path $dump)) { throw 'LiveKD failed to create a native dump.' }
-          $cmdFile = Join-Path $root 'inspect-acx10-load.txt'
-          @('.symfix C:\Symbols', '.reload /f Wdf01000.sys', '.reload /f Acx01000.sys', '.reload /f LdacA2dp.sys', 'lmvm LdacA2dp', '!wdfldr acx01000', '!wdfkd.wdfldr Acx01000.sys', 'q') | Set-Content -LiteralPath $cmdFile -Encoding ascii
           $log = Join-Path $root 'wdfldr-after-load.txt'
           & $kdPath -z $dump -y $env:_NT_SYMBOL_PATH -logo $log -cf $cmdFile
           "KD_EXIT=$LASTEXITCODE" | Out-File (Join-Path $root 'install-result.txt') -Append -Encoding utf8
