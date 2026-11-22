@@ -2,7 +2,7 @@
 
 - Exact failure stage: `VersionBindClass` for class `Acx`, status `0xC000000D`; ACX class-version mismatch remains the leading explanation, not a proven final root cause.
 - KMDF 1.31 / runtime 1.33 is supported; Universal is supported on Server 2022; Bluetooth setup class is correct for BTHENUM.
-- Hosted runner LiveKD `-ml` capture works, but `!wdfkd.wdfldr` could not resolve private WDF loader symbols. CI #6/#7 are still running.
+- Hosted runner LiveKD CI #6/#7 were cancelled and produced no valid class-module query; CI #8 failed before dump creation because LiveKD could not find kd.exe. Current workflow correction commit 02dcde601f08e1e52ac9cf073dbf99b6e0e0a8a3 is unverified.
 - Physical server remains unchanged: UBR 5761, ACX file 10.0.20348.3451, testsigning Yes, `oem75.inf` 0.2.325.1600, Code 37.
 - **Do not run the earlier `Launch-WinDbg-Kernel.bat` as-is:** it uses `-kl` and does not configure BCD local debugging. No BCD or driver changes are authorized.
 
@@ -82,7 +82,7 @@ Before any server-side test, read [PHYSICAL_TEST_RUNBOOK.md](docs/agent/PHYSICAL
 - The package preparation script imports a test certificate into LocalMachine Root and TrustedPublisher, enables IHVDRIVER debug output and sets BCD testsigning; it requires a reboot and is not transactional.
 - The guarded upgrade tool requires the exact token `I_ACCEPT_LDAC_DIAGNOSTIC_UPGRADE` and checks the exact OPPO devnode and candidate package.
 - Do not use `install-oppo.cmd` for the current target; it is intended for an inbox `bth.inf` device.
-- `rollback-oppo.cmd` selects inbox `bth.inf`; it does **not** restore CI #126 / `oem75.inf`. It is a fallback, not an exact restore.
+- `rollback-oppo.cmd` selects inbox `bth.inf`; it does **not** restore the prior WDK 26100 baseline package from successful run #129 / `oem75.inf`. It is a fallback, not an exact restore.
 - The CI #133 certificate thumbprint is `4A4E17BFC74DBE7220CA0606763FB81BA85A947B`.
 - None of the CI #133 preparation, certificate import, driver upgrade, rollback or reboot steps has been performed on the physical host.
 
@@ -104,3 +104,10 @@ Before any server-side test, read [PHYSICAL_TEST_RUNBOOK.md](docs/agent/PHYSICAL
 - **BLOCKED:** cannot proceed without user-side access/action.
 
 If any source conflicts with this snapshot, do not silently choose. Compare timestamps and exact commits, record the conflict, then update the snapshot after resolving it. Never claim background work is running unless an actual scheduled automation or tool execution is doing it.
+
+
+## Latest continuation — 2026-11-22 20:37 Kyiv
+
+Read [the latest run #129 / PnP / LiveKD update](docs/agent/2026-11-22-RUN129-PNP-LIVEKD-UPDATE.md) after this bootstrap. The physical PnP properties now show service LdacA2dp, oem75.inf, DriverVer 0.2.325.1600, Code 37 and ProblemStatus 0xC000000D. The successful WDK 26100.6584 ACX 1.1 build is GitHub Actions run #129 (ID 44922058650); actual run #126 (ID 44922013678) failed. Do not reuse the old CI #126 label for run #129 artifacts.
+
+The leading ACX 1.1-versus-1.0 class-version hypothesis remains supported, not proven. CI #6/#7 were cancelled, CI #8 failed in the LiveKD harness, and the latest workflow fix commit has no verified CI result. Next action is the read-only status pre-check for CI #133 / ACX 1.0 after extraction; no server-changing action is authorized.
