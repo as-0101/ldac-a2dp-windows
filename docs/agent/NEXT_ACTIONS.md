@@ -74,3 +74,12 @@ Read [PHYSICAL_TEST_RUNBOOK.md](PHYSICAL_TEST_RUNBOOK.md) before any user-side a
    `& 'C:\\LDAC-Test\\ACX10-Universal\\oppo-driver-tool.exe' status 2>&1 | Tee-Object -FilePath "$env:USERPROFILE\\Desktop\\ldac-acx10-precheck.txt"`
 
 4. Do not run prepare/upgrade/install, import certificates, restart the device, change BCD, rollback or update the OS without separate explicit authorization. The rollback script selects inbox bth.inf, not the previous run #129 baseline package.
+
+
+## UBR 5870 / hosted ACX 1.0 test — 2026-11-22 21:02 Kyiv
+
+1. Hosted Server 2022 UBR 5870 (KB5070761) still reports ACX CLASS_MODULE v1.0, matching the physical host at UBR 5761. Do not recommend OS update as the fix on current evidence.
+2. CI #133 package preflight passed on a disposable runner: testsigning Yes, certificate and hashes verified, DevGen available.
+3. Inspect build run #230 / 45058265287 on experiment/acx10-hosted-load. The job creates a temporary SWD device, installs the ACX 1.0 candidate, and queries the ACX class client list. Record whether LdacA2dp reaches the class client list and its PnP ProblemStatus.
+4. If hosted load succeeds, the only physical blocker is the read-only package status pre-check. Then request separate explicit authorization before any physical install.
+5. If hosted load fails, inspect the exact PnP status and Kernel-PnP events before changing the driver or asking for a physical test.
