@@ -86,11 +86,10 @@ jobs:
           name: ldac-a2dp-oppo-server2022-test
           path: ${{ runner.temp }}\ci133-artifact
 
-      - name: Restore WDK tools for DevGen discovery
+      - name: Locate DevGen and validate ACX 1.0 package
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          nuget restore driver\packages.config -PackagesDirectory driver\packages
           $root = Join-Path $env:RUNNER_TEMP 'acx10-hosted-load'
           New-Item -ItemType Directory -Path $root -Force | Out-Null
           $zip = Get-ChildItem -LiteralPath (Join-Path $env:RUNNER_TEMP 'ci133-artifact') -Filter '*.zip' -Recurse | Select-Object -First 1
@@ -118,20 +117,20 @@ jobs:
               $cert.Thumbprint -ne '4A4E17BFC74DBE7220CA0606763FB81BA85A947B') {
             throw 'Unexpected ACX 1.0 test certificate subject or thumbprint.'
           }
-
           $bcd = & bcdedit.exe /enum '{current}' 2>&1
           $bcd | Select-String -Pattern 'testsigning' | Out-File (Join-Path $root 'bcd-policy.txt') -Encoding utf8
           if (($bcd -join [Environment]::NewLine) -notmatch 'testsigning\s+Yes') { throw 'Hosted runner is not in test-signing mode; driver load test is unsafe.' }
-
-          $toolRoots = @(
-            (Join-Path ([Environment]::GetFolderPath('ProgramFilesX86')) 'Windows Kits\10\Tools'),
-            (Join-Path $env:ProgramFiles 'Windows Kits\10\Tools'),
-            (Join-Path (Get-Location).Path 'driver\packages')
-          ) | Where-Object { Test-Path $_ }
-          $devgen = $null
-          if ($toolRoots) {
-            $devgen = Get-ChildItem -Path $toolRoots -Filter 'devgen.exe' -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.FullName -match '\\x64\\devgen\.exe$' } | Sort-Object FullName -Descending | Select-Object -First 1
+          # CI runner only: enable this driver's DbgPrintEx component for the post-load !dbgprint query.
+          $debugFilterPath = 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Debug Print Filter'
+          New-Item -Path $debugFilterPath -Force | Out-Null
+          New-ItemProperty -Path $debugFilterPath -Name IHVDRIVER -PropertyType DWord -Value 0xFFFFFFFF -Force | Out-Null
+          $toolsRoot = Join-Path ([Environment]::GetFolderPath('ProgramFilesX86')) 'Windows Kits\10\Tools'
+          $devgenPath = Join-Path $toolsRoot '10.0.26100.0\x64\devgen.exe'
+          if (-not (Test-Path -LiteralPath $devgenPath)) {
+            $devgen = Get-ChildItem -LiteralPath $toolsRoot -Filter 'devgen.exe' -File -Recurse -Depth 3 -ErrorAction SilentlyContinue | Where-Object { $_.FullName -match '\\x64\\devgen\.exe$' } | Select-Object -First 1
+            if ($devgen) { $devgenPath = $devgen.FullName }
           }
+          if (-not (Test-Path -LiteralPath $devgenPath)) { throw "DevGen.exe not found under $toolsRoot; no driver install attempted." }
           $result = [pscustomobject]@{
             PackageDriverVer = $driverVersion
             AcxVersion = '1.0'
@@ -140,11 +139,11 @@ jobs:
             CatSHA256 = (Get-FileHash $cat.FullName -Algorithm SHA256).Hash
             CertificateThumbprint = $cert.Thumbprint
             TestSigning = $true
-            DevGen = if ($devgen) { $devgen.FullName } else { 'NOT_FOUND' }
+            IHVDRIVERFilter = '0xFFFFFFFF'
+            DevGen = $devgenPath
           }
           $result | ConvertTo-Json -Depth 4 | Tee-Object -FilePath (Join-Path $root 'preflight.json') | Write-Host
-          if (-not $devgen) { throw 'DevGen.exe not found in installed WDK tools; no driver install attempted.' }
-          "DEVGEN_PATH=$($devgen.FullName)" | Out-File (Join-Path $root 'devgen-path.txt') -Encoding utf8
+          "DEVGEN_PATH=$devgenPath" | Out-File (Join-Path $root 'devgen-path.txt') -Encoding utf8
 
       - name: Import test certificate and create temporary BTHENUM software device
         shell: pwsh
@@ -219,13 +218,13 @@ jobs:
           & $livekd.FullName -o $dump -m -b 2>&1 | Tee-Object -FilePath $captureLog
           if ($LASTEXITCODE -ne 0 -or -not (Test-Path $dump)) { throw 'LiveKD failed to create a kernel mirror dump.' }
           $cmdFile = Join-Path $root 'inspect-acx10-load.txt'
-          @('.symfix C:\Symbols', '.reload /f Wdf01000.sys', '.reload /f Acx01000.sys', '.reload /f LdacA2dp.sys', 'lmvm LdacA2dp', '!wdfkd.wdfldr LdacA2dp.sys', '!wdfkd.wdfldr Acx01000.sys', '!wdfldr acx01000', 'q') | Set-Content -LiteralPath $cmdFile -Encoding ascii
+          @('.symfix C:\Symbols', '.reload /f Wdf01000.sys', '.reload /f Acx01000.sys', '.reload /f LdacA2dp.sys', 'lmvm LdacA2dp', '!wdfkd.wdfldr LdacA2dp.sys', '!wdfkd.wdfldr Acx01000.sys', '!wdfldr acx01000', '!dbgprint', 'q') | Set-Content -LiteralPath $cmdFile -Encoding ascii
           $log = Join-Path $root 'wdfldr-after-load.txt'
           & $kdPath -z $dump -y $env:_NT_SYMBOL_PATH -logo $log -cf $cmdFile
           "KD_EXIT=$LASTEXITCODE" | Out-File (Join-Path $root 'install-result.txt') -Append -Encoding utf8
           if (Test-Path $log) { Get-Content $log }
 
-      - name: Remove temporary software device
+      - name: Remove temporary software device and CI certificate
         if: always()
         shell: pwsh
         continue-on-error: true
@@ -234,7 +233,16 @@ jobs:
           $devgenPathFile = Join-Path $root 'devgen-path.txt'
           if (Test-Path $devgenPathFile) {
             $devgenPath = (Get-Content -LiteralPath $devgenPathFile -Raw).Trim().Substring(12)
-            & $devgenPath /remove /instanceid LDAC_A2DP_CI_TEST 2>&1 | Tee-Object -FilePath (Join-Path $root 'devgen-remove.txt')
+            $device = Get-PnpDevice -PresentOnly -ErrorAction SilentlyContinue | Where-Object { $_.InstanceId -like '*LDAC_A2DP_CI_TEST*' -or $_.FriendlyName -eq 'LDAC A2DP Source' } | Select-Object -First 1
+            if ($device) {
+              & $devgenPath /remove $device.InstanceId /subtree 2>&1 | Tee-Object -FilePath (Join-Path $root 'devgen-remove.txt')
+            } else {
+              'Synthetic device already absent; no DevGen removal required.' | Out-File (Join-Path $root 'devgen-remove.txt') -Encoding utf8
+            }
+          }
+          $thumbprint = '4A4E17BFC74DBE7220CA0606763FB81BA85A947B'
+          foreach ($store in @('Cert:\LocalMachine\Root','Cert:\LocalMachine\TrustedPublisher')) {
+            Get-ChildItem -LiteralPath $store -ErrorAction SilentlyContinue | Where-Object { $_.Thumbprint -eq $thumbprint } | Remove-Item -Force -ErrorAction SilentlyContinue
           }
 
       - name: Upload hosted ACX 1.0 load report
