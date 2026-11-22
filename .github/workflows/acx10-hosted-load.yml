@@ -1,0 +1,88 @@
+name: ACX 1.0 hosted-load preflight
+
+on:
+  push:
+    branches:
+      - experiment/acx10-hosted-load
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  preflight:
+    name: Inspect CI #133 package and hosted runner tools
+    runs-on: windows-2022
+    timeout-minutes: 15
+    steps:
+      - name: Download CI #133 package artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ldac-a2dp-oppo-server2022-test
+          path: ${{ runner.temp }}\ci133-artifact
+          run-id: 45044497961
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify package, test signing and DevGen availability
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $root = Join-Path $env:RUNNER_TEMP 'ci133-artifact'
+          $zip = Get-ChildItem -LiteralPath $root -Filter '*.zip' -Recurse | Select-Object -First 1
+          if (-not $zip) { throw 'CI #133 package ZIP not found in downloaded artifact.' }
+          $pkg = Join-Path $env:RUNNER_TEMP 'ci133-package'
+          Expand-Archive -LiteralPath $zip.FullName -DestinationPath $pkg -Force
+          $files = Get-ChildItem -LiteralPath $pkg -File -Recurse
+          $files | Select-Object FullName,Length | Format-Table -AutoSize | Out-String | Write-Host
+
+          $inf = Get-ChildItem -LiteralPath $pkg -Filter 'LdacA2dp.inf' -Recurse | Select-Object -First 1
+          $sys = Get-ChildItem -LiteralPath $pkg -Filter 'LdacA2dp.sys' -Recurse | Select-Object -First 1
+          $cat = Get-ChildItem -LiteralPath $pkg -Filter 'LdacA2dp.cat' -Recurse | Select-Object -First 1
+          $cer = Get-ChildItem -LiteralPath $pkg -Filter 'ldac-a2dp-test.cer' -Recurse | Select-Object -First 1
+          if (-not $inf -or -not $sys -or -not $cat -or -not $cer) { throw 'One or more required CI #133 package files are missing.' }
+
+          $infText = Get-Content -LiteralPath $inf.FullName -Raw
+          if ($infText -notmatch 'DriverVer\s*=\s*[^,]+,\s*0\.2\.326\.1634') { throw 'Unexpected CI #133 DriverVer in INF.' }
+          $cert = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new($cer.FullName)
+          if ($cert.Thumbprint -ne '4A4E17BFC74DBE7220CA0606763FB81BA85A947B') { throw "Unexpected test certificate thumbprint: $($cert.Thumbprint)" }
+
+          $bcd = & bcdedit.exe /enum '{current}' 2>&1
+          $bcd | Select-String -Pattern 'testsigning' | Tee-Object -FilePath (Join-Path $env:RUNNER_TEMP 'bcd-policy.txt') | Write-Host
+          if (($bcd -join [Environment]::NewLine) -notmatch 'testsigning\s+Yes') { throw 'Hosted runner is not in test-signing mode; no driver install will be attempted.' }
+
+          $toolRoots = @(
+            (Join-Path ([Environment]::GetFolderPath('ProgramFilesX86')) 'Windows Kits\10\Tools'),
+            (Join-Path $env:ProgramFiles 'Windows Kits\10\Tools'),
+            (Join-Path $env:USERPROFILE '.nuget\packages\microsoft.windows.wdk.x64')
+          ) | Where-Object { Test-Path $_ }
+          $devgen = $null
+          if ($toolRoots) {
+            $devgen = Get-ChildItem -Path $toolRoots -Filter 'devgen.exe' -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.FullName -match '\\x64\\devgen\.exe$' } | Sort-Object FullName -Descending | Select-Object -First 1
+          }
+          $devcon = $null
+          if ($toolRoots) {
+            $devcon = Get-ChildItem -Path $toolRoots -Filter 'devcon.exe' -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.FullName -match '\\x64\\devcon\.exe$' } | Sort-Object FullName -Descending | Select-Object -First 1
+          }
+
+          [pscustomobject]@{
+            DriverVer = '0.2.326.1634'
+            InfSHA256 = (Get-FileHash $inf.FullName -Algorithm SHA256).Hash
+            SysSHA256 = (Get-FileHash $sys.FullName -Algorithm SHA256).Hash
+            CatSHA256 = (Get-FileHash $cat.FullName -Algorithm SHA256).Hash
+            CertificateThumbprint = $cert.Thumbprint
+            TestSigning = (($bcd -join [Environment]::NewLine) -match 'testsigning\s+Yes')
+            DevGen = if ($devgen) { $devgen.FullName } else { 'NOT_FOUND' }
+            DevCon = if ($devcon) { $devcon.FullName } else { 'NOT_FOUND' }
+          } | ConvertTo-Json -Depth 4 | Tee-Object -FilePath (Join-Path $env:RUNNER_TEMP 'preflight.json') | Write-Host
+
+      - name: Upload preflight report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acx10-hosted-load-preflight
+          path: |
+            ${{ runner.temp }}\preflight.json
+            ${{ runner.temp }}\bcd-policy.txt
+          if-no-files-found: warn
+          retention-days: 7
