@@ -1,6 +1,7 @@
 # LDAC project — START HERE
 
-**Last reconciled:** 2026-11-23 (Kyiv). **Documentation branch:** `docs/project-source-reorg`.  
+**Last reconciled:** 2026-11-23 (Kyiv).
+**Latest project-source commit:** `7e5d332bbaf155b329cc041b97130b4471d83f39` (CI #13/#14 results, WDF diagnostics decision, CI #15 plan). **Documentation branch:** `docs/project-source-reorg`.  
 **Mission:** achieve stable Bluetooth A2DP stereo playback on physical Windows Server 2022 Datacenter with OPPO Enco Buds2. First milestone: SBC stereo; only then LDAC negotiation and verified LDAC audio. HFP/microphone is out of scope.
 
 ## Current result — do not misread it
