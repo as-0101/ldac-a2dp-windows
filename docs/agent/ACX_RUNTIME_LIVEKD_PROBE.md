@@ -104,3 +104,16 @@ An optional follow-up intended to print the hosted runner's OS/UBR, ACX/WDF file
 - This does not affect the successful run #10 result: hosted Server 2022 ACX CLASS_MODULE v1.0 / WDF 1.31 / runtime 1.33, matching the physical host.
 
 The optional metadata probe is secondary. The next project blocker is the read-only status pre-check for the CI #133 / Universal / ACX 1.0 package. No physical host change is needed for this workflow.
+
+
+## UBR 5870 and ACX 1.0 hosted-load preflight — 2026-11-22 21:02 Kyiv
+
+[Metadata run #12](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45057605446) reports Windows Server 2022 Datacenter UBR 5870, hotfix KB5070761 (2026-11-19), Acx01000.sys 10.0.20348.5866 (SHA-256 D10924E8B8F3E609EA696BFE4724B96460453D654DCBDEEC83E88D07214DA5D0), Wdf01000.sys 1.33.20348.1 (SHA-256 32C3A7A3E47765E3B20EC291E73E88664A56C30EA38EDC983F13A812075C943B), and BCD testsigning Yes. Run #10 measured ACX CLASS_MODULE v1.0 on this same image.
+
+The physical host is UBR 5761 with Acx01000.sys 10.0.20348.3451 and CLASS_MODULE v1.0. A more recently serviced Server 2022 image with a newer ACX file version still exposes class v1.0. This weakens the OS-update-as-fix theory; do not infer class version from file version.
+
+A separate [experiment/acx10-hosted-load](https://github.com/as-0101/ldac-a2dp-windows/tree/experiment/acx10-hosted-load) branch preflight [run #1 / 45058127024](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45058127024) verified the CI #133 package, DriverVer 0.2.326.1634, SYS hash 435905E1553CB06D089F1477D1CFF57C15BBEB84EF3141CA1B3B500A73898F3E, certificate thumbprint 4A4E17BFC74DBE7220CA0606763FB81BA85A947B, test signing Yes, and DevGen at C:\Program Files (x86)\Windows Kits\10\Tools\10.0.26100.0\x64\devgen.exe.
+
+Build run #230 / 45058265287 on commit 86a1d46aa7c4bc3561e96ded77442b03b34789f0 adds a disposable hosted-runner test: create a temporary SWD software device with the BTHENUM A2DP IDs, import the package test certificate, install the ACX 1.0 INF, capture PnP state and then inspect the ACX class client list via LiveKD. It does not run prepare-oppo-host.cmd or modify BCD. Run #230 was still in progress at the time of writing.
+
+Full metadata and preflight report: [2026-11-22-UBR5870-ACX10-HOSTED-PREFLIGHT.md](2026-11-22-UBR5870-ACX10-HOSTED-PREFLIGHT.md). Run #12 artifact 14768231770, Library ID libfile_4897fef219b48191a9372a287b40ae44. Preflight artifact 14768550673, Library ID libfile_8111dbd5c2208191b128accd907c5cfc.
