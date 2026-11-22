@@ -14,10 +14,10 @@ Status labels: CONFIRMED = direct evidence; SUPPORTED = converging evidence, not
 | E-008 | CI #133 job ran on Windows Server 2022 build 20348; driver build and signability check passed with zero warnings/errors. | CONFIRMED | KMDF driver job 137276017983, logs; run #133. |
 | E-009 | CI #133 resolves the ACX include and stub library specifically to 1.0. | SUPPORTED | Project file sets `ACX_VERSION_MINOR=0` and computes include/link paths from the macro; exact expanded path not printed in captured job log. Verify if needed. |
 | E-010 | Driver passes ACX class binding on physical Server 2022. | UNTESTED | No ACX 1.0 package has been installed/tested on the physical server. |
-| E-011 | KMDF 1.31 versus WDF runtime 1.33 is the cause. | UNTESTED / LOW PRIORITY | No direct evidence; separate from ACX class module version. |
+| E-011 | KMDF 1.31 client versus WDF runtime 1.33 causes the pre-DriverEntry bind failure | REFUTED as a generic version mismatch | Microsoft KMDF version history; official `!acxkd` example shows client 1.31 / runtime 1.33 | This version pair is supported; investigate ACX class binding separately. |
 | E-012 | ACX unload caused LDAC class-bind failure. | UNTESTED | ETW event order alone is not causal evidence. |
-| E-013 | `DriverTargetPlatform=Universal` is the cause. | LOW PRIORITY / NOT SUPPORTED | Kept unchanged in experiment; Microsoft sample precedent noted in Notion handoff. |
-| E-014 | Physical device was last recorded on `oem75.inf`, version 0.2.325.1600, Code 37. | CONFIRMED (last recorded state) | User-side status after CI #126, documented in Notion. State may have changed since; re-query before any action. |
+| E-013 | Universal target platform is unsupported on Windows Server 2022 and causes the ACX bind failure | REFUTED as an unsupported-platform claim; runtime effect remains untested | Microsoft Target Platforms; CI #143 build | Universal is supported on Server 2022. The successful alternate Windows Driver build does not prove either target's physical runtime behavior. |
+| E-014 | Physical OPPO A2DP devnode remains on the failing CI #126 driver | CONFIRMED again on 2026-11-22 | User read-only PnP/status output and `ldac-acx10-precheck.txt` | One present A2DP devnode; `oem75.inf`, `0.2.325.1600`, Code 37. No host mutation performed. |
 
 ## Artifact locations
 
@@ -68,3 +68,17 @@ The exact ACX function count in the Server 2022 10.0.20348.3451 class module has
 
 | E-029 | Microsoft's !acxkd example explicitly shows CLIENT_MODULE WDF 1.31 with Wdf01000.sys runtime 1.33 and CLASS_MODULE ACX 1.1; this WDF client/runtime pairing is valid and is not the observed mismatch on the target. | CONFIRMED | https://learn.microsoft.com/en-us/windows-hardware/drivers/debuggercmds/-acxkd lines 167–190. The target's class module is v1.0. |
 | E-030 | Microsoft says !acxkd has only partial functionality under ACX 1.0. | CONFIRMED | Same Microsoft !acxkd page, lines 46–48. |
+
+## Evidence additions — 2026-11-22 20:28 Kyiv
+
+| ID | Claim | Status | Source | Interpretation |
+|---|---|---|---|---|
+| E-031 | The exact WDF error is logged as `VersionBindClass` for class `Acx`, status `0xC000000D` | CONFIRMED | Preserved kernel debug log in the Notion journal | Failure is reported by the `WdfVersionBindClass` path before the driver's own `DriverEntry`; exact internal return condition remains unknown. |
+| E-032 | Microsoft's WDF source identifies `WdfVersionBindClass` as the class-extension load/reference and client-link path | CONFIRMED | [Microsoft WDF fxldr.h](https://github.com/microsoft/Windows-Driver-Frameworks/blob/main/src/framework/shared/inc/private/common/fxldr.h) | Public source exposes the interface/header contract, not the WdfLdr implementation. |
+| E-033 | KMDF 1.31 client on WDF runtime 1.33 is unsupported | REFUTED | [KMDF version history](https://learn.microsoft.com/en-us/windows-hardware/drivers/wdf/kmdf-version-history); [!acxkd example](https://learn.microsoft.com/en-us/windows-hardware/drivers/debuggercmds/-acxkd) | This client/runtime pair is supported and explicitly shown in Microsoft's ACX debugger example. |
+| E-034 | Universal drivers are unsupported on Windows Server 2022 | REFUTED | [Microsoft Target Platforms](https://learn.microsoft.com/en-us/windows-hardware/drivers/develop/target-platforms); CI #143 run 45050062916 | Universal is a supported target; physical runtime effect remains untested. |
+| E-035 | Bluetooth setup class in the LDAC INF is wrong because AudioCodec uses MEDIA | REFUTED | [Installing a Bluetooth Device](https://learn.microsoft.com/en-us/windows-hardware/drivers/bluetooth/installing-a-bluetooth-device); Microsoft AudioCodec sample | Bluetooth is appropriate for BTHENUM; MEDIA in the sample reflects its ROOT audio-codec topology. |
+| E-036 | Hosted Server 2022 runner has a newer ACX binary file version than the physical host | CONFIRMED | CI run 45050478308 and LiveKD report artifact 14766509597 | Runner `Acx01000.sys` is 10.0.20348.5866 versus host 10.0.20348.3451. File version does not establish class-module version. |
+| E-037 | ACX service can be started on the disposable hosted runner | CONFIRMED | CI run 45054071166 and report artifact 14767070902 | `sc.exe start Acx01000` succeeded on the runner only; not executed on the physical host. |
+| E-038 | LiveKD `-ml` can capture a Server 2022 kernel live dump without BCD local-debugging changes | CONFIRMED for capture | [Sysinternals LiveKD](https://learn.microsoft.com/en-us/sysinternals/downloads/livekd); CI run 45054287408 | Dump capture and KD processing succeeded; `!wdfkd.wdfldr` still lacked required WDF loader symbols from the public symbol set. |
+| E-039 | The earlier `-kl` BAT is sufficient for local kernel debugging | REFUTED | [Microsoft local kernel debugging setup](https://learn.microsoft.com/en-us/windows-hardware/drivers/debugger/setting-up-local-kernel-debugging-of-a-single-computer-manually) | `-kl` requires BCD `debug on`, local `dbgsettings`, and reboot; the BAT only launches WinDbg. |

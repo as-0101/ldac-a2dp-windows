@@ -1,3 +1,41 @@
+## Investigation update — 2026-11-22 20:28 Kyiv
+
+### WDF class-binding stage
+- The preserved diagnostic is `FxStubBindClasses: VersionBindClass WDF_CLASS_BIND_INFO ..., class Acx, returned status 0xC000000D`. It names the `WdfVersionBindClass` path, not a `ClientBindClass` failure message.
+- Microsoft's WDF source header `fxldr.h` describes `WdfVersionBindClass` as loading/referencing the class extension and linking it into the framework library list. The public WDF source repository does not include the WdfLdr implementation; the exact internal check returning `STATUS_INVALID_PARAMETER` remains unknown.
+- ACX class-version mismatch remains the leading explanation (physical host class module Version 1.0 versus CI #126 client built against ACX 1.1). CI #133 ACX 1.0 is the isolated experiment; physical binding remains untested.
+
+### Ruled out or demoted
+- KMDF 1.31 client / WDF runtime 1.33 is supported by Microsoft's KMDF version history; the official `!acxkd` example shows the same client/runtime pair. Do not treat this as the cause.
+- Universal is a supported driver target on Server 2022. CI #143 also built the Windows Driver target, but neither target has been physically compared. The claim that Universal is unsupported is false; runtime effect remains untested.
+- `Class=Bluetooth` is appropriate for the BTHENUM profile devnode. The AudioCodec sample uses MEDIA because it is ROOT-enumerated; do not change the LDAC INF class based on that sample.
+- ACX unload immediately before Event 227 remains correlation only, not causation.
+
+### Current physical-host snapshot — read-only
+- Windows Server 2022 Datacenter, build 20348, UBR 5761; `Acx01000.sys` file version 10.0.20348.3451.
+- Test signing is already `Yes`.
+- One present OPPO A2DP devnode; active INF `oem75.inf`, driver `0.2.325.1600`, Code 37 / `CM_PROB_FAILED_DRIVER_ENTRY`.
+- CI #133 package is extracted under `C:\LDAC-Test\ACX10-Universal`. No certificate import, driver install, device restart, BCD change, or OS update has been performed.
+
+### Hosted Server 2022 runner / LiveKD
+- GitHub `windows-2022` runner build 20348 has `Acx01000.sys` file version 10.0.20348.5866 and `Wdf01000.sys` file version 1.33.20348.1. File version does not establish ACX class-module version.
+- `Acx01000` is stopped by default on the hosted runner; `sc.exe start Acx01000` succeeded on the disposable runner only.
+- CI #5 [45054287408](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45054287408), commit `40d40d4b0300b708388c25f83e3fb2bc00c7b19e`, successfully captured a native LiveKD `-ml` dump and opened it with KD. `!wdfkd.wdfldr` could not resolve `wdfldr!WdfLdrGlobals` and required private WDF type information from the public symbol set; no runner `CLASS_MODULE` version was returned.
+- Run #4 report 14767070902 is in Files Library at `/Bluetooth LDAC Research/Artifacts/ACX-runtime-LiveKD-run4-report.zip` (Library ID `libfile_1c51ba296db8819195bef7905d6b0bb2`). Run #5 report 14766509597 is at `/Bluetooth LDAC Research/Artifacts/ACX-runtime-LiveKD-run5-report.zip` (Library ID `libfile_f6b3dc250e70819180b85bfe0f78d3df`).
+- Diagnostic branch: [research/acx-runtime-livekd](https://github.com/as-0101/ldac-a2dp-windows/tree/research/acx-runtime-livekd), latest workflow commit `d30bc2cdccc5bcea16059505ef444393701dac0a`. CI #6 [45054673989](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45054673989) and CI #7 [45054866734](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45054866734) are still running at this snapshot. Full build workflows passed; no driver source or production branch changed.
+
+### Debugger safety correction
+- The earlier `Launch-WinDbg-Kernel.bat` launches WinDbg with `-kl` only. It does not configure local kernel debugging. Microsoft requires BCD `debug on`, local `dbgsettings`, and a reboot for `-kl`; do not run it as-is or enable BCD debugging on the physical host without separate authorization.
+- Preferred alternative: Sysinternals LiveKD `-ml` native live-dump mode. CI #5 validated dump capture without BCD changes, but WDF loader symbol availability still blocks the runner class query.
+
+### Immediate continuation
+1. Finish CI #6/#7 and inspect whether direct LiveKD mode plus the configured symbol path changes the WDF extension result.
+2. If public symbols still cannot expose `WdfLdrGlobals`, do not infer runner class version from `Acx01000.sys` file version. The physical host's prior `!wdfldr` output remains the direct evidence for that host.
+3. If a fresh physical-host snapshot is needed, prepare a corrected LiveKD-based BAT using the user's existing debugger/symbol environment; it must not change BCD, install a driver, restart the OPPO devnode, or update Windows.
+4. Do not run `prepare-oppo-host.cmd`, `upgrade-oppo.cmd`, `install-oppo.cmd`, or rollback without separate explicit authorization.
+
+Repository probe record: [ACX_RUNTIME_LIVEKD_PROBE.md](ACX_RUNTIME_LIVEKD_PROBE.md).
+
 ## Investigation update — 2026-11-22 20:15 Kyiv
 
 - The complete Notion research journal was re-read (18,840 characters); older status/action lists are historical and superseded by this snapshot and the current START HERE page.

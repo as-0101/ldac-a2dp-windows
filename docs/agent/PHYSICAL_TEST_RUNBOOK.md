@@ -88,6 +88,12 @@ The thumbprint is from the CI #133 package certificate. Do not use Get-PfxCertif
 - The README's older INSTALLATION section describes an inbox-driver install path; for the current physical host already bound to LDAC, follow only the guarded upgrade procedure above.
 - Static package review confirmed the CI #133 test ZIP SHA-256 and INF DriverVer. No package script has been executed on the physical host.
 
+## Kernel debugger capture safety — important correction
+
+The earlier `Launch-WinDbg-Kernel.bat` starts WinDbg with `-kl` only. It does **not** enable local kernel debugging. Microsoft requires BCD `debug on`, local `dbgsettings`, and a reboot for `-kl`. These are system/BCD changes; do not enable them on the physical Server 2022 host without separate explicit authorization.
+
+Preferred non-BCD route under validation: Sysinternals LiveKD `-ml` native live-dump mode. CI #5 proved that it can capture a Server 2022 live dump and run KD against it. The WDF `!wdfkd.wdfldr` extension still needs WDF loader symbols that were not available from the hosted runner's public symbol set. If using LiveKD on the physical host, preserve the output log and do not install or update any driver.
+
 ## Safety boundary
 
 - The agent has not run any command on the physical server.

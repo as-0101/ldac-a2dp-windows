@@ -1,3 +1,15 @@
+## Current continuation — 2026-11-22 20:28 Kyiv
+
+**Current blocker:** finish the hosted LiveKD debugger experiment without changing the physical server.
+
+1. Inspect CI #6 (`45054673989`) and CI #7 (`45054866734`). CI #5 (`45054287408`) proved that LiveKD `-ml -o` captures a native kernel dump and KD opens it, but `!wdfkd.wdfldr` could not resolve `wdfldr!WdfLdrGlobals` from public symbols.
+2. Do not infer the runner's ACX class version from `Acx01000.sys` file version `10.0.20348.5866`. The physical host's previously recorded class version is ACX 1.0.
+3. If a fresh physical-host snapshot is needed, prepare a corrected LiveKD-based capture using the user's existing debugger/symbol environment. No BCD changes, driver installation, device restart, or OS update.
+4. Do not ask the user to repeat the completed `status` pre-check; the package is extracted and the one-A2DP / `oem75.inf` / Code 37 baseline is confirmed.
+5. Do not run `prepare-oppo-host.cmd`, `upgrade-oppo.cmd`, `install-oppo.cmd`, or `rollback-oppo.cmd` without separate explicit authorization.
+
+Previous action lists below are historical snapshots; this section is the current continuation.
+
 # Next actions — exact continuation
 
 **Current blocker:** no physical-host test of the successful ACX 1.0 package has been performed. Do not touch the user's server without explicit authorization.
