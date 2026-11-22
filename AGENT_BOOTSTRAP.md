@@ -1,3 +1,22 @@
+# Reorganization handoff — 2026-11-22
+
+**Read [START_HERE.md](START_HERE.md) first.** It is now the canonical repository entry point. The user-facing ChatGPT Project Source file is [LDAC_Project_Source_START_HERE.md](LDAC_Project_Source_START_HERE.md). The older bootstrap content below is retained as detailed background, but its earlier “ACX 1.0 candidate next” guidance is superseded by the negative hosted run #248.
+
+New reference set:
+- [NEXT_ACTIONS](docs/agent/NEXT_ACTIONS.md)
+- [PROJECT_STATE](docs/agent/PROJECT_STATE.md)
+- [EVIDENCE](docs/agent/EVIDENCE.md)
+- [BUILD_REGISTRY](research/BUILD_REGISTRY.md)
+- [TEST_MATRIX](research/TEST_MATRIX.md)
+- [HARDWARE_SAFETY](research/HARDWARE_SAFETY.md)
+- [ARTIFACT_INDEX](research/ARTIFACT_INDEX.md)
+
+**Current critical correction:** hosted CI #248 explicitly started Acx01000 before installing an ACX 1.0 candidate, yet the synthetic device still failed with Code 37 / ProblemStatus 0xC000000D before DriverEntry. ACX 1.0 alone did not resolve the failure. CI #255 then verified the actual 1.0 bind descriptor (210 functions / 62 structures), so the next discriminator is a minimal official AudioCodec ACX 1.0 bind probe on the same hosted Server 2022 runtime.
+
+Every incoming user file must be preserved, hashed, indexed and linked to its research context. See [ARTIFACT_INDEX](research/ARTIFACT_INDEX.md). Never claim a file is durably available without a confirmed Project Source or Library record.
+
+---
+
 ## Latest continuation — 2026-11-22
 
 - Exact failure stage: `VersionBindClass` for class `Acx`, status `0xC000000D`; ACX class-version mismatch remains the leading explanation, not a proven final root cause.
