@@ -54,3 +54,7 @@ Append a dated record after each meaningful experiment. Record question, exact c
 - This experiment is build/package-only. It cannot prove physical ACX class binding.
 - Microsoft Target Platforms documentation explicitly lists Server 2022 for Universal drivers, so Universal is valid; the sample difference remains a low-priority A/B check.
 - Result: PASS for compile/package only. Physical class binding remains UNTESTED.
+
+## D-006 — First physical test candidate
+
+Choose CI #133 / Universal / ACX 1.0 for the first runtime test because it isolates ACX version only and preserves the original Universal target. Do not use CI #143 as the first runtime candidate because it also changes DriverTargetPlatform. No server-side preparation or installation is authorized by this documentation decision.
