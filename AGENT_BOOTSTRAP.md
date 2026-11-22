@@ -111,3 +111,10 @@ If any source conflicts with this snapshot, do not silently choose. Compare time
 Read [the latest run #129 / PnP / LiveKD update](docs/agent/2026-11-22-RUN129-PNP-LIVEKD-UPDATE.md) after this bootstrap. The physical PnP properties now show service LdacA2dp, oem75.inf, DriverVer 0.2.325.1600, Code 37 and ProblemStatus 0xC000000D. The successful WDK 26100.6584 ACX 1.1 build is GitHub Actions run #129 (ID 44922058650); actual run #126 (ID 44922013678) failed. Do not reuse the old CI #126 label for run #129 artifacts.
 
 The leading ACX 1.1-versus-1.0 class-version hypothesis remains supported, not proven. CI #6/#7 were cancelled, CI #8 failed in the LiveKD harness, and the latest workflow fix commit has no verified CI result. Next action is the read-only status pre-check for CI #133 / ACX 1.0 after extraction; no server-changing action is authorized.
+
+
+## LiveKD continuation — 2026-11-22 20:44 Kyiv
+
+Read [the run #9 analysis](docs/agent/2026-11-22-LIVEKD-RUN9-UPDATE.md). Run #9 succeeded: LiveKD captured the dump, KD opened it, and Acx01000 symbols loaded. The hosted runner shows WDF runtime 1.33 and an Acx01000 image represented as a WDF client 1.31; its ACX CLASS_MODULE version remains unknown.
+
+Microsoft's documented query is !wdfldr acx01000. Commit 218b457e9df2bf7ccf58e4d4ad18e40c2bb8d383 adds it to the research workflow. Inspect the CI run for that commit before drawing a runner-versus-host ACX version conclusion. Do not change the physical host.
