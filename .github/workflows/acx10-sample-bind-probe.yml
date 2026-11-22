@@ -18,6 +18,25 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      - name: Validate PowerShell scripts before execution
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $scripts = @(
+            'driver/AcxAudioCodecProbe/Build-AcxAudioCodecProbe.ps1',
+            'driver/AcxAudioCodecProbe/Invoke-AcxAudioCodecProbe.ps1'
+          )
+          foreach ($scriptPath in $scripts) {
+            $tokens = $null
+            $parseErrors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path $scriptPath).Path, [ref]$tokens, [ref]$parseErrors) | Out-Null
+            if ($parseErrors.Count -gt 0) {
+              $parseErrors | Format-List * | Out-String | Write-Host
+              throw "PowerShell parser errors in $scriptPath"
+            }
+            Write-Host "POWERSHELL_PARSE_OK=$scriptPath"
+          }
+
       - name: Restore pinned WDK and SDK NuGet packages
         shell: pwsh
         run: |
