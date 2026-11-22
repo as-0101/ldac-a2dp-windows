@@ -124,3 +124,11 @@ The table does not list Windows Server 2022. The fact that this specific Server 
 - [Microsoft AudioCodec INF](https://github.com/microsoft/Windows-driver-samples/blob/main/audio/Acx/Samples/AudioCodec/Driver/AudioCodec.inf)
 - [Microsoft WDF loader header fxldr.h](https://github.com/microsoft/Windows-Driver-Frameworks/blob/main/src/framework/shared/inc/private/common/fxldr.h)
 - [Independent ACX 1.0 class-bind investigation](https://erfi.dev/guides/usb-audio2-acx-driver-without-wdk/)
+
+### 6. What KmdfLibraryVersion does — and does not do
+
+Microsoft's INF documentation defines KmdfLibraryVersion as the KMDF framework version (major.minor) selected for the KMDF driver; the WDK substitutes $KMDFVERSION$ during build. It does not select the ACX class-extension version.
+
+In this project, ACX class version is selected in the .vcxproj by ACX_VERSION_MAJOR / ACX_VERSION_MINOR, which form both the ACX include directory and the acxstub.lib dependency path. Thus changing the INF KmdfLibraryVersion cannot turn an ACX 1.1 class bind into ACX 1.0. The current KMDF 1.31 setting matches the official AudioCodec sample and should remain fixed while testing ACX.
+
+Microsoft reference: https://learn.microsoft.com/en-us/windows-hardware/drivers/wdf/specifying-wdf-directives-in-inf-files (KmdfLibraryVersion, lines 248–253).
