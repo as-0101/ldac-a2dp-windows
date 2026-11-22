@@ -78,4 +78,15 @@ All four GitHub artifacts were copied to Library and SHA-256 rechecked after mat
 | CI #14 build | 45081844225 / 14778135563 | 04518a83900a7e7aa093fe56a7669f91349d7588 | /LDAC Project/Incoming/CI-14-ACX10-Sample-Bind-Build.zip | file_0000000016308230b17fad479feda0cb | libfile_c94c662148a48191a58c215aa72e31aa | 123,366 | 2a266fa558e24745e2a991189da119101641112d18079935c68a0c61e872af86 |
 | CI #14 runtime | 45081844225 / 14777212842 | 04518a83900a7e7aa093fe56a7669f91349d7588 | /LDAC Project/Incoming/CI-14-ACX10-Sample-Bind-Runtime.zip | file_00000000f4448230ba6ecc149356941e | libfile_74630d0600e08191b2014f0953d7ded8 | 151,169 | a141b772ff978f995a648c6fb68c4e8e1bd46d98cef314786da7e835cab0b312 |
 
-The CI #13 sample SYS hash is 70BA9899BF1B54989E7C6C3F6C0DEDAE2ADFCEF16D7AE6A9803192E7C86EDAA6; CI #14 sample SYS hash is AE960C99DE0DA995621113118DDB2CC13FFACBF5F6BBC217C29CB5E4CF6E91D4. Both contain ACX 1.0 / 210-function / 62-structure descriptor metadata. CI #15 artifacts are pending.
+The CI #13 sample SYS hash is 70BA9899BF1B54989E7C6C3F6C0DEDAE2ADFCEF16D7AE6A9803192E7C86EDAA6; CI #14 sample SYS hash is AE960C99DE0DA995621113118DDB2CC13FFACBF5F6BBC217C29CB5E4CF6E91D4. Both contain ACX 1.0 / 210-function / 62-structure descriptor metadata. CI #15 build and runtime artifacts are now durably saved in `/LDAC Project/Incoming/`; exact Library IDs and byte-for-byte verified hashes are recorded below.
+
+## CI #15 sample bind artifacts — 2026-11-23
+
+| Artifact | GitHub run / artifact ID | Repository commit | Library path | File ID | Library ID | Size | SHA-256 |
+|---|---|---|---|---|---|---:|---|
+| CI #15 build | 45082965356 / 14778450384 | `488ae8104eec960370c0887e07136a3e9e3846b5` | `/LDAC Project/Incoming/CI-15-ACX10-Sample-Bind-Build.zip` | `file_0000000088fc8230b404f1bc3423c8e8` | `libfile_c72211f203f88191a5895df8e19daf32` | 123,115 | `8e701ee7f69f1d9c855f5b2c3d4c06de39628dfb7e955ecb12877fc9f811e449` |
+| CI #15 runtime | 45082965356 / 14778137925 | `488ae8104eec960370c0887e07136a3e9e3846b5` | `/LDAC Project/Incoming/CI-15-ACX10-Sample-Bind-Runtime.zip` | `file_0000000070a88230a7da7802d7525cfc` | `libfile_553acf157ff88191b459dfdf42911d8a` | 152,791 | `aa63c8dfbce7b9b319d9117e1be7b8db1565ff85a0d56c08e57c9de98710e59b` |
+
+Both Library copies were materialized and SHA-256 matched the original GitHub artifact bytes. Runtime package inner hashes: SYS `BAB3C54C0EAB186CC8C9D89B07BCA871112454175C0C45F8D199DA57927114B6`; INF `CC2A09F6D2F8590DA5395CB366FE62C83164D48EF8B227E3B0004447E0112DC7`; CAT `9A120CCB4D5B8781EED86D50C096A5A95CC59140954A5A1E9830F0875A42ABD8`; PDB `4FDC48C1C86C33DC6939A8130E8CD594016E80EA64DB3ADADE846D083B03CCB7`. Build and runtime SYS/INF/PDB bytes match; the CAT differs because the runtime package is signed with the ephemeral test certificate.
+
+GitHub artifact retention is 14 days from the run; durable Library copies are retained independently.

@@ -131,3 +131,21 @@ CI #15 sets WDF `VerboseOn=1` and `LogPages=16` for the probe through its INF an
 ## Compatibility note — ACX 1.0 support matrix
 
 Microsoft ACX version information lists ACX 1.0 as pre-release for Windows 10 1903 / KMDF 1.29; Server 2022 is not listed. The official AudioCodec sample defaults to ACX 1.1 / KMDF 1.31. The tested ACX 1.0 + WDK 26100 + KMDF 1.31 + Server 2022 tuple is not documented as supported. This is a caveat, not a proven explanation for Code 37.
+
+## EXP-006 — CI #15 minimal AudioCodec-derived ACX 1.0 bind test (2026-11-23)
+
+- **Question:** does a minimal ACX 1.0 client derived from Microsoft's AudioCodec sample bind on the same hosted Server 2022 runtime as the LDAC candidate?
+- **Source:** Microsoft Windows-driver-samples commit `d49bb7d72f3651952b2b6e4ad28d14fe2247eb69`. The full sample defaults to ACX 1.1 / KMDF 1.31; the probe is deliberately reduced to ACX 1.0 / KMDF 1.31, root-enumerated `ROOT\AudioCodec`, `Class=MEDIA`, and minimal WdfDriverCreate/AcxDriverInitialize code. It is not a full build of the complete sample.
+- **Run:** CI #15 / 45082965356; branch `experiment/acx10-sample-bind-probe-v2`; commit `488ae8104eec960370c0887e07136a3e9e3846b5`.
+- **Build:** WDK NuGet 10.0.26100.6584, SDK 10.0.26100.0, VS2022 MSBuild 17.14.60.43110, KMDF 1.31, ACX 1.0, Windows Driver target. DriverVer `11/22/2026,23.24.24.909`. SYS SHA-256 `BAB3C54C0EAB186CC8C9D89B07BCA871112454175C0C45F8D199DA57927114B6`.
+- **Runtime:** hosted Server 2022 build 20348 / UBR 5870; PnP selected `oem13.inf` for the synthetic root device and returned Code 37 / `0xC000000D`; no DriverEntry marker. This is a confirmed negative bind result, not a successful load.
+- **Diagnostics:** per-driver WDF `VerboseOn=1` / `LogPages=16` were set for Acx01000 before service start and restored afterward. The raw preinstall LiveKD log contains ACX01000 IFR entries; the probe's own IFR is unavailable because it never loaded. The native dump still lacked a page required to display the class-module record. The script's structured IFR field missed preinstall output; CI #16 fixes this.
+- **Cleanup:** device, probe service and temporary certificate removed; Acx01000 restored to its original STOPPED state; WDF diagnostic values restored; no private-key files/markers; private temporary directory removed.
+- **Artifacts:** build artifact 14778450384 / ZIP SHA-256 `8e701ee7f69f1d9c855f5b2c3d4c06de39628dfb7e955ecb12877fc9f811e449`; runtime artifact 14778137925 / ZIP SHA-256 `aa63c8dfbce7b9b319d9117e1be7b8db1565ff85a0d56c08e57c9de98710e59b`. Both durable Library copies are indexed in `research/ARTIFACT_INDEX.md`.
+- **Interpretation:** the shared pre-DriverEntry failure is not specific to LDAC's INF topology or DriverEntry body. The exact runtime validation that returns `STATUS_INVALID_PARAMETER` remains unknown.
+
+## D-014 — Inspect the runtime class-bind contract before another driver-code change
+CI #15 reproduces the pre-DriverEntry failure with the minimal sample-derived client. Existing physical debug evidence identifies `WdfVersionBindClass` returning `0xC000000D`; WDF source describes this call as loading/referencing the class extension and linking the client. The next step is to compare runtime class-bind information with the exact WDK ACX 1.0 descriptor, not to simplify LDAC topology or change DriverEntry code. CI #16 uses a full LiveKD mirror and WDF type/header inspection. Physical Server 2022 remains unchanged.
+
+## D-015 — Do not expect probe-driver IFR when class binding fails before DriverEntry
+CI #15's `!wdfkd.wdflogdump AcxAudioCodecProbe` output says to confirm that the driver was successfully loaded. That is expected: the probe never becomes a loaded WDF client, so its per-driver IFR is not available. Preserve ACX01000 preinstall IFR separately; do not classify the missing probe IFR as evidence that the class-bind failure did not occur.
