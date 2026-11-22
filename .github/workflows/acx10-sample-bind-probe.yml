@@ -1,0 +1,128 @@
+name: ACX 1.0 Microsoft AudioCodec sample bind probe
+
+on:
+  push:
+    branches:
+      - experiment/acx10-sample-bind-probe-v2
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build sample-derived ACX 1.0 probe with pinned WDK
+    runs-on: windows-2022
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Restore pinned WDK and SDK NuGet packages
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          nuget restore driver\packages.config -PackagesDirectory driver\packages
+          if ($LASTEXITCODE -ne 0) { throw "Pinned WDK/SDK NuGet restore failed: $LASTEXITCODE" }
+          if (-not (Test-Path 'driver\packages\Microsoft.Windows.WDK.x64.10.0.26100.6584')) {
+            throw 'Pinned WDK 10.0.26100.6584 package directory was not restored.'
+          }
+
+      - name: Build and verify exact toolchain, INF, and PDB
+        shell: pwsh
+        run: |
+          & .\driver\AcxAudioCodecProbe\Build-AcxAudioCodecProbe.ps1
+          if ($LASTEXITCODE -ne 0) { throw "Probe build script failed: $LASTEXITCODE" }
+
+      - name: Upload unsigned build package and provenance
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acx10-sample-bind-probe-build
+          path: |
+            \${{ runner.temp }}\acx10-sample-bind-probe\package\**
+            \${{ runner.temp }}\acx10-sample-bind-probe\build\**
+            \${{ runner.temp }}\acx10-sample-bind-probe\report\**
+          if-no-files-found: warn
+          retention-days: 14
+
+  hosted-bind-test:
+    name: Bind test on disposable Windows Server 2022
+    needs: build
+    if: needs.build.result == 'success'
+    runs-on: windows-2022
+    timeout-minutes: 35
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Download the exact build artifact from this workflow run
+        uses: actions/download-artifact@v4
+        with:
+          name: acx10-sample-bind-probe-build
+          path: \${{ runner.temp }}\acx10-sample-bind-probe
+
+      - name: Install Windows SDK Debugging Tools and LiveKD
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $privateRoot = Join-Path $env:RUNNER_TEMP 'acx10-sample-bind-probe-private'
+          New-Item -ItemType Directory -Path $privateRoot -Force | Out-Null
+          $setup = Join-Path $privateRoot 'winsdksetup.exe'
+          Invoke-WebRequest 'https://download.microsoft.com/download/9d2b0e7e-c04f-402c-8ce6-51f1e56028e8/KIT_BUNDLE_WINDOWSSDK_MEDIACREATION/winsdksetup.exe' -OutFile $setup
+          $setupLog = Join-Path $privateRoot 'winsdksetup.log'
+          $setupProcess = Start-Process -FilePath $setup -ArgumentList @('/features','OptionId.WindowsDesktopDebuggers','/quiet','/norestart','/log',$setupLog) -Wait -PassThru
+          if ($setupProcess.ExitCode -ne 0 -and $setupProcess.ExitCode -ne 3010) {
+            throw "Windows SDK Debugging Tools setup failed: $($setupProcess.ExitCode)"
+          }
+          $kdPath = Join-Path ([Environment]::GetFolderPath('ProgramFilesX86')) 'Windows Kits\10\Debuggers\x64\kd.exe'
+          if (-not (Test-Path -LiteralPath $kdPath)) { throw 'kd.exe missing after Debugging Tools setup.' }
+
+          $liveZip = Join-Path $privateRoot 'LiveKD.zip'
+          Invoke-WebRequest 'https://download.sysinternals.com/files/LiveKD.zip' -OutFile $liveZip
+          $liveDir = Join-Path $privateRoot 'livekd'
+          Expand-Archive -LiteralPath $liveZip -DestinationPath $liveDir -Force
+          $live = Get-ChildItem -LiteralPath $liveDir -Filter 'livekd.exe' -File -Recurse | Select-Object -First 1
+          if (-not $live) { throw 'LiveKD.exe missing from the official Sysinternals archive.' }
+          $kdDir = Split-Path -Parent $kdPath
+          $liveKdPath = Join-Path $kdDir 'livekd.exe'
+          Copy-Item -LiteralPath $live.FullName -Destination $liveKdPath -Force
+          New-Item -Path 'HKCU:\Software\Sysinternals\LiveKd' -Force | Out-Null
+          New-ItemProperty -Path 'HKCU:\Software\Sysinternals\LiveKd' -Name EulaAccepted -PropertyType DWord -Value 1 -Force | Out-Null
+          New-Item -ItemType Directory -Path 'C:\Symbols' -Force | Out-Null
+          Add-Content -LiteralPath $env:GITHUB_ENV -Value "KD_PATH=$kdPath"
+          Add-Content -LiteralPath $env:GITHUB_ENV -Value "LIVEKD_PATH=$liveKdPath"
+          Add-Content -LiteralPath $env:GITHUB_ENV -Value "_NT_SYMBOL_PATH=srv*C:\Symbols*https://msdl.microsoft.com/download/symbols"
+          $toolInfo = [pscustomobject]@{
+            KDPath = $kdPath
+            KDVersion = (Get-Item -LiteralPath $kdPath).VersionInfo.FileVersion
+            LiveKDPath = $liveKdPath
+            LiveKDVersion = (Get-Item -LiteralPath $liveKdPath).VersionInfo.FileVersion
+          }
+          $toolInfo | ConvertTo-Json -Depth 4 | Set-Content (Join-Path $env:RUNNER_TEMP 'acx10-sample-bind-probe\report\debugger-tools.json') -Encoding utf8
+
+      - name: Run ACX 1.0 bind probe with pre-install class capture
+        shell: pwsh
+        run: |
+          & .\driver\AcxAudioCodecProbe\Invoke-AcxAudioCodecProbe.ps1
+          if ($LASTEXITCODE -ne 0) { throw "Hosted bind probe script failed: $LASTEXITCODE" }
+
+      - name: Final cleanup and private-key artifact guard
+        if: always()
+        shell: pwsh
+        run: |
+          & .\driver\AcxAudioCodecProbe\Invoke-AcxAudioCodecProbe.ps1 -CleanupOnly -StrictCleanup
+          if ($LASTEXITCODE -ne 0) { throw "Strict cleanup/private-key guard failed: $LASTEXITCODE" }
+
+      - name: Upload hosted bind report and signed package (public certificate only)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acx10-sample-bind-probe-runtime
+          path: |
+            \${{ runner.temp }}\acx10-sample-bind-probe\package\**
+            \${{ runner.temp }}\acx10-sample-bind-probe\build\**
+            \${{ runner.temp }}\acx10-sample-bind-probe\report\**
+          if-no-files-found: warn
+          retention-days: 14

@@ -1,0 +1,54 @@
+; Minimal MEDIA/root-enumerated INF derived from the Microsoft AudioCodec sample topology.
+; Deliberately omits audio interfaces, circuits, endpoints, and KS registrations.
+
+[Version]
+Signature="$WINDOWS NT$"
+Class=MEDIA
+ClassGuid={4d36e96c-e325-11ce-bfc1-08002be10318}
+Provider=%Provider%
+DriverVer=11/22/2026,1.0.0.1
+CatalogFile=AcxAudioCodecProbe.cat
+PnpLockDown=1
+
+[DestinationDirs]
+DefaultDestDir=13
+
+[Manufacturer]
+%Mfg%=Models,NTamd64.10.0...19041
+
+[Models.NTamd64.10.0...19041]
+%DeviceDesc%=Audio_Device,ROOT\AudioCodec
+
+[Audio_Device.NT]
+CopyFiles=Audio_Device.NT.Copy
+
+[Audio_Device.NT.Copy]
+AcxAudioCodecProbe.sys
+
+[Audio_Device.NT.Services]
+AddService=AcxAudioCodecProbe,0x00000002,Audio_Service_Inst
+
+[Audio_Service_Inst]
+DisplayName=%DeviceDesc%
+ServiceType=1
+StartType=3
+ErrorControl=1
+ServiceBinary=%13%\AcxAudioCodecProbe.sys
+
+[Audio_Device.NT.Wdf]
+KmdfService=AcxAudioCodecProbe,Audio_Wdf
+
+[Audio_Wdf]
+KmdfLibraryVersion=1.31
+
+[SourceDisksNames]
+1=%Disk%
+
+[SourceDisksFiles]
+AcxAudioCodecProbe.sys=1
+
+[Strings]
+Provider="LDAC A2DP Research"
+Mfg="Microsoft AudioCodec Sample-derived Probe"
+DeviceDesc="ACX AudioCodec Bind Probe"
+Disk="ACX AudioCodec Bind Probe"

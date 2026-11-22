@@ -1,0 +1,161 @@
+$ErrorActionPreference = 'Stop'
+
+$repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
+$runRoot = Join-Path $env:RUNNER_TEMP 'acx10-sample-bind-probe'
+$buildRoot = Join-Path $runRoot 'build'
+$packageRoot = Join-Path $runRoot 'package'
+$reportRoot = Join-Path $runRoot 'report'
+New-Item -ItemType Directory -Path $buildRoot,$packageRoot,$reportRoot -Force | Out-Null
+
+$wdkPackage = Join-Path $repoRoot 'driver\packages\Microsoft.Windows.WDK.x64.10.0.26100.6584'
+if (-not (Test-Path -LiteralPath $wdkPackage)) {
+    throw "Pinned WDK NuGet package missing: $wdkPackage"
+}
+
+$vswhere = Join-Path ([Environment]::GetFolderPath('ProgramFilesX86')) 'Microsoft Visual Studio\Installer\vswhere.exe'
+if (-not (Test-Path -LiteralPath $vswhere)) { throw 'vswhere.exe not found.' }
+$vsPath = & $vswhere -latest -products '*' -requires Microsoft.Component.MSBuild -property installationPath
+if (-not $vsPath) { throw 'Visual Studio MSBuild installation not found.' }
+$msbuild = Join-Path $vsPath 'MSBuild\Current\Bin\MSBuild.exe'
+if (-not (Test-Path -LiteralPath $msbuild)) { throw "MSBuild.exe missing: $msbuild" }
+
+$project = Join-Path $PSScriptRoot 'AcxAudioCodecProbe.vcxproj'
+$consoleLog = Join-Path $buildRoot 'msbuild-console.log'
+$msbuildOutput = & $msbuild $project '/t:Rebuild' '/m' '/p:Configuration=Release' '/p:Platform=x64' '/v:normal' 2>&1
+$msbuildExit = $LASTEXITCODE
+$msbuildOutput | Out-File -LiteralPath $consoleLog -Encoding utf8
+if ($msbuildExit -ne 0) { throw "MSBuild failed with exit code $msbuildExit. See $consoleLog" }
+
+$buildText = Get-Content -LiteralPath $consoleLog -Raw
+$toolchainMatch = [regex]::Match(
+    $buildText,
+    '(?m)PROBE_TOOLCHAIN\|WDK_ASSEMBLY=(?<wdk>[^|]+)\|SDK=(?<sdk>[^|]+)\|ACX=(?<acx>[^|]+)\|KMDF=(?<kmdf>[^|]+)\|TARGET=(?<target>[^|]+)\|PLATFORM=(?<platform>[^\r\n]+)')
+if (-not $toolchainMatch.Success) { throw 'Build log did not contain the evaluated PROBE_TOOLCHAIN provenance marker.' }
+
+$toolchain = [pscustomobject]@{
+    WdkAssemblyVersion = $toolchainMatch.Groups['wdk'].Value.Trim()
+    WindowsTargetPlatformVersion = $toolchainMatch.Groups['sdk'].Value.Trim()
+    AcxVersion = $toolchainMatch.Groups['acx'].Value.Trim()
+    KmdfVersion = $toolchainMatch.Groups['kmdf'].Value.Trim()
+    DriverTargetPlatform = $toolchainMatch.Groups['target'].Value.Trim()
+    Platform = $toolchainMatch.Groups['platform'].Value.Trim()
+}
+if ($toolchain.WdkAssemblyVersion -ne '10.0.26100.6584' -or
+    $toolchain.WindowsTargetPlatformVersion -ne '10.0.26100.0' -or
+    $toolchain.AcxVersion -ne '1.0' -or
+    $toolchain.KmdfVersion -ne '1.31' -or
+    $toolchain.DriverTargetPlatform -ne 'Windows Driver' -or
+    $toolchain.Platform -ne 'x64') {
+    throw "Evaluated toolchain does not match the experiment contract: $($toolchain | ConvertTo-Json -Compress)"
+}
+
+$repoBuildRoot = Join-Path $repoRoot 'build\AcxAudioCodecProbe'
+if (-not (Test-Path -LiteralPath $repoBuildRoot)) { throw "Build output directory missing: $repoBuildRoot" }
+
+$sys = Get-ChildItem -LiteralPath $repoBuildRoot -Filter 'AcxAudioCodecProbe.sys' -File -Recurse |
+    Where-Object { $_.FullName -notmatch '\\obj\\' } | Select-Object -First 1
+$infFile = Get-ChildItem -LiteralPath $repoBuildRoot -Filter 'AcxAudioCodecProbe.inf' -File -Recurse |
+    Select-Object -First 1
+$pdbFile = Get-ChildItem -LiteralPath $repoBuildRoot -Filter 'AcxAudioCodecProbe.pdb' -File -Recurse |
+    Select-Object -First 1
+if (-not $sys -or -not $infFile -or -not $pdbFile) {
+    throw "Expected SYS, INF and PDB outputs. SYS=$([bool]$sys), INF=$([bool]$infFile), PDB=$([bool]$pdbFile)"
+}
+
+$packageFiles = @(
+    @{ Source = $sys.FullName; Name = 'AcxAudioCodecProbe.sys' },
+    @{ Source = $infFile.FullName; Name = 'AcxAudioCodecProbe.inf' },
+    @{ Source = $pdbFile.FullName; Name = 'AcxAudioCodecProbe.pdb' }
+)
+foreach ($file in $packageFiles) {
+    Copy-Item -LiteralPath $file.Source -Destination (Join-Path $packageRoot $file.Name) -Force
+}
+
+$kitsBin = Join-Path ([Environment]::GetFolderPath('ProgramFilesX86')) 'Windows Kits\10\bin'
+$inf2catCandidates = Get-ChildItem -LiteralPath $kitsBin -Filter 'Inf2Cat.exe' -File -Recurse -ErrorAction SilentlyContinue
+$inf2cat = $inf2catCandidates | Where-Object { $_.FullName -like '*\10.0.26100.0\x86\Inf2Cat.exe' } | Select-Object -First 1
+if (-not $inf2cat) { $inf2cat = $inf2catCandidates | Where-Object { $_.DirectoryName -like '*\x86' } | Select-Object -First 1 }
+if (-not $inf2cat) { $inf2cat = $inf2catCandidates | Select-Object -First 1 }
+if (-not $inf2cat) { throw 'Inf2Cat.exe not found in installed Windows Kits.' }
+$inf2catLog = Join-Path $buildRoot 'inf2cat-server2022.log'
+$inf2catOutput = & $inf2cat.FullName "/driver:$packageRoot" /os:Server2022_X64 2>&1
+$inf2catExit = $LASTEXITCODE
+$inf2catOutput | Out-File -LiteralPath $inf2catLog -Encoding utf8
+if ($inf2catExit -ne 0) { throw "Inf2Cat Server2022_X64 failed with exit code $inf2catExit." }
+$catPath = Join-Path $packageRoot 'AcxAudioCodecProbe.cat'
+if (-not (Test-Path -LiteralPath $catPath)) { throw 'Inf2Cat did not produce AcxAudioCodecProbe.cat.' }
+
+$packageInf = Join-Path $packageRoot 'AcxAudioCodecProbe.inf'
+$infText = Get-Content -LiteralPath $packageInf -Raw
+foreach ($required in @(
+    '(?im)^Class\s*=\s*MEDIA\s*$',
+    '(?i)ROOT\\AudioCodec',
+    '(?im)^KmdfLibraryVersion\s*=\s*1\.31\s*$'
+)) {
+    if ($infText -notmatch $required) { throw "Built INF failed sample-topology preflight: $required" }
+}
+
+$toolRoots = @(
+    $wdkPackage,
+    (Join-Path ([Environment]::GetFolderPath('ProgramFilesX86')) 'Windows Kits\10')
+) | Where-Object { Test-Path -LiteralPath $_ }
+$infVerifCandidates = foreach ($root in $toolRoots) {
+    Get-ChildItem -LiteralPath $root -Filter 'InfVerif.exe' -File -Recurse -ErrorAction SilentlyContinue
+}
+$infVerif = $infVerifCandidates | Where-Object { $_.FullName -like '*\10.0.26100.0\x86\InfVerif.exe' } | Select-Object -First 1
+if (-not $infVerif) { $infVerif = $infVerifCandidates | Where-Object { $_.FullName -like '*\x86\InfVerif.exe' } | Select-Object -First 1 }
+if (-not $infVerif) { $infVerif = $infVerifCandidates | Select-Object -First 1 }
+if (-not $infVerif) { throw 'InfVerif.exe not found in pinned WDK package or installed Windows Kits.' }
+
+$infVerifLog = Join-Path $buildRoot 'infverif-windows-driver.log'
+$infVerifOutput = & $infVerif.FullName /w $packageInf 2>&1
+$infVerifExit = $LASTEXITCODE
+$infVerifOutput | Out-File -LiteralPath $infVerifLog -Encoding utf8
+if ($infVerifExit -ne 0) { throw "InfVerif /w failed with exit code $infVerifExit. See $infVerifLog" }
+
+$hashes = [ordered]@{}
+foreach ($name in @('AcxAudioCodecProbe.sys','AcxAudioCodecProbe.inf','AcxAudioCodecProbe.cat','AcxAudioCodecProbe.pdb')) {
+    $path = Join-Path $packageRoot $name
+    $hashes[$name] = [pscustomobject]@{
+        Length = (Get-Item -LiteralPath $path).Length
+        SHA256 = (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash
+    }
+}
+$driverVer = [regex]::Match($infText, '(?im)^\s*DriverVer\s*=\s*(.+)$').Groups[1].Value.Trim()
+$manifest = [ordered]@{
+    Experiment = 'ACX 1.0 Microsoft AudioCodec sample-derived bind probe'
+    SourceSampleCommit = 'd49bb7d72f3651952b2b6e4ad28d14fe2247eb69'
+    SourceSampleDriverCppBlob = '452b0d99eaf24451d965bd1b0f3ef140417e6d98'
+    SourceSampleProjectBlob = '0cdc9e6154c6340d384c8b07550d6ecf11a2e6d3'
+    SourceSampleInfBlob = '0bc5fe2314b32e30e13827e3d421911048d8f579'
+    RepositoryCommit = $env:GITHUB_SHA
+    RepositoryRef = $env:GITHUB_REF_NAME
+    WorkflowRunId = $env:GITHUB_RUN_ID
+    WorkflowRunNumber = $env:GITHUB_RUN_NUMBER
+    Toolchain = $toolchain
+    DriverVer = $driverVer
+    Inf2CatPath = $inf2cat.FullName
+    Inf2CatVersion = $inf2cat.VersionInfo.FileVersion
+    Inf2CatServer2022ExitCode = $inf2catExit
+    InfVerifPath = $infVerif.FullName
+    InfVerifVersion = $infVerif.VersionInfo.FileVersion
+    InfVerifWindowsDriverExitCode = $infVerifExit
+    Files = $hashes
+}
+$manifestPath = Join-Path $reportRoot 'build-manifest.json'
+$manifest | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $manifestPath -Encoding utf8
+Write-Host ($manifest | ConvertTo-Json -Depth 8)
+
+if ($env:GITHUB_STEP_SUMMARY) {
+    @(
+        '### ACX sample-derived probe build',
+        '',
+        "- Commit: $env:GITHUB_SHA",
+        "- WDK assembly: $($toolchain.WdkAssemblyVersion)",
+        "- SDK target: $($toolchain.WindowsTargetPlatformVersion)",
+        "- ACX / KMDF: $($toolchain.AcxVersion) / $($toolchain.KmdfVersion)",
+        "- Target platform: $($toolchain.DriverTargetPlatform)",
+        '- InfVerif /w: PASS',
+        "- SYS SHA-256: $($hashes['AcxAudioCodecProbe.sys'].SHA256)"
+    ) | Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY
+}
