@@ -65,3 +65,17 @@ The CI #248 report and both CI #248 package archives plus CI #255 stub archive a
 - **CI #11 ACX 1.0 sample probe runtime preflight** — artifact 14776440518; SHA-256 380638450711410885f785bb75d99feec19020a17ac46ee0cb05ce9e446e9c2d; Library copy /LDAC Project/Incoming/CI-11-ACX10-Sample-Probe-Runtime-Preflight.zip; Library file ID libfile_7d9bb98142b881919332288dc98b1b19.
 - Each Library copy was materialized and its SHA-256 matched the original GitHub artifact byte-for-byte.
 - CI #12 (run 45078310971) produced no probe artifact because PowerShell parser validation failed before build/runtime. CI #13 (run 45078613003) build artifact/runtime report are pending completion and will be indexed in the next update.
+
+
+## CI #13/#14 ACX 1.0 sample bind probe artifacts — 2026-11-23
+
+All four GitHub artifacts were copied to Library and SHA-256 rechecked after materialization. Each ZIP remains unchanged.
+
+| Artifact | GitHub run / artifact ID | Repository commit | Library path | File ID | Library ID | Size | SHA-256 |
+|---|---|---|---|---|---|---:|---|
+| CI #13 build | 45078613003 / 14776416132 | 35e700a3ecb74548b858f0479a1e15e31a2d110f | /LDAC Project/Incoming/CI-13-ACX10-Sample-Bind-Build.zip | file_00000000dc7c82308c042331f2aff619 | libfile_509f5b94f4308191bd673c86d486ebf9 | 122,613 | 35e2aba65e565b59beacbf1562294a7e75079a62c2f7a6bfd72b4c769467b600 |
+| CI #13 runtime | 45078613003 / 14776347679 | 35e700a3ecb74548b858f0479a1e15e31a2d110f | /LDAC Project/Incoming/CI-13-ACX10-Sample-Bind-Runtime.zip | file_0000000024c88230a51233edbfa39a92 | libfile_a26ef569e41881919d92c23f68001dd9 | 149,036 | b3a26a3565b214355a64a48153074a725bd1320e0e09a78b9308d8a83bd330c4 |
+| CI #14 build | 45081844225 / 14778135563 | 04518a83900a7e7aa093fe56a7669f91349d7588 | /LDAC Project/Incoming/CI-14-ACX10-Sample-Bind-Build.zip | file_0000000016308230b17fad479feda0cb | libfile_c94c662148a48191a58c215aa72e31aa | 123,366 | 2a266fa558e24745e2a991189da119101641112d18079935c68a0c61e872af86 |
+| CI #14 runtime | 45081844225 / 14777212842 | 04518a83900a7e7aa093fe56a7669f91349d7588 | /LDAC Project/Incoming/CI-14-ACX10-Sample-Bind-Runtime.zip | file_00000000f4448230ba6ecc149356941e | libfile_74630d0600e08191b2014f0953d7ded8 | 151,169 | a141b772ff978f995a648c6fb68c4e8e1bd46d98cef314786da7e835cab0b312 |
+
+The CI #13 sample SYS hash is 70BA9899BF1B54989E7C6C3F6C0DEDAE2ADFCEF16D7AE6A9803192E7C86EDAA6; CI #14 sample SYS hash is AE960C99DE0DA995621113118DDB2CC13FFACBF5F6BBC217C29CB5E4CF6E91D4. Both contain ACX 1.0 / 210-function / 62-structure descriptor metadata. CI #15 artifacts are pending.

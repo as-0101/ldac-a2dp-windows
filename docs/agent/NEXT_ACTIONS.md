@@ -1,14 +1,16 @@
-# Current continuation — 2026-11-23 (ACX 1.0 sample-derived bind probe)
+# Current continuation — 2026-11-23 (WDF IFR diagnostic pass)
 
-**Current status:** the official-sample-derived ACX 1.0 probe builds with the exact pinned WDK/KMDF inputs. Two hosted runtime attempts stopped in test-harness preflight before PnP installation. CI #13 build is green; its hosted runtime job is still running.
+**Current status:** CI #13 and #14 prove that a minimal Microsoft AudioCodec-derived ACX 1.0 client reaches hosted Server 2022 PnP but fails with Code 37 / `0xC000000D` before DriverEntry. This is not specific to LDAC's original INF topology. CI #15 is running with per-driver WDF IFR logging.
 
-1. Continue CI #13, run 45078613003, experiment branch commit 35e700a3ecb74548b858f0479a1e15e31a2d110f. Build job 137381366829 passed; runtime job 137381843080 is in progress. Inspect its artifact after completion.
-2. CI #10 directly exposed ACX CLASS_MODULE v1.0, WDF client 1.31 and WDF runtime 1.33. Its runtime attempt stopped at the incorrect SignTool /kp preflight before root-device creation. The harness now uses documented /pa PnP-installation verification for CAT, SYS and INF.
-3. CI #11 built successfully and recorded exact ACX/WDF link inputs. Its runtime preflight stopped because a LiveKD bitmap dump lacked a page needed by !wdfldr; the output still showed WDF runtime 1.33 and a WDF 1.31 client row associated with Acx01000. It also exposed that WMI Win32_SystemDriver.Started misreported the already-RUNNING service. The current script uses sc.exe query and records incomplete class-module output as a limitation, not a driver failure.
-4. If CI #13 reaches PnP: capture the exact first failure and post-install !dbgprint / !wdfldr output. If the sample reaches DriverEntry, compare its WDF/ACX binding metadata and DriverEntry sequence with LDAC. If it fails with Code 37 / 0xC000000D before DriverEntry, investigate the pinned WDK 26100 ACX 1.0 stub against the Server 2022 runtime.
-5. Do not change the physical server. No driver installation, certificate changes, BCD/security changes, device restart, rollback or OS update. All current experiments run on disposable GitHub-hosted Server 2022 runners.
+1. Inspect [CI #15 / run 45082965356](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45082965356), commit `488ae8104eec960370c0887e07136a3e9e3846b5`. Confirm WDF `VerboseOn=1` / `LogPages=16` were applied to the sample and (when Acx01000 was stopped) to Acx01000 before service start; verify restoration and temporary probe-service cleanup.
+2. Inspect the native LiveKD `-ml` dump output and `!wdfkd.wdflogdump` records for Acx01000, AcxAudioCodecProbe and WDF. Look specifically for `FxStubBindClasses`, `VersionBindClass`, `InitTypes`, `STATUS_INVALID_PARAMETER` and `0xC000000D`.
+3. If an IFR record identifies the first failing stage, compare that exact WDK 26100 ACX 1.0 stub path/descriptor with the hosted Server 2022 Acx01000 class module. Preserve module versions, hashes and symbol evidence.
+4. CI #14's global `DbgPrintOn` registry write is not a valid post-boot diagnostic: Wdf01000.sys reads `WdfLdrDbgPrintOn` in its DriverEntry at boot. Do not repeat it. If CI #15 IFR is insufficient, use a live KD session (runtime global enable) or ETW capture.
+5. Only after the exact stage is known, consider an older-WDK ACX 1.0 control build. ACX 1.0 is documented as pre-release for Windows 10 1903 / KMDF 1.29; Server 2022 is not listed in the ACX 1.0 support table. Do not assume the tested tuple is supported.
+6. Keep the physical server unchanged. No driver installation, certificate changes, BCD/security changes, device restart, rollback or OS update. All current runtime work is on disposable GitHub-hosted Server 2022.
 
-Detailed experiment and hashes: [ACX 1.0 sample bind probe](../../research/ACX10_SAMPLE_BIND_PROBE.md). See BUILD_REGISTRY, TEST_MATRIX and ARTIFACT_INDEX. Earlier continuation blocks below remain historical.
+Artifacts for CI #13 and #14 are preserved in `/LDAC Project/Incoming/` and indexed in `research/ARTIFACT_INDEX.md`. Earlier continuation blocks below remain historical.
+
 
 ---
 

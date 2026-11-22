@@ -103,3 +103,31 @@ CI #11's LiveKD mirror reported a missing page; !wdfldr still showed WDF runtime
 - Official source pinned at Microsoft Windows-driver-samples commit d49bb7d72f3651952b2b6e4ad28d14fe2247eb69; shared Public.h blob f1e9da3bd6101a503f620a31fa3d2ec471009161.
 - The official project defaults to ACX 1.1; the probe deliberately targets ACX 1.0, keeps KMDF 1.31 and reduces INF topology to MEDIA / root-enumerated ROOT\AudioCodec. DriverEntry mirrors WdfDriverCreate then AcxDriverInitialize; EvtDeviceAdd logs and returns STATUS_NOT_SUPPORTED to isolate bind/entry from full codec topology.
 - CI #11 build manifest proves the exact ACX 1.0 stub hash equals CI #255: 9846617F4DFB2B5C60A33FC531D53825562C6C8CE15B04013079CE74E6DFCF74. It also pins acx.h SHA-256 91877A614618A3A726E376A6014B99431C9E4EF54A804E9B48F1F7F8680F19FA, WdfDriverEntry.lib SHA-256 101BF4D30BBF773AC46FF96352EBFDE88A88C834C29F67C10065488CFE2F475C, and WdfLdr.lib SHA-256 AF708DE43A0975239F976BDF5F2596CC6FD7219A076643B2C6C98BDD6C4FF530.
+
+
+## EXP-004 — Official AudioCodec-derived ACX 1.0 minimal bind test (CI #13, 2026-11-23)
+
+- **Question:** does a minimal client based on Microsoft's AudioCodec sample bind on the same hosted Server 2022 runtime?
+- **Source:** Windows-driver-samples commit `d49bb7d72f3651952b2b6e4ad28d14fe2247eb69`; project defaults ACX 1.1 / KMDF 1.31. Probe deliberately used ACX 1.0 / KMDF 1.31 / WDK 10.0.26100.6584 and a root-enumerated MEDIA INF.
+- **Run:** CI #13 / 45078613003; commit `35e700a3ecb74548b858f0479a1e15e31a2d110f`.
+- **Result:** BUILD PASS; PnP selected the probe INF, then Code 37 / `0xC000000D` before DriverEntry. Same failure class as LDAC candidate.
+- **Interpretation:** CONFIRMED negative runtime test. LDAC's original topology and DriverEntry-specific code are not required to reproduce the failure. Internal WDF/ACX stage remains unknown.
+
+## D-012 — Treat the pre-DriverEntry failure as a shared WDF/ACX bind problem, not an LDAC-only problem
+
+CI #13 reproduces Code 37 / 0xC000000D with a minimal root-enumerated MEDIA client derived from Microsoft's sample. Do not spend another cycle simplifying LDAC topology or changing LDAC DriverEntry order until the shared loader failure is understood.
+
+## EXP-005 — Global DbgPrintOn post-boot attempt (CI #14, 2026-11-23)
+
+- **Run:** CI #14 / 45081844225; commit `04518a83900a7e7aa093fe56a7669f91349d7588`.
+- **Result:** build and runtime harness pass; sample still fails Code 37 / 0xC000000D before DriverEntry; `!dbgprint` is empty.
+- **Important correction:** the script wrote `HKLM\SYSTEM\CurrentControlSet\Control\Wdf\Kmdf\Diagnostics\DbgPrintOn=1` after the OS had booted. Microsoft WDF source initializes `WdfLdrDbgPrintOn` in `Wdf01000.sys` DriverEntry and reads the registry there (pinned source commit `b6191d9543441329154da32f7ab9bdd97228dd3c`, lines 111–115 and 358). The write was too late; empty `!dbgprint` is not evidence of an absent loader trace.
+- **Decision:** do not repeat post-boot global DbgPrintOn writes. Use per-driver WDF `VerboseOn` / `LogPages` and `!wdfkd.wdflogdump`, or attach a live kernel debugger before PnP.
+
+## D-013 — Use per-driver WDF IFR logging for the next hosted bind attempt
+
+CI #15 sets WDF `VerboseOn=1` and `LogPages=16` for the probe through its INF and for Acx01000 before service start, with snapshot/restore. It uses LiveKD native `-ml` dumps and WDF IFR log dumps. The experiment remains on a disposable hosted runner; physical Server 2022 remains untouched.
+
+## Compatibility note — ACX 1.0 support matrix
+
+Microsoft ACX version information lists ACX 1.0 as pre-release for Windows 10 1903 / KMDF 1.29; Server 2022 is not listed. The official AudioCodec sample defaults to ACX 1.1 / KMDF 1.31. The tested ACX 1.0 + WDK 26100 + KMDF 1.31 + Server 2022 tuple is not documented as supported. This is a caveat, not a proven explanation for Code 37.

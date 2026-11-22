@@ -159,3 +159,33 @@ The exact ACX function count in the Server 2022 10.0.20348.3451 class module has
 
 ## E-064 — CI #13 current attempt
 - Workflow run 45078613003, experiment commit 35e700a3ecb74548b858f0479a1e15e31a2d110f. PowerShell validation and build passed; build job 137381366829 succeeded. Hosted runtime job 137381843080 was still in progress at the time of this update.
+
+
+## E-001 — Minimal AudioCodec-derived ACX 1.0 client fails before DriverEntry (CI #13)
+
+- **Claim:** the pre-DriverEntry Code 37 / 0xC000000D failure is not specific to LDAC's original INF topology or driver-specific code.
+- **Environment:** VM_TEST — hosted Windows Server 2022; WDK 10.0.26100.6584; KMDF 1.31; ACX 1.0; root-enumerated MEDIA probe.
+- **Source:** Microsoft Windows-driver-samples AudioCodec pinned commit d49bb7d72f3651952b2b6e4ad28d14fe2247eb69.
+- **Run/commit:** CI #13, run 45078613003, commit 35e700a3ecb74548b858f0479a1e15e31a2d110f.
+- **Observed:** build, InfVerif and Inf2Cat pass; PnP selects the probe INF; PnP Code 37 / ProblemStatus 0xC000000D; no DriverEntry marker.
+- **Hashes:** probe SYS 70BA9899BF1B54989E7C6C3F6C0DEDAE2ADFCEF16D7AE6A9803192E7C86EDAA6; LDAC candidate SYS FF97EED8409A7FF9DADB8D9C7C7FB309E789F9A3225847793B39B7D97D8FB9A8.
+- **Interpretation:** CONFIRMED negative runtime result. The internal WDF/ACX bind substage remains unknown.
+
+## E-002 — ACX 1.0 descriptor parity between sample probe and LDAC candidate
+
+- **Claim:** the minimal sample probe and LDAC candidate use the same ACX 1.0 stub descriptor family.
+- **Evidence:** sample SYS descriptor major/minor 1.0, 210 functions, 62 structures; LDAC candidate SYS has the same 1.0 / 210 / 62 descriptor. WDK 10.0.26100.6584 ACX 1.0 stub library SHA-256 9846617F4DFB2B5C60A33FC531D53825562C6C8CE15B04013079CE74E6DFCF74. Sample build manifest also pins acx.h, WdfDriverEntry.lib and WdfLdr.lib hashes.
+- **Environment:** STATIC_ANALYSIS / BUILD_ONLY. CI #13 run 45078613003, commit 35e700a3ecb74548b858f0479a1e15e31a2d110f.
+- **Interpretation:** CONFIRMED descriptor parity; this does not prove every bind-related section or runtime ABI field is identical.
+
+## E-003 — Post-boot DbgPrintOn did not enable WDF loader diagnostics (CI #14)
+
+- **Claim:** the empty !dbgprint output in CI #14 is an instrumentation-timing limitation, not proof that the loader emitted no messages.
+- **Evidence:** CI #14 run 45081844225, commit 04518a83900a7e7aa093fe56a7669f91349d7588; registry DbgPrintOn was set after the hosted OS booted; !dbgprint remained empty. Microsoft WDF source initializes WdfLdrDbgPrintOn in Wdf01000.sys DriverEntry and reads the registry there (pinned source commit b6191d9543441329154da32f7ab9bdd97228dd3c, lines 111–115 and 358).
+- **Interpretation:** CONFIRMED that the registry write was too late for the already-loaded WDF runtime. Do not repeat this post-boot global setting.
+
+## E-004 — ACX 1.0 support-matrix caveat
+
+- **Claim:** ACX 1.0 on Server 2022 with WDK 26100 / KMDF 1.31 is not a documented supported tuple in the published ACX version table.
+- **Evidence:** Microsoft ACX version information describes ACX 1.0 as pre-release and lists Windows 10 1903 / KMDF 1.29; Server 2022 is not listed. The official AudioCodec sample project defaults to ACX 1.1 / KMDF 1.31.
+- **Interpretation:** SUPPORTED as a documentation caveat only; it is not proof that the runtime mismatch causes Code 37.

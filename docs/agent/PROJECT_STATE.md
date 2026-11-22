@@ -366,3 +366,29 @@ Runtime attempt #10 did not reach PnP: SignTool /kp rejected the self-signed tes
 CI #13 run 45078613003 on commit 35e700a3ecb74548b858f0479a1e15e31a2d110f: build job 137381366829 passed; hosted runtime job 137381843080 was in progress at update time. No PnP result is claimed yet.
 
 Durable artifacts and verified hashes are in ARTIFACT_INDEX. No physical server has been modified; all runtime work is on disposable GitHub-hosted Server 2022.
+
+
+## 2026-11-23 — ACX 1.0 sample-derived bind test and WDF diagnostics
+
+### CI #13 — confirmed hosted runtime failure
+- Run: [45078613003](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45078613003); run number 13; repository commit `35e700a3ecb74548b858f0479a1e15e31a2d110f`.
+- Source: Microsoft Windows-driver-samples AudioCodec, pinned commit `d49bb7d72f3651952b2b6e4ad28d14fe2247eb69`. The probe deliberately used ACX 1.0, KMDF 1.31 and WDK 10.0.26100.6584, with a root-enumerated MEDIA INF.
+- Build succeeded; `InfVerif /w` and `Inf2Cat` returned 0. Runtime on hosted Server 2022 selected the probe INF and attempted PnP start, but returned Code 37 / `0xC000000D`; no DriverEntry marker.
+- The probe SYS hash is `70BA9899BF1B54989E7C6C3F6C0DEDAE2ADFCEF16D7AE6A9803192E7C86EDAA6`; the LDAC ACX 1.0 candidate SYS hash is `FF97EED8409A7FF9DADB8D9C7C7FB309E789F9A3225847793B39B7D97D8FB9A8`. Both contain ACX 1.0 descriptor 210 functions / 62 structures. WDK ACX 1.0 stub hash: `9846617F4DFB2B5C60A33FC531D53825562C6C8CE15B04013079CE74E6DFCF74`.
+- This rules out an LDAC-only INF/topology cause for the pre-DriverEntry failure. It does not identify the internal bind stage.
+
+### CI #14 — DbgPrintOn timing limitation
+- Run: [45081844225](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45081844225); run number 14; commit `04518a83900a7e7aa093fe56a7669f91349d7588`.
+- Build and runtime harness succeeded; sample bind again returned Code 37 / `0xC000000D` before DriverEntry.
+- The probe set global `DbgPrintOn=1` after OS boot, but `!dbgprint` remained empty. This is not evidence that the WDF loader emitted no messages: Microsoft WDF source initializes `WdfLdrDbgPrintOn` from the registry in `Wdf01000.sys` DriverEntry (lines 111–115, read at line 358), which has already executed before the hosted job starts. Do not repeat a post-boot registry write.
+- CI #14 cleanup reports device removed, temporary certificate removed, Acx01000 restored to its prior stopped state, and temporary private-key directory removed.
+
+### Compatibility evidence
+- The official AudioCodec project defaults to ACX 1.1 / KMDF 1.31. Microsoft ACX version information lists ACX 1.0 as pre-release for Windows 10 1903 / KMDF 1.29; Server 2022 is not listed for ACX 1.0. The tested ACX 1.0 + WDK 26100 + KMDF 1.31 + Server 2022 tuple is therefore not documented as supported. This is a compatibility caveat, not a proven cause.
+- WDF client 1.31 with Server 2022 WDF runtime 1.33 is a separate version relationship from ACX class-module 1.0.
+
+### CI #15 — next diagnostic in progress
+- Run: [45082965356](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45082965356); run number 15; commit `488ae8104eec960370c0887e07136a3e9e3846b5`.
+- Removed the ineffective global post-boot DbgPrintOn modification. Added per-driver WDF `VerboseOn=1` and `LogPages=16` in the probe INF and temporarily for Acx01000 before service start, with snapshot/restore.
+- LiveKD capture uses native `-ml` dumps with all-regions mirror fallback; KD commands dump WDF IFR logs for Acx01000, AcxAudioCodecProbe and WDF. Runtime result pending.
+- No physical server driver, certificate, BCD/security, device or OS state has been changed.
