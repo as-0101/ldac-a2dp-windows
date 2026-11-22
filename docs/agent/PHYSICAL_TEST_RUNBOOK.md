@@ -116,3 +116,12 @@ Before any install, the only requested action is the read-only package status ch
     & 'C:\\LDAC-Test\\ACX10-Universal\\oppo-driver-tool.exe' status 2>&1 | Tee-Object -FilePath "$env:USERPROFILE\\Desktop\\ldac-acx10-precheck.txt"
 
 No prepare, certificate import, driver installation, upgrade, device restart, rollback, BCD change or OS update is authorized by this runbook. The rollback script selects inbox bth.inf; it does not restore the previous run #129 WDK 26100 baseline package.
+
+
+## UBR 5870 and hosted preflight update — 2026-11-22
+
+A more recently serviced hosted Server 2022 image (UBR 5870, KB5070761) still reports ACX CLASS_MODULE v1.0, WDF 1.31 / runtime 1.33. The physical host at UBR 5761 reports the same class version. Do not update the physical OS as a speculative attempt to obtain ACX 1.1.
+
+The CI #133 ACX 1.0 package preflight passed on a disposable runner: package DriverVer 0.2.326.1634, SYS hash 435905E1553CB06D089F1477D1CFF57C15BBEB84EF3141CA1B3B500A73898F3E, expected test certificate, BCD testsigning Yes, DevGen available. A hosted driver-load test is in progress in build run #230 / 45058265287. Wait for its result before requesting physical installation.
+
+The physical test remains gated by the read-only status command and separate explicit authorization. No physical host change has been made.
