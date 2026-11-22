@@ -1,0 +1,83 @@
+name: acx10-official-baseline-probe
+
+on:
+  push:
+    branches:
+      - experiment/acx10-official-baseline-probe
+
+permissions:
+  contents: read
+
+jobs:
+  pinned-build-preflight:
+    runs-on: windows-2022
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Restore pinned WDK and SDK NuGet packages
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          nuget restore driver\packages.config -PackagesDirectory driver\packages
+          if ($LASTEXITCODE -ne 0) { throw "NuGet restore failed: $LASTEXITCODE" }
+          $wdkProps = 'driver\packages\Microsoft.Windows.WDK.x64.10.0.26100.6584\build\native\Microsoft.Windows.WDK.x64.props'
+          $sdkProps = 'driver\packages\Microsoft.Windows.SDK.CPP.x64.10.0.26100.6584\build\native\Microsoft.Windows.SDK.cpp.x64.props'
+          if (-not (Test-Path $wdkProps)) { throw "Pinned WDK props missing: $wdkProps" }
+          if (-not (Test-Path $sdkProps)) { throw "Pinned SDK props missing: $sdkProps" }
+
+      - name: Assert evaluated toolchain provenance
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $vswhere = "\${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $vs = & $vswhere -latest -products '*' -requires Microsoft.Component.MSBuild -property installationPath
+          if (-not $vs) { throw 'Visual Studio MSBuild not found.' }
+          $msbuild = Join-Path $vs 'MSBuild\Current\Bin\MSBuild.exe'
+          $project = 'driver\AcxAudioCodecProbe\AcxAudioCodecProbe.vcxproj'
+          $raw = & $msbuild $project -getProperty:WdkAssemblyVersion,WindowsTargetPlatformVersion,ACX_VERSION_MAJOR,ACX_VERSION_MINOR,KMDF_VERSION_MAJOR,KMDF_VERSION_MINOR,DriverTargetPlatform /p:Configuration=Release /p:Platform=x64
+          if ($LASTEXITCODE -ne 0) { throw "MSBuild property evaluation failed: $LASTEXITCODE" }
+          $raw | Set-Content build-toolchain-properties.json
+          $p = $raw | ConvertFrom-Json
+          $expected = @{
+            WdkAssemblyVersion = '10.0.26100.6584'
+            WindowsTargetPlatformVersion = '10.0.26100.0'
+            ACX_VERSION_MAJOR = '1'
+            ACX_VERSION_MINOR = '0'
+            KMDF_VERSION_MAJOR = '1'
+            KMDF_VERSION_MINOR = '31'
+            DriverTargetPlatform = 'Windows Driver'
+          }
+          foreach ($name in $expected.Keys) {
+            $actual = [string]$p.$name
+            Write-Host "$name=$actual"
+            if ($actual -ne $expected[$name]) { throw "$name mismatch: expected '$($expected[$name])', got '$actual'" }
+          }
+
+      - name: Build ACX 1.0 AudioCodec baseline
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $vswhere = "\${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $vs = & $vswhere -latest -products '*' -requires Microsoft.Component.MSBuild -property installationPath
+          $msbuild = Join-Path $vs 'MSBuild\Current\Bin\MSBuild.exe'
+          New-Item -ItemType Directory -Path build\AcxAudioCodecProbe -Force | Out-Null
+          & $msbuild driver\AcxAudioCodecProbe\AcxAudioCodecProbe.vcxproj /m /p:Configuration=Release /p:Platform=x64 /v:minimal /bl:build\AcxAudioCodecProbe\build.binlog
+          if ($LASTEXITCODE -ne 0) { throw "MSBuild failed: $LASTEXITCODE" }
+          $sys = Get-ChildItem build\AcxAudioCodecProbe -Filter AcxAudioCodecProbe.sys -Recurse | Select-Object -First 1
+          if (-not $sys) { throw 'AcxAudioCodecProbe.sys was not produced.' }
+          Copy-Item driver\AcxAudioCodecProbe\AcxAudioCodecProbe.inf build\AcxAudioCodecProbe\
+          Get-FileHash $sys.FullName -Algorithm SHA256 | Format-List | Out-String | Set-Content build\AcxAudioCodecProbe\sys-sha256.txt
+          Get-FileHash build\AcxAudioCodecProbe\AcxAudioCodecProbe.inf -Algorithm SHA256 | Format-List | Out-String | Set-Content build\AcxAudioCodecProbe\inf-sha256.txt
+
+      - name: Upload build-only evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acx10-official-baseline-build
+          path: |
+            build\AcxAudioCodecProbe\**
+            build-toolchain-properties.json
+          if-no-files-found: warn
+          retention-days: 14
