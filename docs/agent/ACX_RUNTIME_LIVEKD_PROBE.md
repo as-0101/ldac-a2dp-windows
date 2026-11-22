@@ -26,6 +26,7 @@ Branch: [research/acx-runtime-livekd](https://github.com/as-0101/ldac-a2dp-windo
 | LiveKD native dump + KD | `40d40d4b0300b708388c25f83e3fb2bc00c7b19e` | [45054287408](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45054287408) | **Capture succeeded.** LiveKD `-ml -o` produced a native kernel dump and KD opened it. `!wdfkd.wdfldr` could not resolve `wdfldr!WdfLdrGlobals` / required private WDF symbols from the public symbol set, so no `CLASS_MODULE` version was returned. Report artifact 14766509597 preserved in Files Library. |
 | Direct LiveKD `-k` path | `e13cd43d66d13e7c341f7c81a64f1677a3aabfe4` | [45054673989](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45054673989) | Cancelled. Job log shows KD command-line usage; no valid WDF/ACX class query. Artifact 14767527142. |
 | LiveKD with preconfigured symbol path | `d30bc2cdccc5bcea16059505ef444393701dac0a` | [45054866734](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45054866734) | Cancelled. Job log shows KD command-line usage; no valid WDF/ACX class query. Artifact 14767775337. |
+| LiveKD dump + KD command-file flow | `02dcde601f08e1e52ac9cf073dbf99b6e0e0a8a3` | [45056585788](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45056585788) | **Success:** native dump captured; KD opened it and loaded Acx01000 symbols. `!wdfldr` showed WDF runtime 1.33 and an unnamed client 1.31 at the Acx01000 image base. Exact CLASS_MODULE query still missing. Artifact 14768155168. |
 
 Files Library copies:
 - `/Bluetooth LDAC Research/Artifacts/ACX-runtime-LiveKD-run4-report.zip` — Library ID `libfile_1c51ba296db8819195bef7905d6b0bb2`.
@@ -48,10 +49,32 @@ The earlier `Launch-WinDbg-Kernel.bat` launches WinDbg with `-kl` only. Local ke
 - Run #6 artifact 14767527142, SHA-256 `f793ea378ba1e57df6a1f7102a1f21e8bc3acce76e9d6646d9551bd69967af1c`, Files Library ID `libfile_3fcc773af2ec8191899040f1ab2f0021` (duplicate-safe path ends in run6-report(1)).
 - Run #7 artifact 14767775337, SHA-256 `bb8764e5cb2d789981bd36cda3053f4ec91f83f29359f8fe27e738d238b3a5a1`, Files Library ID `libfile_70550aca71088191b2940b0f11fb92ab`.
 - Run #8 artifact 14767208063 is preserved in Files Library, ID `libfile_5fe724c427a08191a924c877c0c16ba2`.
-- Workflow-only fix committed on `research/acx-runtime-livekd`: [02dcde601f08e1e52ac9cf073dbf99b6e0e0a8a3](https://github.com/as-0101/ldac-a2dp-windows/commit/02dcde601f08e1e52ac9cf073dbf99b6e0e0a8a3). It adds the KD directory to PATH and uses a command file (`-cf`) for KD inspection. No CI run has yet been observed for this commit; unverified.
+- Workflow-only fix committed on `research/acx-runtime-livekd`: [02dcde601f08e1e52ac9cf073dbf99b6e0e0a8a3](https://github.com/as-0101/ldac-a2dp-windows/commit/02dcde601f08e1e52ac9cf073dbf99b6e0e0a8a3). It adds the KD directory to PATH and uses a command file (`-cf`) for KD inspection. Verified by successful run #9; it does not yet resolve the ACX class version.
 
 ## Next action
 
 - If a new CI run can be triggered for commit `02dcde601f08e1e52ac9cf073dbf99b6e0e0a8a3`, verify whether LiveKD creates the dump and whether KD reaches `!wdfkd.wdfldr`. Do not treat the workflow correction as proven before a successful run.
 - Hosted runner ACX class-module version remains unknown. The only direct ACX 1.0 evidence is the physical host's earlier `!wdfldr` output; do not infer from file version.
 - Keep CI #133 / #143 packages and PRs unmerged; do not run host prepare/upgrade/rollback.
+
+
+## Microsoft ACX class-binding query — 2026-11-22 20:44 Kyiv
+
+Run #9 proves that the LiveKD dump + separate KD command-file flow works. The WDF listing shows Wdf01000.sys runtime v1.33 and an unnamed WDF client v1.31 at the exact Acx01000.sys image base. The image and PDB load, but this does not reveal ACX CLASS_MODULE version.
+
+The official [Microsoft !acxkd documentation](https://learn.microsoft.com/en-us/windows-hardware/drivers/debuggercmds/-acxkd) shows the exact command for ACX binding:
+
+    !wdfldr acx01000
+
+Its example output contains both CLIENT_MODULE and CLASS_MODULE, including the ACX Version field. The prior !wdfkd.wdfldr Acx01000.sys invocation is not equivalent and returned “Unable to find the specified WDF driver”.
+
+A follow-up workflow commit [218b457e9df2bf7ccf58e4d4ad18e40c2bb8d383](https://github.com/as-0101/ldac-a2dp-windows/commit/218b457e9df2bf7ccf58e4d4ad18e40c2bb8d383) adds !wdfldr acx01000 to the command file. No CI run had yet been observed for this commit at the time of writing; do not claim a hosted class version until that run completes.
+
+Run #9 report artifact 14768155168, SHA-256 bb29ddd8613eb94d350c6ad08818369d8c169ebd962ec6796f28939955687d8c, Files Library ID libfile_574b6bc225f08191acf43df2c939095c, path /Bluetooth LDAC Research/Artifacts/ACX-runtime-LiveKD-run9-report.zip.
+
+## Next action
+
+- Inspect the CI run triggered by commit 218b457e9df2bf7ccf58e4d4ad18e40c2bb8d383 and capture the output of !wdfldr acx01000.
+- If the hosted runner reports CLASS_MODULE Version v1.1, record the host/runner difference but do not attribute it to a particular cumulative update without a controlled image comparison.
+- If it reports v1.0, the host and runner are aligned; continue investigating other binding inputs.
+- Keep physical Server 2022 unchanged. CI #133 / Universal / ACX 1.0 remains a separate gated test.
