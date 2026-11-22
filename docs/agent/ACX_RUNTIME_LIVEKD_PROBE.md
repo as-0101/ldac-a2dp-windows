@@ -24,8 +24,8 @@ Branch: [research/acx-runtime-livekd](https://github.com/as-0101/ldac-a2dp-windo
 | WinDbg MSIX retry | `f2499f3a765db58e6755122fc9566bb0d427e661` | [45053922954](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45053922954) | Same missing-console-debugger issue. |
 | SDK Debugging Tools + LiveKD | `6c0204588207d80a4a921d156379772ab05e0808` | [45054071166](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45054071166) | SDK Debugging Tools 10.0.26100.6584 installed; ACX service start succeeded; LiveKD initially could not find `kd.exe` on PATH. Report artifact 14767070902 preserved in Files Library. |
 | LiveKD native dump + KD | `40d40d4b0300b708388c25f83e3fb2bc00c7b19e` | [45054287408](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45054287408) | **Capture succeeded.** LiveKD `-ml -o` produced a native kernel dump and KD opened it. `!wdfkd.wdfldr` could not resolve `wdfldr!WdfLdrGlobals` / required private WDF symbols from the public symbol set, so no `CLASS_MODULE` version was returned. Report artifact 14766509597 preserved in Files Library. |
-| Direct LiveKD `-k` path | `e13cd43d66d13e7c341f7c81a64f1677a3aabfe4` | [45054673989](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45054673989) | In progress at this snapshot. |
-| LiveKD with preconfigured symbol path | `d30bc2cdccc5bcea16059505ef444393701dac0a` | [45054866734](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45054866734) | In progress at this snapshot. |
+| Direct LiveKD `-k` path | `e13cd43d66d13e7c341f7c81a64f1677a3aabfe4` | [45054673989](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45054673989) | Cancelled. Job log shows KD command-line usage; no valid WDF/ACX class query. Artifact 14767527142. |
+| LiveKD with preconfigured symbol path | `d30bc2cdccc5bcea16059505ef444393701dac0a` | [45054866734](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45054866734) | Cancelled. Job log shows KD command-line usage; no valid WDF/ACX class query. Artifact 14767775337. |
 
 Files Library copies:
 - `/Bluetooth LDAC Research/Artifacts/ACX-runtime-LiveKD-run4-report.zip` — Library ID `libfile_1c51ba296db8819195bef7905d6b0bb2`.
@@ -42,8 +42,16 @@ Files Library copies:
 
 The earlier `Launch-WinDbg-Kernel.bat` launches WinDbg with `-kl` only. Local kernel debugging requires BCD `debug on`, local `dbgsettings`, and a reboot; the BAT does not configure these. Do not run it on the physical host as-is or enable BCD debugging without separate authorization. Prefer LiveKD `-ml` native live-dump mode if a fresh host snapshot is needed.
 
+## Latest CI audit — 2026-11-22 20:37 Kyiv
+
+- [Run #8 / 45056354003](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45056354003) failed. LiveKD reported `Error finding kd.exe`; the expected dump was not created. Artifact 14767208063, SHA-256 `b9cf8c3a224d0c370305ae1270de369b3bfd6c885d038488a5ede475115427ea`.
+- Run #6 artifact 14767527142, SHA-256 `f793ea378ba1e57df6a1f7102a1f21e8bc3acce76e9d6646d9551bd69967af1c`, Files Library ID `libfile_3fcc773af2ec8191899040f1ab2f0021` (duplicate-safe path ends in run6-report(1)).
+- Run #7 artifact 14767775337, SHA-256 `bb8764e5cb2d789981bd36cda3053f4ec91f83f29359f8fe27e738d238b3a5a1`, Files Library ID `libfile_70550aca71088191b2940b0f11fb92ab`.
+- Run #8 artifact 14767208063 is preserved in Files Library, ID `libfile_5fe724c427a08191a924c877c0c16ba2`.
+- Workflow-only fix committed on `research/acx-runtime-livekd`: [02dcde601f08e1e52ac9cf073dbf99b6e0e0a8a3](https://github.com/as-0101/ldac-a2dp-windows/commit/02dcde601f08e1e52ac9cf073dbf99b6e0e0a8a3). It adds the KD directory to PATH and uses a command file (`-cf`) for KD inspection. No CI run has yet been observed for this commit; unverified.
+
 ## Next action
 
-- Inspect CI #6 and #7. If the WDF loader symbols remain unavailable, stop the hosted-runner class-version probe rather than inferring from the file version.
-- If a fresh physical-host snapshot is needed, prepare a LiveKD-based BAT that captures a dump and runs `!wdfkd.wdfldr Acx01000.sys` using the user's existing debugger/symbol environment. No BCD changes, driver installation, device restart, or OS update.
+- If a new CI run can be triggered for commit `02dcde601f08e1e52ac9cf073dbf99b6e0e0a8a3`, verify whether LiveKD creates the dump and whether KD reaches `!wdfkd.wdfldr`. Do not treat the workflow correction as proven before a successful run.
+- Hosted runner ACX class-module version remains unknown. The only direct ACX 1.0 evidence is the physical host's earlier `!wdfldr` output; do not infer from file version.
 - Keep CI #133 / #143 packages and PRs unmerged; do not run host prepare/upgrade/rollback.
