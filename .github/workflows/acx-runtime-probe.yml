@@ -1,0 +1,39 @@
+name: ACX runtime probe
+
+on:
+  push:
+    branches:
+      - research/acx-runtime-probe
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    name: Inspect hosted Windows Server 2022 ACX runtime
+    runs-on: windows-2022
+    steps:
+      - name: Inspect OS and ACX/WDF binaries
+        shell: pwsh
+        run: |
+          $os = Get-CimInstance Win32_OperatingSystem
+          Write-Host "OS Caption: $($os.Caption)"
+          Write-Host "OS Version: $($os.Version)"
+          Write-Host "OS Build: $($os.BuildNumber)"
+          foreach ($name in @('Acx01000.sys','Wdf01000.sys','BthA2dp.sys')) {
+            $path = Join-Path $env:windir "System32\drivers\$name"
+            if (Test-Path $path) {
+              $f = Get-Item $path
+              $h = Get-FileHash $path -Algorithm SHA256
+              [pscustomobject]@{Name=$name;Length=$f.Length;FileVersion=$f.VersionInfo.FileVersion;ProductVersion=$f.VersionInfo.ProductVersion;LastWriteTimeUtc=$f.LastWriteTimeUtc;SHA256=$h.Hash} | Format-List
+            } else { Write-Host "$name NOT FOUND" }
+          }
+          $svc = Get-CimInstance Win32_SystemDriver -Filter "Name='Acx01000'"
+          if ($svc) { $svc | Select-Object Name,State,Started,StartMode,PathName | Format-List } else { Write-Host 'Acx01000 service not registered' }
+          Get-HotFix | Sort-Object InstalledOn -Descending | Select-Object -First 8 HotFixID,InstalledOn,Description | Format-Table -AutoSize
+          $kd = @("$env:ProgramFiles\Windows Kits\10\Debuggers\x64\kd.exe","$env:ProgramFiles(x86)\Windows Kits\10\Debuggers\x64\kd.exe") | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if ($kd) {
+            Write-Host "Attempting local kernel debugger ACX class query"
+            & $kd -kl -c "!wdfkd.wdfldr Acx01000.sys; q" 2>&1 | Out-String | Write-Host
+          } else { Write-Host 'kd.exe not present; no live CLASS_MODULE query attempted' }
