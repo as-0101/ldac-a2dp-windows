@@ -56,3 +56,23 @@ Edges:
 - FACT-009 `QUALIFIES` EXP-001: compatibility experiment only, not production-support status.
 - FACT-010 `MOTIVATES` HYP-002, but does not prove it.
 - HYP-002 `REQUIRES_TEST` file version and `!wdfldr` comparison on an updated image/host before any driver installation test.
+
+## 2026-11-22 evidence expansion
+
+- FACT-006: ACX service DriverInit completed with status 0 in DriverDiagnostic.xml before the LDAC class-bind failure.
+- FACT-007: ACX unload completion precedes LDAC Event 227 by 23.5–33.7 microseconds on the same kernel thread in two traces.
+- SUPPORTED-002: ACX unload is likely cleanup after failed class binding, not the cause; this is an interpretation of event order, not proof.
+- FACT-008: LdacA2dp source scan found no ACX 1.1-only DDIs from Microsoft's version-overview list.
+- FACT-009: Official AudioCodec sample and LdacA2dp share the essential DriverEntry sequence and WDF service-registration pattern.
+- FACT-010: Microsoft documents Universal driver support on Server 2022; the AudioCodec sample's Windows Driver setting is a valid difference but not a platform incompatibility.
+- FACT-011: ACX 1.0 is described by Microsoft as pre-release/not recommended for new driver development; its presence on this exact host is observed, but Server 2022 is not listed in the ACX version table.
+- EXP-002: one-variable DriverTargetPlatform A/B build, commit 6656e2d1fcda8d731f6795bd2e7a2950d5ba8309, PR #3, CI run #143 (in progress at snapshot).
+
+### Updated edges
+
+- FACT-006 + FACT-007 SUPPORT SUPPORTED-002.
+- FACT-008 supports ACX 1.0 source compatibility.
+- FACT-009 reduces priority of DriverEntry-order and basic INF-service-registration hypotheses.
+- FACT-010 reduces priority of Universal-platform invalidity hypothesis.
+- FACT-011 qualifies the ACX 1.0 workaround as host-specific/experimental rather than generally supported.
+- EXP-002 tests whether changing only DriverTargetPlatform changes build/package behavior; it does not prove runtime class binding.
