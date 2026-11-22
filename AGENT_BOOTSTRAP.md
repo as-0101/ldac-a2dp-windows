@@ -118,3 +118,8 @@ The leading ACX 1.1-versus-1.0 class-version hypothesis remains supported, not p
 Read [the run #9 analysis](docs/agent/2026-11-22-LIVEKD-RUN9-UPDATE.md). Run #9 succeeded: LiveKD captured the dump, KD opened it, and Acx01000 symbols loaded. The hosted runner shows WDF runtime 1.33 and an Acx01000 image represented as a WDF client 1.31; its ACX CLASS_MODULE version remains unknown.
 
 Microsoft's documented query is !wdfldr acx01000. Commit 218b457e9df2bf7ccf58e4d4ad18e40c2bb8d383 adds it to the research workflow. Inspect the CI run for that commit before drawing a runner-versus-host ACX version conclusion. Do not change the physical host.
+
+
+## ACX class version confirmed — 2026-11-22 20:48 Kyiv
+
+Read [the run #10 analysis](docs/agent/2026-11-22-LIVEKD-RUN10-ACX-VERSION.md). Hosted Server 2022 run #10 reports ACX CLASS_MODULE Version v1.0, WDF 1.31, bound to Wdf01000 runtime v1.33. This matches the physical host's earlier CLASS_MODULE v1.0 / WDF 1.31 / runtime 1.33 output. The leading ACX 1.1 client versus ACX 1.0 class mismatch is strongly supported, not yet fully proven. The next step is the read-only pre-check for CI #133 / ACX 1.0; no system-changing action is authorized.
