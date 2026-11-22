@@ -119,3 +119,11 @@ The public KB summaries do not establish whether these later cumulative updates 
 2. CI #133 package identity and binary have been inspected; it is a real ACX 1.0 build, not a mislabeled archive.
 3. The next discriminating experiment remains physical class binding, but the old OS build introduces a possible prior question: would a newer Server 2022 servicing level expose a different ACX class version?
 4. No driver installation, BCD change, certificate import, device restart, or OS update was performed during this review.
+
+
+## Persistent Library copies
+
+The two key CI #133 artifacts were saved to the user's Files Library folder `/Bluetooth LDAC Research/Artifacts/` (Directory ID `6b0318b95f648191802d868fc1be5e96`):
+
+- Test package: `CI-133-ldac-a2dp-oppo-server2022-test.zip`, file ID `file_00000000930c82108b163ba2ebce2681`, Library ID `libfile_60473151996c8191afd738dd16568422`.
+- Unsigned driver + PDB: `CI-133-ldac-a2dp-driver-unsigned-with-PDB.zip`, file ID `file_000000009bc48210b592ba4406f4af98`, Library ID `libfile_964eaac2a28081919289a0387170570d`.
