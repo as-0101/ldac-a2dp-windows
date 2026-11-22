@@ -110,14 +110,12 @@ $inf2catExit = 0
 if ($catFile) {
     Copy-Item -LiteralPath $catFile.FullName -Destination $catPath -Force
 } else {
-    $inf2catRoots = @(
-        $wdkPackage,
-        (Join-Path ([Environment]::GetFolderPath('ProgramFilesX86')) 'Windows Kits\10')
-    ) | Where-Object { Test-Path -LiteralPath $_ }
-    $inf2catCandidates = foreach ($root in $inf2catRoots) {
-        Get-ChildItem -LiteralPath $root -Filter 'Inf2Cat.exe' -File -Recurse -ErrorAction SilentlyContinue
+    $inf2catPathCandidate = Join-Path $wdkBinX86 'Inf2Cat.exe'
+    if (-not (Test-Path -LiteralPath $inf2catPathCandidate)) {
+        throw "Pinned Inf2Cat.exe missing from WDK NuGet package: $inf2catPathCandidate"
     }
-    $inf2cat = $inf2catCandidates | Where-Object { $_.FullName -match '\\10\.0\.26100\.0\\x86\\Inf2Cat\.exe    $inf2catPath = $inf2cat.FullName
+    $inf2cat = Get-Item -LiteralPath $inf2catPathCandidate
+    $inf2catPath = $inf2cat.FullName
     $inf2catVersion = $inf2cat.VersionInfo.FileVersion
     $inf2catLog = Join-Path $buildRoot 'inf2cat-server2022.log'
     $inf2catOutput = & $inf2cat.FullName "/driver:$packageRoot" /os:Server2022_X64 2>&1
