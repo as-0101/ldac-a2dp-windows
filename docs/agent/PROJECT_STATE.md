@@ -129,3 +129,12 @@ Detailed static review: [CI133_PACKAGE_REVIEW.md](CI133_PACKAGE_REVIEW.md).
 |---|---:|---|---|---|
 | Test package | 14763242251 | f3414c19042e51488c9a5a9b00e133eb5a1af26b16ed75b3b1bb96fb34ade1ad | /Bluetooth LDAC Research/Artifacts/CI-133-ACX10-Universal-test.zip | libfile_fac18af78e50819181cc6ed246a9bb4a |
 | Unsigned driver | 14763157658 | 1302c21c3278af9134b5959577a6daa629d0649fd1405148012e074e8147db9c | /Bluetooth LDAC Research/Artifacts/CI-133-ACX10-Universal-driver-unsigned.zip | libfile_950a60b65b38819193414b34670af657 |
+
+
+## Physical test preparation — safety facts
+
+- First candidate is CI #133 / Universal / ACX 1.0 because it isolates ACX version while keeping the original target platform. Do not use CI #143 for the first runtime test because it also changes DriverTargetPlatform.
+- The test package's prepare script imports a CI-generated certificate into LocalMachine Root and TrustedPublisher, enables IHVDRIVER debug output (0xF), and sets BCD testsigning on; reboot required. It is a system-changing step and has not been executed.
+- The upgrade tool requires an explicit confirmation token and checks exact OPPO MAC, single A2DP devnode, current LdacA2dp service/manufacturer, Server 2022 build 20348, candidate version and rank. It uses DiInstallDevice for the exact devnode.
+- The package rollback selects inbox bth.inf; it does not restore CI #126. After rollback, testsigning and the test certificate require separate cleanup.
+- See docs/agent/PHYSICAL_TEST_RUNBOOK.md. No physical-server action has been executed.
