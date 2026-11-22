@@ -13,7 +13,7 @@ jobs:
   inspect:
     name: Inspect hosted Server 2022 ACX class through LiveKD
     runs-on: windows-2022
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - name: Install Windows SDK Debugging Tools
         shell: pwsh
@@ -21,22 +21,16 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $root = Join-Path $env:RUNNER_TEMP 'acx-livekd'
           New-Item -ItemType Directory -Path $root -Force | Out-Null
-
           $setup = Join-Path $root 'winsdksetup.exe'
           Invoke-WebRequest 'https://download.microsoft.com/download/9d2b0e7e-c04f-402c-8ce6-51f1e56028e8/KIT_BUNDLE_WINDOWSSDK_MEDIACREATION/winsdksetup.exe' -OutFile $setup
           $setupLog = Join-Path $root 'winsdksetup.log'
           $p = Start-Process -FilePath $setup -ArgumentList @('/features','OptionId.WindowsDesktopDebuggers','/quiet','/norestart','/log',$setupLog) -Wait -PassThru
           "SDK_SETUP_EXIT=$($p.ExitCode)" | Out-File (Join-Path $root 'sdk-install.txt') -Encoding utf8
           if ($p.ExitCode -ne 0 -and $p.ExitCode -ne 3010) { throw "Windows SDK Debugging Tools install failed: $($p.ExitCode)" }
-
           $programFilesX86 = [Environment]::GetFolderPath('ProgramFilesX86')
           $kdPath = Join-Path $programFilesX86 'Windows Kits\10\Debuggers\x64\kd.exe'
           for ($i=0; $i -lt 60 -and -not (Test-Path $kdPath); $i++) { Start-Sleep -Seconds 2 }
-          if (-not (Test-Path $kdPath)) {
-            Get-ChildItem (Join-Path $programFilesX86 'Windows Kits\10\Debuggers') -Filter 'kd.exe' -Recurse -ErrorAction SilentlyContinue |
-              Select-Object -First 5 FullName | Format-Table -AutoSize
-            throw 'kd.exe not found after Windows SDK Debugging Tools installation'
-          }
+          if (-not (Test-Path $kdPath)) { throw 'kd.exe not found after Windows SDK Debugging Tools installation' }
           $kdVersion = (Get-Item $kdPath).VersionInfo.FileVersion
           "KD_PATH=$kdPath" | Out-File (Join-Path $root 'kd-path.txt') -Encoding utf8
           "KD_VERSION=$kdVersion" | Out-File (Join-Path $root 'sdk-install.txt') -Append -Encoding utf8
@@ -47,7 +41,6 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           $root = Join-Path $env:RUNNER_TEMP 'acx-livekd'
-
           $os = Get-CimInstance Win32_OperatingSystem
           $cv = Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion'
           $sys = foreach ($name in @('Acx01000.sys','Wdf01000.sys')) {
@@ -58,55 +51,46 @@ jobs:
               [pscustomobject]@{Name=$name;FileVersion=$f.VersionInfo.FileVersion;Length=$f.Length;SHA256=$h.Hash;LastWriteTimeUtc=$f.LastWriteTimeUtc}
             }
           }
-          [pscustomobject]@{OS=$os.Caption;Version=$os.Version;Build=$os.BuildNumber;UBR=$cv.UBR;Drivers=$sys;HotFixes=(Get-HotFix | Sort-Object InstalledOn -Descending | Select-Object -First 8 HotFixID,InstalledOn)} |
-            ConvertTo-Json -Depth 6 | Set-Content (Join-Path $root 'system-info.json') -Encoding utf8
+          [pscustomobject]@{OS=$os.Caption;Version=$os.Version;Build=$os.BuildNumber;UBR=$cv.UBR;Drivers=$sys;HotFixes=(Get-HotFix | Sort-Object InstalledOn -Descending | Select-Object -First 8 HotFixID,InstalledOn)} | ConvertTo-Json -Depth 6 | Set-Content (Join-Path $root 'system-info.json') -Encoding utf8
 
           $service = Get-CimInstance Win32_SystemDriver -Filter "Name='Acx01000'"
           if ($service -and -not $service.Started) {
-            Write-Host 'Attempting to start the inbox ACX class-extension service on this disposable hosted runner only...'
+            Write-Host 'Starting ACX service on disposable hosted runner only...'
             & sc.exe start Acx01000
             "SC_START_EXIT=$LASTEXITCODE" | Out-File (Join-Path $root 'service-start.txt') -Encoding utf8
             Start-Sleep -Seconds 3
-          } elseif ($service) {
-            'ACX service already started' | Out-File (Join-Path $root 'service-start.txt') -Encoding utf8
-          } else {
-            'ACX service not registered' | Out-File (Join-Path $root 'service-start.txt') -Encoding utf8
-          }
+          } elseif ($service) { 'ACX service already started' | Out-File (Join-Path $root 'service-start.txt') -Encoding utf8 } else { 'ACX service not registered' | Out-File (Join-Path $root 'service-start.txt') -Encoding utf8 }
 
           $zip = Join-Path $root 'LiveKD.zip'
           Invoke-WebRequest 'https://download.sysinternals.com/files/LiveKD.zip' -OutFile $zip
           Expand-Archive -LiteralPath $zip -DestinationPath (Join-Path $root 'livekd') -Force
           $livekd = Get-ChildItem (Join-Path $root 'livekd') -Filter livekd.exe -Recurse | Select-Object -First 1
           if (-not $livekd) { throw 'LiveKD executable not found in official Sysinternals archive' }
-
           New-Item -Path 'HKCU:\Software\Sysinternals\LiveKd' -Force | Out-Null
           New-ItemProperty -Path 'HKCU:\Software\Sysinternals\LiveKd' -Name EulaAccepted -PropertyType DWord -Value 1 -Force | Out-Null
 
           $kdPath = (Get-Content -LiteralPath (Join-Path $root 'kd-path.txt') -Raw).Trim().Substring(8)
-          $kdDir = Split-Path $kdPath
-          $env:PATH = "$kdDir;$env:PATH"
-          Write-Host "KD available to LiveKD: $((Get-Command kd.exe).Source)"
-
           New-Item -ItemType Directory -Path 'C:\Symbols' -Force | Out-Null
           $env:_NT_SYMBOL_PATH = 'srv*C:\Symbols*https://msdl.microsoft.com/download/symbols'
+          $dump = Join-Path $root 'server2022-live.dmp'
           $log = Join-Path $root 'wdfldr-output.txt'
-          $cmd = '.symfix C:\Symbols; .reload /f Wdf01000.sys; .reload /f Acx01000.sys; !wdfkd.wdfldr Acx01000.sys; q'
-          Write-Host 'Running LiveKD native live-dump mode with KD and querying ACX class binding...'
-          Push-Location $kdDir
-          try {
-            & $livekd.FullName -k $kdPath -ml -logo $log -c $cmd
-            $livekdExit = $LASTEXITCODE
-          } finally {
-            Pop-Location
-          }
-          "LIVEKD_KD_EXIT=$livekdExit" | Out-File (Join-Path $root 'result.txt') -Encoding utf8
-          if (Test-Path $log) {
-            Write-Host '----- WDF/ACX debugger output -----'
-            Get-Content $log
-            Write-Host '----- end debugger output -----'
-          }
-          if ($livekdExit -ne 0) { throw "LiveKD/KD failed with exit code $livekdExit" }
+          $captureLog = Join-Path $root 'livekd-capture.txt'
 
+          Write-Host 'Capturing native live kernel dump with LiveKD -ml -o; debugger will be started separately.'
+          & $livekd.FullName -o $dump -ml -b 2>&1 | Tee-Object -FilePath $captureLog
+          $captureExit = $LASTEXITCODE
+          "LIVEKD_CAPTURE_EXIT=$captureExit" | Out-File (Join-Path $root 'result.txt') -Encoding utf8
+          if ($captureExit -ne 0) { throw "LiveKD capture failed: $captureExit" }
+          if (-not (Test-Path $dump)) { throw 'LiveKD reported success but dump file is missing' }
+          "DUMP_SIZE=$((Get-Item $dump).Length)" | Out-File (Join-Path $root 'result.txt') -Append -Encoding utf8
+
+          $cmd = '.symfix C:\Symbols; .reload /f Wdf01000.sys; .reload /f Acx01000.sys; lmvm Acx01000; !wdfldr; !wdfkd.wdfldr Acx01000.sys; q'
+          Write-Host 'Opening saved live dump with KD and querying WDF/ACX class module.'
+          & $kdPath -z $dump -y $env:_NT_SYMBOL_PATH -logo $log -c $cmd
+          $kdExit = $LASTEXITCODE
+          "KD_EXIT=$kdExit" | Out-File (Join-Path $root 'result.txt') -Append -Encoding utf8
+          if (Test-Path $log) { Get-Content $log }
+          if ($kdExit -ne 0) { throw "KD inspection failed: $kdExit" }
 
       - name: Upload text report
         if: always()
