@@ -87,8 +87,10 @@ jobs:
           $env:PATH = "$kdDir;$env:PATH"
           Write-Host "KD available to LiveKD: $((Get-Command kd.exe).Source)"
 
+          New-Item -ItemType Directory -Path 'C:\Symbols' -Force | Out-Null
+          $env:_NT_SYMBOL_PATH = 'srv*C:\Symbols*https://msdl.microsoft.com/download/symbols'
           $log = Join-Path $root 'wdfldr-output.txt'
-          $cmd = '.symfix C:\Symbols; .reload /f; !wdfkd.wdfldr Acx01000.sys; q'
+          $cmd = '.symfix C:\Symbols; .reload /f Wdf01000.sys; .reload /f Acx01000.sys; !wdfkd.wdfldr Acx01000.sys; q'
           Write-Host 'Running LiveKD native live-dump mode with KD and querying ACX class binding...'
           Push-Location $kdDir
           try {
