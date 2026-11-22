@@ -31,7 +31,7 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          $vswhere = "\${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $vswhere = Join-Path ([Environment]::GetFolderPath('ProgramFilesX86')) 'Microsoft Visual Studio\Installer\vswhere.exe'
           $vs = & $vswhere -latest -products '*' -requires Microsoft.Component.MSBuild -property installationPath
           if (-not $vs) { throw 'Visual Studio MSBuild not found.' }
           $msbuild = Join-Path $vs 'MSBuild\Current\Bin\MSBuild.exe'
@@ -59,7 +59,7 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          $vswhere = "\${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $vswhere = Join-Path ([Environment]::GetFolderPath('ProgramFilesX86')) 'Microsoft Visual Studio\Installer\vswhere.exe'
           $vs = & $vswhere -latest -products '*' -requires Microsoft.Component.MSBuild -property installationPath
           $msbuild = Join-Path $vs 'MSBuild\Current\Bin\MSBuild.exe'
           New-Item -ItemType Directory -Path build\AcxAudioCodecProbe -Force | Out-Null
