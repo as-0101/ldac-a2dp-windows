@@ -1,3 +1,14 @@
+## Investigation update — 2026-11-22 19:35 Kyiv
+
+- The complete Notion research journal was re-read (18,840 characters); older status/action lists are historical and superseded by this snapshot and the current START HERE page.
+- The physical host's ACX class module is v1.0; the WDF client version is 1.31. Do not confuse ACX class version with WDF/KMDF version.
+- CI #133 proves the ACX 1.0 branch compiles, links and packages on a Windows Server 2022 runner using WDK/SDK NuGet 10.0.26100.6584. The project selects ACX 1.0 headers and acxstub.lib through ACX_VERSION_MINOR=0; the captured build log does not echo expanded paths, but compile/link success is consistent with that selection. CI #133 is not a physical bind test.
+- The LdacA2dp sources use none of the ACX 1.1-only DDIs listed in Microsoft's ACX version overview; scans of audio.c, driver.c and driver.h found no matches. CI #133 additionally compiles/links the full driver against the ACX 1.0 configuration.
+- The Microsoft AudioCodec sample uses ACX 1.1, KMDF 1.31 and DriverTargetPlatform=Windows Driver; LdacA2dp uses KMDF 1.31 and Universal. Microsoft lists Server 2022 as supported for Universal drivers too, so this difference is not a proven cause. A one-variable A/B branch changes only the target platform.
+- CI #143 / https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45050062916 for branch experiment/acx10-windowsdriver-platform, commit 6656e2d1fcda8d731f6795bd2e7a2950d5ba8309, was in progress at snapshot: core and utility jobs passed; KMDF driver job still running. Draft PR #3: https://github.com/as-0101/ldac-a2dp-windows/pull/3; do not merge.
+- Archived ETW shows ACX DriverInit returned status 0, then ACX unload completed; LDAC Event 227 returned 0xC000000D 23.5–33.7 microseconds later on the same kernel thread. This supports interpreting ACX unload as possible failed-bind cleanup, not as the cause; causality is not proven.
+- Microsoft ACX version overview describes ACX 1.0 as pre-release and not recommended for new driver development; it lists ACX 1.1 as the public release for Windows 10 2004. The table does not list Server 2022. Treat ACX 1.0 as a host-specific compatibility experiment, not a general supported target.
+
 # Project state — LDAC / OPPO Enco Buds2 on Windows Server 2022
 
 **Snapshot date:** 2026-11-22  
