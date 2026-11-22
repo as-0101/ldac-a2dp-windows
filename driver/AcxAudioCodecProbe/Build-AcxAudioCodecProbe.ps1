@@ -206,21 +206,4 @@ $manifest = [ordered]@{
     InfVerifPath = $infVerif.FullName
     InfVerifVersion = $infVerif.VersionInfo.FileVersion
     InfVerifWindowsDriverExitCode = $infVerifExit
-    Files = $hashes
 }
-$manifestPath = Join-Path $reportRoot 'build-manifest.json'
-$manifest | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $manifestPath -Encoding utf8
-Write-Host ($manifest | ConvertTo-Json -Depth 8)
-
-if ($env:GITHUB_STEP_SUMMARY) {
-    @(
-        '### ACX sample-derived probe build',
-        '',
-        "- Commit: $env:GITHUB_SHA",
-        "- WDK assembly: 10.0.26100.6584 (from WDK build target log)",
-        "- SDK target: $($toolchain.WindowsTargetPlatformVersion)",
-        "- ACX / KMDF: $($toolchain.AcxVersion) / $($toolchain.KmdfVersion)",
-        "- Target platform: $($toolchain.DriverTargetPlatform)",
-        '- InfVerif /w: PASS',
-        "- SYS SHA-256: $($hashes['AcxAudioCodecProbe.sys'].SHA256)"
-    ) | Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY
