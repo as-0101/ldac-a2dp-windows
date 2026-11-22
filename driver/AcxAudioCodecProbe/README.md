@@ -24,8 +24,8 @@ The probe retains the sample's DriverEntry/WDF initialization sequence and MEDIA
 
 ## Exact build contract
 
-- Build runner: GitHub-hosted `windows-2025` (Windows Server 2025 + Visual Studio 2026); runtime runner: GitHub-hosted `windows-2022` (Windows Server 2022).
-- Microsoft WDK NuGet guidance currently lists Windows 11 or newer and Visual Studio 2026 with Desktop development with C++ plus the Windows Driver Kit component. The build job uses the Server 2025 / VS2026 image; Microsoft does not explicitly enumerate Server 2025 in that prerequisite sentence, so this remains an environment-documentation caveat.
+- Build runner: GitHub-hosted `windows-2022` (Windows Server 2022 + Visual Studio 2022 / MSBuild 17.x); runtime runner: GitHub-hosted `windows-2022` (Windows Server 2022).
+- Microsoft’s supported-kit table explicitly pairs WDK 10.0.26100.6584 with Visual Studio 2022; WDK 10.0.28000.2526 is the VS2026 kit. The experiment therefore pins MSBuild 17.x. A test on VS2026/MSBuild 18.x failed at `ValidateNTTargetVersion` because the 26100 package does not ship `Microsoft.DriverKit.Build.Tasks.18.0.dll`.
 - The build invokes 64-bit MSBuild and adds the pinned WDK NuGet `c\bin\10.0.26100.0\x64` and `x86` tool directories to PATH; this is required for WDK tool discovery (including StampInf).
 - WDK NuGet assembly: 10.0.26100.6584.
 - SDK target: 10.0.26100.0.

@@ -29,6 +29,7 @@ if (-not $vsPath) { throw 'Visual Studio MSBuild installation not found.' }
 $msbuild = Join-Path $vsPath 'MSBuild\Current\Bin\amd64\MSBuild.exe'
 if (-not (Test-Path -LiteralPath $msbuild)) { throw "64-bit MSBuild.exe is required for WDK tool discovery; missing: $msbuild" }
 $msbuildVersion = (Get-Item -LiteralPath $msbuild).VersionInfo.FileVersion
+if ($msbuildVersion -notmatch '^17\.') { throw "WDK 10.0.26100.6584 requires VS2022/MSBuild 17.x; found $msbuildVersion" }
 $stampInfVersion = (Get-Item -LiteralPath $stampInf).VersionInfo.FileVersion
 $stampInfHash = (Get-FileHash -LiteralPath $stampInf -Algorithm SHA256).Hash
 

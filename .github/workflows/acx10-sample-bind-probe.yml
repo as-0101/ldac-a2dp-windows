@@ -12,8 +12,8 @@ permissions:
 jobs:
   build:
     name: Build sample-derived ACX 1.0 probe with pinned WDK
-    # Current WDK NuGet guidance requires VS2026; runtime validation remains on Server 2022 below.
-    runs-on: windows-2025
+    # WDK 10.0.26100.6584 is paired with VS2022; runtime validation is also on Server 2022.
+    runs-on: windows-2022
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v5
