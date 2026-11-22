@@ -180,6 +180,23 @@ foreach ($name in @('AcxAudioCodecProbe.sys','AcxAudioCodecProbe.inf','AcxAudioC
         SHA256 = (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash
     }
 }
+
+$acxStubPath = Join-Path $toolchain.DdkLibraryPath 'acx\km\1.0\acxstub.lib'
+$acxHeaderPath = Join-Path $toolchain.DdkIncludePath 'acx\km\1.0\acx.h'
+$wdfLibRoot = Join-Path $wdkPackage 'c\lib\wdf\kmdf\x64\1.31'
+$wdfDriverEntryLibPath = Join-Path $wdfLibRoot 'WdfDriverEntry.lib'
+$wdfLdrLibPath = Join-Path $wdfLibRoot 'WdfLdr.lib'
+foreach ($requiredPath in @($acxStubPath,$acxHeaderPath,$wdfDriverEntryLibPath,$wdfLdrLibPath)) {
+    if (-not (Test-Path -LiteralPath $requiredPath)) { throw "Required ACX/WDF build input missing: $requiredPath" }
+}
+$acxStubItem = Get-Item -LiteralPath $acxStubPath
+$acxStubHash = (Get-FileHash -LiteralPath $acxStubPath -Algorithm SHA256).Hash
+if ($acxStubItem.Length -ne 1362352 -or $acxStubHash -ne '9846617F4DFB2B5C60A33FC531D53825562C6C8CE15B04013079CE74E6DFCF74') {
+    throw "ACX 1.0 stub differs from CI #255 WDK 10.0.26100.6584 baseline: length=$($acxStubItem.Length), SHA256=$acxStubHash"
+}
+$acxHeaderHash = (Get-FileHash -LiteralPath $acxHeaderPath -Algorithm SHA256).Hash
+$wdfDriverEntryHash = (Get-FileHash -LiteralPath $wdfDriverEntryLibPath -Algorithm SHA256).Hash
+$wdfLdrHash = (Get-FileHash -LiteralPath $wdfLdrLibPath -Algorithm SHA256).Hash
 $driverVer = [regex]::Match($infText, '(?im)^\s*DriverVer\s*=\s*(.+)$').Groups[1].Value.Trim()
 $manifest = [ordered]@{
     Experiment = 'ACX 1.0 Microsoft AudioCodec sample-derived bind probe'
@@ -206,4 +223,24 @@ $manifest = [ordered]@{
     InfVerifPath = $infVerif.FullName
     InfVerifVersion = $infVerif.VersionInfo.FileVersion
     InfVerifWindowsDriverExitCode = $infVerifExit
+    SourceSamplePublicHeaderBlob = 'f1e9da3bd6101a503f620a31fa3d2ec471009161'
+    AcxStubLibrary = [ordered]@{
+        Path = $acxStubPath
+        Length = $acxStubItem.Length
+        SHA256 = $acxStubHash
+    }
+    AcxHeader = [ordered]@{
+        Path = $acxHeaderPath
+        SHA256 = $acxHeaderHash
+    }
+    WdfLibraries = [ordered]@{
+        WdfDriverEntryPath = $wdfDriverEntryLibPath
+        WdfDriverEntrySHA256 = $wdfDriverEntryHash
+        WdfLdrPath = $wdfLdrLibPath
+        WdfLdrSHA256 = $wdfLdrHash
+    }
+    Files = $hashes
 }
+$manifestPath = Join-Path $reportRoot 'build-manifest.json'
+$manifest | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath $manifestPath -Encoding utf8
+Write-Host "PROBE_BUILD_MANIFEST=$manifestPath"

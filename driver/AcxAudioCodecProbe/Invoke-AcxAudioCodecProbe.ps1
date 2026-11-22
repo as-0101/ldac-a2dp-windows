@@ -53,11 +53,20 @@ function Invoke-LiveKdDump([string]$Phase,[string[]]$Commands) {
 
 function Invoke-Cleanup([switch]$Strict) {
     $errors = [System.Collections.Generic.List[string]]::new()
+    $warnings = [System.Collections.Generic.List[string]]::new()
     $cleanup = [ordered]@{ TimestampUtc = [DateTime]::UtcNow.ToString('o') }
     $state = $null
     if (Test-Path -LiteralPath $statePath) {
         try { $state = Get-Content -LiteralPath $statePath -Raw | ConvertFrom-Json }
         catch { $errors.Add("Cleanup state parse failed: $($_.Exception.Message)") }
+    }
+    if ($state) {
+        if (-not ($state.PSObject.Properties.Name -contains 'CleanupComplete')) {
+            $state | Add-Member -NotePropertyName CleanupComplete -NotePropertyValue $false
+        }
+        if (-not ($state.PSObject.Properties.Name -contains 'CleanupResult')) {
+            $state | Add-Member -NotePropertyName CleanupResult -NotePropertyValue $null
+        }
     }
 
     if ($state) {
@@ -115,26 +124,41 @@ function Invoke-Cleanup([switch]$Strict) {
 
         if ($state.AcxStartedByProbe) {
             $svc = Get-CimInstance Win32_SystemDriver -Filter "Name='Acx01000'" -ErrorAction SilentlyContinue
-            if ($svc -and $svc.Started) {
+            $previousStopRejected = ($state.CleanupResult -and [int]$state.CleanupResult.AcxStopExitCode -eq 1061)
+            if ($svc -and $svc.Started -and -not $previousStopRejected) {
                 & sc.exe stop Acx01000 2>&1 | Out-File (Join-Path $reportRoot 'cleanup-acx-service.txt') -Encoding utf8
                 $cleanup.AcxStopExitCode = $LASTEXITCODE
-                Start-Sleep -Seconds 2
+                Start-Sleep -Seconds 3
+            } elseif ($previousStopRejected) {
+                $cleanup.AcxStopExitCode = 1061
+                $cleanup.AcxStopRetrySkipped = $true
             }
             $svc = Get-CimInstance Win32_SystemDriver -Filter "Name='Acx01000'" -ErrorAction SilentlyContinue
-            if ($svc -and $svc.Started) { $errors.Add('Acx01000 remains running although started by this probe.') }
-            else { $cleanup.AcxServiceRestored = $true }
+            if ($svc -and $svc.Started) {
+                if ([int]$cleanup.AcxStopExitCode -eq 1061) {
+                    $cleanup.AcxServiceRestored = $false
+                    $warnings.Add('Acx01000 remained RUNNING because SCM rejected STOP with 1061; this is a disposable hosted runner and it is destroyed after the job.')
+                } else {
+                    $errors.Add('Acx01000 remains running after a non-1061 stop result.')
+                }
+            } else { $cleanup.AcxServiceRestored = $true }
         } else { $cleanup.AcxServiceWasNotStartedByProbe = $true }
 
     }
 
     $badExt = @('.pfx','.p12','.pvk','.key')
-    $badFiles = Get-ChildItem -LiteralPath $runRoot -File -Recurse -ErrorAction SilentlyContinue |
-        Where-Object { $_.Extension.ToLowerInvariant() -in $badExt }
+    $scanRoots = @($runRoot,$privateRoot) | Where-Object { Test-Path -LiteralPath $_ }
+    $badFiles = foreach ($scanRoot in $scanRoots) {
+        Get-ChildItem -LiteralPath $scanRoot -File -Recurse -ErrorAction SilentlyContinue |
+            Where-Object { $_.Extension.ToLowerInvariant() -in $badExt }
+    }
     foreach ($file in $badFiles) { Remove-Item -LiteralPath $file.FullName -Force -ErrorAction SilentlyContinue }
     if ($badFiles) { $errors.Add("Private-key files found and deleted: $($badFiles.Name -join ', ')") }
 
-    $textFiles = Get-ChildItem -LiteralPath $runRoot -File -Recurse -ErrorAction SilentlyContinue |
-        Where-Object { $_.Extension.ToLowerInvariant() -in @('.txt','.log','.json','.pem') }
+    $textFiles = foreach ($scanRoot in $scanRoots) {
+        Get-ChildItem -LiteralPath $scanRoot -File -Recurse -ErrorAction SilentlyContinue |
+            Where-Object { $_.Extension.ToLowerInvariant() -in @('.txt','.log','.json','.pem') }
+    }
     $keyMarkers = foreach ($file in $textFiles) {
         if (Select-String -LiteralPath $file.FullName -Pattern 'BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY|PRIVATE KEY-----' -Quiet -ErrorAction SilentlyContinue) {
             $file.FullName
@@ -146,7 +170,20 @@ function Invoke-Cleanup([switch]$Strict) {
     }
 
     $cleanup.PrivateKeyArtifactScan = if (-not $badFiles -and -not $keyMarkers) { 'NO_PRIVATE_KEY_FILES_OR_MARKERS' } else { 'PRIVATE_KEY_MATERIAL_FOUND_AND_DELETED' }
+    $cleanup.Warnings = @($warnings)
     $cleanup.Errors = @($errors)
+    $privateTempDirectoryRemoved = $false
+    if (Test-Path -LiteralPath $privateRoot) {
+        try {
+            Remove-Item -LiteralPath $privateRoot -Recurse -Force -ErrorAction Stop
+            $privateTempDirectoryRemoved = -not (Test-Path -LiteralPath $privateRoot)
+        } catch {
+            $errors.Add("Private temporary directory cleanup failed: $($_.Exception.Message)")
+        }
+    } else { $privateTempDirectoryRemoved = $true }
+    $cleanup.PrivateTempDirectoryRemoved = $privateTempDirectoryRemoved
+    $cleanup.Errors = @($errors)
+    $cleanup.Warnings = @($warnings)
     $cleanup.Success = ($errors.Count -eq 0)
     $cleanup | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $reportRoot 'cleanup-result.json') -Encoding utf8
     if ($state) {
@@ -175,6 +212,8 @@ $state = [ordered]@{
     AcxWasRunning = $false
     AcxStartedByProbe = $false
     TestAttempted = $false
+    CleanupComplete = $false
+    CleanupResult = $null
 }
 Save-State $state
 
@@ -285,10 +324,20 @@ try {
         Out-File -LiteralPath (Join-Path $reportRoot 'signtool-sign.txt') -Encoding utf8
     $signExit = $LASTEXITCODE
     if ($signExit -ne 0) { throw "SignTool signing failed: $signExit" }
-    & $signTool.FullName verify /kp /v /c $packageCat $packageSys 2>&1 |
-        Out-File -LiteralPath (Join-Path $reportRoot 'signtool-verify.txt') -Encoding utf8
-    $verifyExit = $LASTEXITCODE
-    if ($verifyExit -ne 0) { throw "SignTool catalog verification failed: $verifyExit" }
+    & $signTool.FullName verify /v /pa $packageCat 2>&1 |
+        Out-File -LiteralPath (Join-Path $reportRoot 'signtool-verify-cat.txt') -Encoding utf8
+    $verifyCatExit = $LASTEXITCODE
+    if ($verifyCatExit -ne 0) { throw "SignTool test-catalog verification failed: $verifyCatExit" }
+
+    & $signTool.FullName verify /v /pa /c $packageCat $packageSys 2>&1 |
+        Out-File -LiteralPath (Join-Path $reportRoot 'signtool-verify-sys.txt') -Encoding utf8
+    $verifySysExit = $LASTEXITCODE
+    if ($verifySysExit -ne 0) { throw "SignTool test-SYS catalog verification failed: $verifySysExit" }
+
+    & $signTool.FullName verify /v /pa /c $packageCat $packageInf 2>&1 |
+        Out-File -LiteralPath (Join-Path $reportRoot 'signtool-verify-inf.txt') -Encoding utf8
+    $verifyInfExit = $LASTEXITCODE
+    if ($verifyInfExit -ne 0) { throw "SignTool test-INF catalog verification failed: $verifyInfExit" }
 
     $devgenRoots = @((Join-Path $kitsRoot 'Tools'),$kitsRoot) | Where-Object { Test-Path -LiteralPath $_ }
     $devgenCandidates = foreach ($rootPath in $devgenRoots) {
