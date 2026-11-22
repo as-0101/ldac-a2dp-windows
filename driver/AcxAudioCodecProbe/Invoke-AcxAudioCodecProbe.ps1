@@ -18,6 +18,13 @@ function Get-PnpValue([string]$InstanceId,[string]$KeyName) {
     return $null
 }
 
+function Test-DriverServiceRunning([string]$Name) {
+    $output = & sc.exe query $Name 2>&1
+    $exitCode = $LASTEXITCODE
+    if ($exitCode -ne 0) { return $false }
+    return (($output -join [Environment]::NewLine) -match '(?im)^\s*STATE\s*:\s*4\s+RUNNING')
+}
+
 function Invoke-LiveKdDump([string]$Phase,[string[]]$Commands) {
     $kdPath = $env:KD_PATH
     $liveKdPath = $env:LIVEKD_PATH
@@ -123,9 +130,9 @@ function Invoke-Cleanup([switch]$Strict) {
         else { $cleanup.CertificateRemovedFromAllStores = $true }
 
         if ($state.AcxStartedByProbe) {
-            $svc = Get-CimInstance Win32_SystemDriver -Filter "Name='Acx01000'" -ErrorAction SilentlyContinue
+            $acxRunning = Test-DriverServiceRunning 'Acx01000'
             $previousStopRejected = ($state.CleanupResult -and [int]$state.CleanupResult.AcxStopExitCode -eq 1061)
-            if ($svc -and $svc.Started -and -not $previousStopRejected) {
+            if ($acxRunning -and -not $previousStopRejected) {
                 & sc.exe stop Acx01000 2>&1 | Out-File (Join-Path $reportRoot 'cleanup-acx-service.txt') -Encoding utf8
                 $cleanup.AcxStopExitCode = $LASTEXITCODE
                 Start-Sleep -Seconds 3
@@ -133,8 +140,8 @@ function Invoke-Cleanup([switch]$Strict) {
                 $cleanup.AcxStopExitCode = 1061
                 $cleanup.AcxStopRetrySkipped = $true
             }
-            $svc = Get-CimInstance Win32_SystemDriver -Filter "Name='Acx01000'" -ErrorAction SilentlyContinue
-            if ($svc -and $svc.Started) {
+            $acxRunningAfter = Test-DriverServiceRunning 'Acx01000'
+            if ($acxRunningAfter) {
                 if ([int]$cleanup.AcxStopExitCode -eq 1061) {
                     $cleanup.AcxServiceRestored = $false
                     $warnings.Add('Acx01000 remained RUNNING because SCM rejected STOP with 1061; this is a disposable hosted runner and it is destroyed after the job.')
@@ -142,7 +149,10 @@ function Invoke-Cleanup([switch]$Strict) {
                     $errors.Add('Acx01000 remains running after a non-1061 stop result.')
                 }
             } else { $cleanup.AcxServiceRestored = $true }
-        } else { $cleanup.AcxServiceWasNotStartedByProbe = $true }
+        } else {
+            $cleanup.AcxServiceWasNotStartedByProbe = $true
+            $cleanup.AcxServiceRestored = $true
+        }
 
     }
 
@@ -245,10 +255,13 @@ try {
         throw 'Runner is not already in testsigning mode. No BCD change or device creation will be attempted.'
     }
 
-    $acxService = Get-CimInstance Win32_SystemDriver -Filter "Name='Acx01000'" -ErrorAction SilentlyContinue
-    if (-not $acxService) { throw 'Acx01000 service is not registered on this hosted runner.' }
-    $state.AcxWasRunning = [bool]$acxService.Started
-    if (-not $acxService.Started) {
+    $serviceBefore = & sc.exe query Acx01000 2>&1
+    $serviceBeforeExit = $LASTEXITCODE
+    $serviceBeforeText = $serviceBefore -join [Environment]::NewLine
+    $serviceBefore | Out-File -LiteralPath (Join-Path $reportRoot 'acx-service-before.txt') -Encoding utf8
+    if ($serviceBeforeExit -ne 0) { throw "Acx01000 service query failed or service is not registered: $serviceBeforeExit" }
+    $state.AcxWasRunning = ($serviceBeforeText -match '(?im)^\s*STATE\s*:\s*4\s+RUNNING')
+    if (-not $state.AcxWasRunning) {
         & sc.exe start Acx01000 2>&1 | Out-File -LiteralPath (Join-Path $reportRoot 'acx-service-start.txt') -Encoding utf8
         $startExit = $LASTEXITCODE
         if ($startExit -ne 0 -and $startExit -ne 1056) { throw "sc.exe start Acx01000 failed: $startExit" }
@@ -257,11 +270,10 @@ try {
     }
     $running = $false
     for ($i=0; $i -lt 15; $i++) {
-        $svc = Get-CimInstance Win32_SystemDriver -Filter "Name='Acx01000'" -ErrorAction SilentlyContinue
-        if ($svc -and $svc.Started) { $running = $true; break }
+        if (Test-DriverServiceRunning 'Acx01000') { $running = $true; break }
         Start-Sleep -Seconds 1
     }
-    if (-not $running) { throw 'Acx01000 did not reach RUNNING.' }
+    if (-not $running) { throw 'Acx01000 did not reach RUNNING according to sc.exe query.' }
     & sc.exe query Acx01000 2>&1 | Out-File -LiteralPath (Join-Path $reportRoot 'acx-service-preinstall.txt') -Encoding utf8
 
     $expectedAcxHash = 'D10924E8B8F3E609EA696BFE4724B96460453D654DCBDEEC83E88D07214DA5D0'
@@ -289,12 +301,302 @@ try {
         'q'
     )
     $preLog = Invoke-LiveKdDump -Phase 'preinstall' -Commands $preCommands
-    if ($preLog -notmatch '(?ims)CLASS_MODULE.{0,1200}?^\s*Version\s+v?1\.0') {
-        $preLog | Set-Content -LiteralPath (Join-Path $reportRoot 'preinstall-class-version-unconfirmed.txt') -Encoding utf8
-        throw 'Pre-install !wdfldr did not confirm ACX CLASS_MODULE v1.0; no cert/device was created.'
+    $acxModuleMatch = [regex]::Match($preLog, '(?im)^(?<start>[\da-f\x60]+)\s+[\da-f\x60]+\s+Acx01000\b')
+    if (-not $acxModuleMatch.Success -or $preLog -notmatch '(?i)Image name:\s+Acx01000\.sys') {
+        $preLog | Set-Content -LiteralPath (Join-Path $reportRoot 'preinstall-acx-module-unconfirmed.txt') -Encoding utf8
+        throw 'Pre-install LiveKD did not confirm Acx01000.sys is loaded; no cert/device was created.'
     }
-    if ($preLog -match '(?is)CLIENT_MODULE.{0,400}?WDF Version\s+v?1\.31') { 'WDF_CLIENT_VERSION=1.31' | Set-Content (Join-Path $reportRoot 'preinstall-version-summary.txt') -Encoding utf8 }
-    if ($preLog -match '(?i)Wdf01000\.sys\s+v1\.33\s+v1\.33') { 'WDF_RUNTIME_VERSION=1.33' | Add-Content (Join-Path $reportRoot 'preinstall-version-summary.txt') }
+    $acxStartAddress = ($acxModuleMatch.Groups['start'].Value -replace '[^0-9A-Fa-f]','').ToLowerInvariant()
+    $wdfRuntimeMatch = [regex]::Match($preLog, '(?is)LIBRARY_MODULE.{0,500}?^\s*Version\s+v?1\.33')
+    if (-not $wdfRuntimeMatch.Success) {
+        $preLog | Set-Content -LiteralPath (Join-Path $reportRoot 'preinstall-wdf-runtime-unconfirmed.txt') -Encoding utf8
+        throw 'Pre-install !wdfldr did not confirm WDF runtime v1.33; no cert/device was created.'
+    }
+    $clientRows = [regex]::Matches($preLog, '(?im)^\s*.+?\s+v1\.31\s+\d+\s+0x[\da-f]+\s+0x[\da-f]+\s+0x(?<image>[\da-f]+)\s+0x[\da-f]+\s*
+    $packageInf = Join-Path $packageRoot 'AcxAudioCodecProbe.inf'
+    $packageSys = Join-Path $packageRoot 'AcxAudioCodecProbe.sys'
+    $packageCat = Join-Path $packageRoot 'AcxAudioCodecProbe.cat'
+    $packagePdb = Join-Path $packageRoot 'AcxAudioCodecProbe.pdb'
+    if (-not (Test-Path -LiteralPath $packageInf) -or -not (Test-Path -LiteralPath $packageSys) -or
+        -not (Test-Path -LiteralPath $packageCat) -or -not (Test-Path -LiteralPath $packagePdb)) {
+        throw 'Build artifact is missing INF, SYS, CAT, or PDB.'
+    }
+
+    $kitsRoot = Join-Path ([Environment]::GetFolderPath('ProgramFilesX86')) 'Windows Kits\10'
+    $signTools = Get-ChildItem -LiteralPath (Join-Path $kitsRoot 'bin') -Filter 'signtool.exe' -File -Recurse -ErrorAction SilentlyContinue
+    $signTool = $signTools | Where-Object { $_.FullName -match '\\x64\\signtool\.exe$' } | Select-Object -First 1
+    if (-not $signTool) { $signTool = $signTools | Select-Object -First 1 }
+    if (-not $signTool) { throw 'SignTool.exe not found in Windows Kits.' }
+
+    $cert = New-SelfSignedCertificate -Type CodeSigningCert -Subject $state.CertSubject -CertStoreLocation 'Cert:\LocalMachine\My' -KeyUsage DigitalSignature -KeyAlgorithm RSA -KeyLength 2048 -HashAlgorithm SHA256 -KeyExportPolicy NonExportable
+    $state.CertThumbprint = $cert.Thumbprint
+    Save-State $state
+
+    $publicCer = Join-Path $packageRoot 'AcxAudioCodecProbe-TestOnly.cer'
+    Export-Certificate -Cert $cert -FilePath $publicCer | Out-Null
+    Import-Certificate -FilePath $publicCer -CertStoreLocation 'Cert:\LocalMachine\Root' | Out-Null
+    Import-Certificate -FilePath $publicCer -CertStoreLocation 'Cert:\LocalMachine\TrustedPublisher' | Out-Null
+
+    & $signTool.FullName sign /fd SHA256 /sm /s My /sha1 $cert.Thumbprint /v $packageCat 2>&1 |
+        Out-File -LiteralPath (Join-Path $reportRoot 'signtool-sign.txt') -Encoding utf8
+    $signExit = $LASTEXITCODE
+    if ($signExit -ne 0) { throw "SignTool signing failed: $signExit" }
+    & $signTool.FullName verify /v /pa $packageCat 2>&1 |
+        Out-File -LiteralPath (Join-Path $reportRoot 'signtool-verify-cat.txt') -Encoding utf8
+    $verifyCatExit = $LASTEXITCODE
+    if ($verifyCatExit -ne 0) { throw "SignTool test-catalog verification failed: $verifyCatExit" }
+
+    & $signTool.FullName verify /v /pa /c $packageCat $packageSys 2>&1 |
+        Out-File -LiteralPath (Join-Path $reportRoot 'signtool-verify-sys.txt') -Encoding utf8
+    $verifySysExit = $LASTEXITCODE
+    if ($verifySysExit -ne 0) { throw "SignTool test-SYS catalog verification failed: $verifySysExit" }
+
+    & $signTool.FullName verify /v /pa /c $packageCat $packageInf 2>&1 |
+        Out-File -LiteralPath (Join-Path $reportRoot 'signtool-verify-inf.txt') -Encoding utf8
+    $verifyInfExit = $LASTEXITCODE
+    if ($verifyInfExit -ne 0) { throw "SignTool test-INF catalog verification failed: $verifyInfExit" }
+
+    $devgenRoots = @((Join-Path $kitsRoot 'Tools'),$kitsRoot) | Where-Object { Test-Path -LiteralPath $_ }
+    $devgenCandidates = foreach ($rootPath in $devgenRoots) {
+        Get-ChildItem -LiteralPath $rootPath -Filter 'devgen.exe' -File -Recurse -ErrorAction SilentlyContinue
+    }
+    $devgen = $devgenCandidates | Where-Object { $_.FullName -match '\\x64\\devgen\.exe$' } | Select-Object -First 1
+    if (-not $devgen) { throw 'DevGen.exe not found; no root device will be created.' }
+    $state.DevGenPath = $devgen.FullName
+    Save-State $state
+
+    $existing = Get-PnpDevice -PresentOnly -ErrorAction SilentlyContinue |
+        Where-Object { $_.InstanceId -like "*$($state.InstanceToken)*" } | Select-Object -First 1
+    if ($existing) { throw "Probe instance token already exists: $($existing.InstanceId)" }
+
+    & $devgen.FullName /add /bus ROOT /instanceid $state.InstanceToken /hardwareid 'ROOT\AudioCodec' 2>&1 |
+        Out-File -LiteralPath (Join-Path $reportRoot 'devgen-add.txt') -Encoding utf8
+    $devgenExit = $LASTEXITCODE
+    if ($devgenExit -ne 0) { throw "DevGen ROOT device creation failed: $devgenExit" }
+
+    $device = $null
+    for ($i=0; $i -lt 15; $i++) {
+        $device = Get-PnpDevice -PresentOnly -ErrorAction SilentlyContinue |
+            Where-Object { $_.InstanceId -like "*$($state.InstanceToken)*" } | Select-Object -First 1
+        if ($device) { break }
+        Start-Sleep -Seconds 1
+    }
+    if (-not $device) { throw 'DevGen created no discoverable ROOT\AudioCodec device.' }
+    $state.DeviceInstanceId = $device.InstanceId
+    Save-State $state
+    $device.InstanceId | Set-Content -LiteralPath (Join-Path $reportRoot 'device-instance-id.txt') -Encoding utf8
+
+    $testStart = Get-Date
+    $state.TestAttempted = $true
+    Save-State $state
+    & pnputil.exe /add-driver $packageInf /install 2>&1 |
+        Out-File -LiteralPath (Join-Path $reportRoot 'pnputil-install.txt') -Encoding utf8
+    $pnputilExit = $LASTEXITCODE
+    "PNPUTIL_EXIT=$pnputilExit" | Set-Content -LiteralPath (Join-Path $reportRoot 'install-result.txt') -Encoding utf8
+    Start-Sleep -Seconds 7
+
+    $deviceNow = Get-PnpDevice -InstanceId $state.DeviceInstanceId -ErrorAction SilentlyContinue
+    if (-not $deviceNow) { throw 'Root device disappeared before PnP state capture.' }
+    $deviceNow | Format-List * | Out-File -LiteralPath (Join-Path $reportRoot 'pnp-device.txt') -Encoding utf8
+
+    $pnpProperties = [ordered]@{}
+    foreach ($key in @('DEVPKEY_Device_DriverInfPath','DEVPKEY_Device_DriverVersion','DEVPKEY_Device_DriverProvider','DEVPKEY_Device_Service','DEVPKEY_Device_ProblemCode','DEVPKEY_Device_ProblemStatus','DEVPKEY_Device_HardwareIds')) {
+        $pnpProperties[$key] = Get-PnpValue -InstanceId $state.DeviceInstanceId -KeyName $key
+    }
+    $problemStatusHex = $null
+    if ($null -ne $pnpProperties['DEVPKEY_Device_ProblemStatus']) {
+        try { $problemStatusHex = '0x{0:X8}' -f ([uint32]([int64]$pnpProperties['DEVPKEY_Device_ProblemStatus'] -band 4294967295)) }
+        catch { $problemStatusHex = [string]$pnpProperties['DEVPKEY_Device_ProblemStatus'] }
+    }
+
+    $driverInfPath = [string]$pnpProperties['DEVPKEY_Device_DriverInfPath']
+    $serviceName = [string]$pnpProperties['DEVPKEY_Device_Service']
+    $candidateDriverVer = [regex]::Match((Get-Content -LiteralPath $packageInf -Raw), '(?im)^\s*DriverVer\s*=\s*(?<value>.+)$').Groups['value'].Value.Trim()
+    $candidateSelected = $false
+    if ($driverInfPath -match '^oem\d+\.inf$') {
+        $stagedInf = Join-Path $env:windir "INF\$driverInfPath"
+        if (Test-Path -LiteralPath $stagedInf) {
+            $stagedText = Get-Content -LiteralPath $stagedInf -Raw
+            $stagedDriverVer = [regex]::Match($stagedText, '(?im)^\s*DriverVer\s*=\s*(?<value>.+)$').Groups['value'].Value.Trim()
+            $candidateSelected = ($stagedDriverVer -eq $candidateDriverVer -and $serviceName -eq 'AcxAudioCodecProbe')
+        }
+    }
+    $state.CandidateInfPath = $driverInfPath
+    $state.CandidateSelected = $candidateSelected
+    Save-State $state
+
+    $pnpReport = [ordered]@{
+        DeviceInstanceId = $state.DeviceInstanceId
+        FriendlyName = $deviceNow.FriendlyName
+        Status = $deviceNow.Status
+        DriverInfPath = $driverInfPath
+        DriverVersion = $pnpProperties['DEVPKEY_Device_DriverVersion']
+        DriverProvider = $pnpProperties['DEVPKEY_Device_DriverProvider']
+        Service = $serviceName
+        ProblemCode = $pnpProperties['DEVPKEY_Device_ProblemCode']
+        ProblemStatusRaw = $pnpProperties['DEVPKEY_Device_ProblemStatus']
+        ProblemStatusHex = $problemStatusHex
+        CandidateInfSelected = $candidateSelected
+        CandidateDriverVer = $candidateDriverVer
+        PnPUtilExitCode = $pnputilExit
+    }
+    $pnpReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $reportRoot 'pnp-result.json') -Encoding utf8
+    if (-not $candidateSelected) {
+        throw "PnP did not select the exact probe package. INF=$driverInfPath; service=$serviceName. No bind conclusion is valid."
+    }
+
+    & sc.exe query Acx01000 2>&1 | Out-File -LiteralPath (Join-Path $reportRoot 'acx-service-postinstall.txt') -Encoding utf8
+    & sc.exe query AcxAudioCodecProbe 2>&1 | Out-File -LiteralPath (Join-Path $reportRoot 'probe-service-postinstall.txt') -Encoding utf8
+
+    $events = Get-WinEvent -FilterHashtable @{ LogName='System'; StartTime=$testStart } -ErrorAction SilentlyContinue |
+        Where-Object { $_.ProviderName -match 'Kernel-PnP' -and $_.Id -in @(219,227,400,410) } |
+        Select-Object TimeCreated,ProviderName,Id,LevelDisplayName,Message
+    $events | Format-List | Out-File -LiteralPath (Join-Path $reportRoot 'kernel-pnp-events.txt') -Encoding utf8
+
+    $setupLog = Join-Path $env:windir 'INF\setupapi.dev.log'
+    if (Test-Path -LiteralPath $setupLog) {
+        $tail = Get-Content -LiteralPath $setupLog -Tail 2500
+        $matches = $tail | Select-String -Pattern ([regex]::Escape($state.DeviceInstanceId) + '|AcxAudioCodecProbe|ROOT\\AudioCodec|oem\d+\.inf') -Context 2,5
+        $matches | Select-Object -Last 120 | Out-String | Set-Content -LiteralPath (Join-Path $reportRoot 'setupapi-device-install.txt') -Encoding utf8
+    }
+
+    $postCommands = @('.symfix C:\Symbols','.reload /f nt','.reload /f Wdf01000.sys','.reload /f Acx01000.sys','!wdfldr acx01000','!dbgprint','q')
+    $postLog = Invoke-LiveKdDump -Phase 'postinstall' -Commands $postCommands
+    $driverEntrySeen = $postLog -match 'AcxAudioCodecProbe: DriverEntry ENTER'
+    $wdfMatch = [regex]::Match($postLog, 'AcxAudioCodecProbe: WdfDriverCreate STATUS=0x(?<status>[0-9A-Fa-f]{8})')
+    $acxMatch = [regex]::Match($postLog, 'AcxAudioCodecProbe: AcxDriverInitialize STATUS=0x(?<status>[0-9A-Fa-f]{8})')
+    $deviceAddSeen = $postLog -match 'AcxAudioCodecProbe: EvtDeviceAdd REACHED'
+    $wdfStatus = if ($wdfMatch.Success) { '0x' + $wdfMatch.Groups['status'].Value.ToUpperInvariant() } else { $null }
+    $acxStatus = if ($acxMatch.Success) { '0x' + $acxMatch.Groups['status'].Value.ToUpperInvariant() } else { $null }
+
+    if ($driverEntrySeen -and $wdfStatus -eq '0x00000000' -and $acxStatus -eq '0x00000000' -and $deviceAddSeen) {
+        $classification = 'ACX_BIND_SUCCEEDED; DriverEntry, WdfDriverCreate, AcxDriverInitialize and EvtDeviceAdd reached; EvtDeviceAdd returned STATUS_NOT_SUPPORTED intentionally.'
+        $firstStage = 'EvtDeviceAdd reached after successful ACX initialization; deliberate terminal status is STATUS_NOT_SUPPORTED.'
+    } elseif ($driverEntrySeen -and $wdfStatus -and $wdfStatus -ne '0x00000000') {
+        $classification = 'DRIVERENTRY_REACHED; WdfDriverCreate failed.'
+        $firstStage = 'WdfDriverCreate'
+    } elseif ($driverEntrySeen -and $acxStatus -and $acxStatus -ne '0x00000000') {
+        $classification = 'DRIVERENTRY_REACHED; WdfDriverCreate passed and AcxDriverInitialize failed.'
+        $firstStage = 'AcxDriverInitialize'
+    } elseif ($driverEntrySeen -and $wdfStatus -eq '0x00000000' -and $acxStatus -eq '0x00000000') {
+        $classification = 'DRIVERENTRY_AND_ACX_INITIALIZE_SUCCEEDED; EvtDeviceAdd marker not observed.'
+        $firstStage = 'After AcxDriverInitialize; EvtDeviceAdd not observed'
+    } elseif ($problemStatusHex -eq '0xC000000D') {
+        $classification = 'NO_DRIVERENTRY_MARKER; PnP reports STATUS_INVALID_PARAMETER. Consistent with pre-DriverEntry bind failure, but exact internal bind substage is not exposed.'
+        $firstStage = 'Before DriverEntry (suspected; no stage marker observed)'
+    } else {
+        $classification = 'INCONCLUSIVE; candidate INF selected, but debugger output has no decisive DriverEntry/ACX status marker.'
+        $firstStage = 'Unresolved'
+    }
+
+    $runtimeManifest = [ordered]@{
+        Classification = $classification
+        FirstObservedFailingStage = $firstStage
+        DriverEntryReached = $driverEntrySeen
+        WdfDriverCreateStatus = $wdfStatus
+        AcxDriverInitializeStatus = $acxStatus
+        EvtDeviceAddReached = $deviceAddSeen
+        EvtDeviceAddExpectedReturn = 'STATUS_NOT_SUPPORTED'
+        PnP = $pnpReport
+        AcxRuntimeFileVersion = $acxFile.VersionInfo.FileVersion
+        AcxRuntimeSHA256 = $acxHash
+        WdfRuntimeFileVersion = $wdfFile.VersionInfo.FileVersion
+        WdfRuntimeSHA256 = $wdfHash
+        PreinstallClassVersionConfirmed = $true
+        CertificateThumbprint = $cert.Thumbprint
+        SignTool = $signTool.FullName
+        RepositoryCommit = $env:GITHUB_SHA
+        WorkflowRunId = $env:GITHUB_RUN_ID
+        WorkflowRunNumber = $env:GITHUB_RUN_NUMBER
+    }
+    $runtimeManifest | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath (Join-Path $reportRoot 'runtime-result.json') -Encoding utf8
+
+    $hashes = [ordered]@{}
+    foreach ($name in @('AcxAudioCodecProbe.sys','AcxAudioCodecProbe.inf','AcxAudioCodecProbe.cat','AcxAudioCodecProbe.pdb','AcxAudioCodecProbe-TestOnly.cer')) {
+        $path = Join-Path $packageRoot $name
+        if (Test-Path -LiteralPath $path) {
+            $hashes[$name] = [pscustomobject]@{ Length=(Get-Item -LiteralPath $path).Length; SHA256=(Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash }
+        }
+    }
+    $hashes | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $reportRoot 'runtime-package-hashes.json') -Encoding utf8
+
+    if ($env:GITHUB_STEP_SUMMARY) {
+        @(
+            '### Hosted Server 2022 ACX 1.0 sample bind probe',
+            '',
+            "- Classification: $classification",
+            "- First observed stage: $firstStage",
+            "- DriverEntry: $driverEntrySeen",
+            "- WdfDriverCreate: $wdfStatus",
+            "- AcxDriverInitialize: $acxStatus",
+            "- EvtDeviceAdd reached: $deviceAddSeen (deliberately returns STATUS_NOT_SUPPORTED)",
+            "- Candidate INF selected: $candidateSelected ($driverInfPath)",
+            "- PnP ProblemStatus: $problemStatusHex",
+            "- ACX runtime SHA-256: $acxHash"
+        ) | Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY
+    }
+    Write-Host $classification
+} catch {
+    [ordered]@{
+        Error = $_.Exception.Message
+        RepositoryCommit = $env:GITHUB_SHA
+        WorkflowRunId = $env:GITHUB_RUN_ID
+        WorkflowRunNumber = $env:GITHUB_RUN_NUMBER
+        TestAttempted = [bool]$state.TestAttempted
+    } | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $reportRoot 'runtime-error.json') -Encoding utf8
+    throw
+} finally {
+    try { Invoke-Cleanup } catch {
+        $_ | Out-String | Set-Content -LiteralPath (Join-Path $reportRoot 'cleanup-exception.txt') -Encoding utf8
+    }
+    if ($transcriptStarted) { try { Stop-Transcript | Out-Null } catch { } }
+}
+)
+    $acxWdfClient = $false
+    foreach ($clientRow in $clientRows) {
+        if ($clientRow.Groups['image'].Value.ToLowerInvariant() -eq $acxStartAddress) { $acxWdfClient = $true; break }
+    }
+    if (-not $acxWdfClient) {
+        $preLog | Set-Content -LiteralPath (Join-Path $reportRoot 'preinstall-acx-wdf-client-unconfirmed.txt') -Encoding utf8
+        throw "Pre-install !wdfldr did not match Acx01000 image 0x$acxStartAddress to a WDF 1.31 client; no cert/device was created."
+    }
+
+    $classModuleMatch = [regex]::Match($preLog, '(?ims)CLASS_MODULE.{0,1200}?\^\s*Version\s+v?1\.0')
+    $missingDumpPage = ($preLog -match '(?i)Page\s+[\da-f]+\s+not present in the dump file')
+    $classModuleStatus = if ($classModuleMatch.Success) { 'CONFIRMED_1.0' } elseif ($missingDumpPage) { 'NOT_VISIBLE_DUE_TO_MISSING_DUMP_PAGE' } else { 'UNCONFIRMED' }
+    if (-not $classModuleMatch.Success -and -not $missingDumpPage) {
+        $preLog | Set-Content -LiteralPath (Join-Path $reportRoot 'preinstall-class-version-unconfirmed.txt') -Encoding utf8
+        throw 'Pre-install !wdfldr did not show ACX CLASS_MODULE v1.0 and no missing-page limitation was reported; no cert/device was created.'
+    }
+
+    $versionSummary = @(
+        "ACX_MODULE_FILE_VERSION=$($acxFile.VersionInfo.FileVersion)"
+        "ACX_MODULE_SHA256=$acxHash"
+        "ACX_CLASS_MODULE_CAPTURE=$classModuleStatus"
+        "ACX_WDF_CLIENT_VERSION=1.31"
+        "ACX_WDF_CLIENT_IMAGE_ADDRESS=0x$acxStartAddress"
+        "WDF_RUNTIME_VERSION=1.33"
+        "ACX_SERVICE_WAS_RUNNING_BEFORE_PROBE=$($state.AcxWasRunning)"
+        "ACX_SERVICE_STARTED_BY_PROBE=$($state.AcxStartedByProbe)"
+    )
+    $versionSummary | Set-Content -LiteralPath (Join-Path $reportRoot 'preinstall-version-summary.txt') -Encoding utf8
+    $preinstallRuntime = [ordered]@{
+        AcxModuleFileVersion = $acxFile.VersionInfo.FileVersion
+        AcxModuleSHA256 = $acxHash
+        AcxModuleImageAddress = "0x$acxStartAddress"
+        AcxClassModuleVersion = if ($classModuleMatch.Success) { '1.0' } else { $null }
+        AcxClassModuleCaptureStatus = $classModuleStatus
+        AcxWdfClientVersion = '1.31'
+        WdfRuntimeVersion = '1.33'
+        MissingDumpPageObserved = $missingDumpPage
+        AcxServiceWasRunningBeforeProbe = $state.AcxWasRunning
+        AcxServiceStartedByProbe = $state.AcxStartedByProbe
+    }
+    $preinstallRuntime | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $reportRoot 'preinstall-runtime-status.json') -Encoding utf8
+    if (-not $classModuleMatch.Success) {
+        'ACX CLASS_MODULE v1.0 was not readable in this bitmap dump; Acx01000.sys hash and WDF 1.31 client/WDF 1.33 runtime were verified, so the probe proceeds with a recorded limitation.' |
+            Set-Content -LiteralPath (Join-Path $reportRoot 'preinstall-class-version-partial.txt') -Encoding utf8
+    }
 
     $packageInf = Join-Path $packageRoot 'AcxAudioCodecProbe.inf'
     $packageSys = Join-Path $packageRoot 'AcxAudioCodecProbe.sys'
