@@ -21,7 +21,7 @@ Status labels: CONFIRMED = direct evidence; SUPPORTED = converging evidence, not
 
 ## Artifact locations
 
-Persistent source archive: Notion Files Library folder `/Bluetooth LDAC Research/Artifacts/`, Directory ID `6b0318b95f648191802d868fc1be5e96`. The handoff page contains exact Library IDs for CI #126 ZIPs and diagnostic logs.
+Persistent source archive: Notion Files Library folder `/Bluetooth LDAC Research/Artifacts/`, Directory ID `6b0318b95f648191802d868fc1be5e96`. The handoff page contains exact Library IDs for legacy-named CI-126 ZIPs that actually belong to successful workflow run #129, plus diagnostic logs.
 
 Current run #133 GitHub artifact URLs:
 - [Test package 14763242251](https://api.github.com/repos/as-0101/ldac-a2dp-windows/actions/artifacts/14763242251/zip)
