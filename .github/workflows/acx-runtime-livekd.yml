@@ -13,7 +13,7 @@ jobs:
   inspect:
     name: Inspect hosted Server 2022 ACX class through LiveKD
     runs-on: windows-2022
-    timeout-minutes: 20
+    timeout-minutes: 10
     steps:
       - name: Install Windows SDK Debugging Tools
         shell: pwsh
@@ -87,35 +87,24 @@ jobs:
           $env:PATH = "$kdDir;$env:PATH"
           Write-Host "KD available to LiveKD: $((Get-Command kd.exe).Source)"
 
-          $dump = Join-Path $root 'kernel-live.dmp'
-          Write-Host 'Capturing a native kernel live dump with Sysinternals LiveKD...'
+          $log = Join-Path $root 'wdfldr-output.txt'
+          $cmd = '.symfix C:\Symbols; .reload /f; !wdfkd.wdfldr Acx01000.sys; q'
+          Write-Host 'Running LiveKD native live-dump mode with KD and querying ACX class binding...'
           Push-Location $kdDir
           try {
-            & $livekd.FullName -o $dump -ml
+            & $livekd.FullName -k $kdPath -ml -logo $log -c $cmd
             $livekdExit = $LASTEXITCODE
           } finally {
             Pop-Location
           }
-          "LIVEKD_EXIT=$livekdExit" | Out-File (Join-Path $root 'result.txt') -Encoding utf8
-          if ($livekdExit -ne 0 -or -not (Test-Path $dump)) { throw "LiveKD dump capture failed, exit=$livekdExit" }
-          $dumpInfo = Get-Item $dump
-          Write-Host "Kernel dump size: $($dumpInfo.Length)"
+          "LIVEKD_KD_EXIT=$livekdExit" | Out-File (Join-Path $root 'result.txt') -Encoding utf8
+          if (Test-Path $log) {
+            Write-Host '----- WDF/ACX debugger output -----'
+            Get-Content $log
+            Write-Host '----- end debugger output -----'
+          }
+          if ($livekdExit -ne 0) { throw "LiveKD/KD failed with exit code $livekdExit" }
 
-          $log = Join-Path $root 'wdfldr-output.txt'
-          $cmd = '.symfix C:\Symbols; .reload /f; !wdfkd.wdfldr Acx01000.sys; q'
-          Write-Host 'Running KD against the live dump and querying ACX class binding...'
-          Push-Location (Split-Path $kdPath)
-          try {
-            & $kdPath -z $dump -c $cmd 2>&1 | Tee-Object -FilePath $log
-            $kdExit = $LASTEXITCODE
-          } finally {
-            Pop-Location
-          }
-          "KD_EXIT=$kdExit" | Out-File (Join-Path $root 'result.txt') -Append -Encoding utf8
-          if (-not (Test-Path $log)) { throw 'KD did not create debugger output' }
-          if ((Get-Content $log -Raw) -notmatch 'CLASS_MODULE') {
-            Write-Warning 'No CLASS_MODULE block was found; preserve the debugger output for diagnosis.'
-          }
 
       - name: Upload text report
         if: always()
