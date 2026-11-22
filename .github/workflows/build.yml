@@ -70,6 +70,14 @@ jobs:
           }
           $manifest | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $out 'manifest.json') -Encoding utf8
           $manifest | Format-Table -AutoSize | Out-String | Write-Host
+
+      - name: Upload ACX stub library inspection
+        uses: actions/upload-artifact@v4
+        with:
+          name: acxstub-libraries-inspection
+          path: build/acxstub-inspection/**
+          if-no-files-found: error
+          retention-days: 7
       - name: Build (build_driver.cmd Release)
         shell: cmd
         run: build_driver.cmd Release
