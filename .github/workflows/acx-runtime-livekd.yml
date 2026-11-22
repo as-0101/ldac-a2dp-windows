@@ -87,7 +87,7 @@ jobs:
           "DUMP_SIZE=$((Get-Item $dump).Length)" | Out-File (Join-Path $root 'result.txt') -Append -Encoding utf8
 
           $cmdFile = Join-Path $root 'inspect-wdfldr.txt'
-          @('.symfix C:\Symbols', '.reload /f Wdf01000.sys', '.reload /f Acx01000.sys', 'lmvm Acx01000', '!wdfldr', '!wdfkd.wdfldr Acx01000.sys', 'q') | Set-Content -LiteralPath $cmdFile -Encoding ascii
+          @('.symfix C:\Symbols', '.reload /f Wdf01000.sys', '.reload /f Acx01000.sys', 'lmvm Acx01000', '!wdfldr', '!wdfldr acx01000', '!wdfkd.wdfldr Acx01000.sys', 'q') | Set-Content -LiteralPath $cmdFile -Encoding ascii
           Write-Host 'Opening saved live dump with KD and querying WDF/ACX class module.'
           & $kdPath -z $dump -y $env:_NT_SYMBOL_PATH -logo $log -cf $cmdFile
           $kdExit = $LASTEXITCODE
