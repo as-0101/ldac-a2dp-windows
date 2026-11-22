@@ -150,3 +150,11 @@ Two candidate explanations are now demoted:
 - Universal is a supported Server 2022 target per [Target Platforms](https://learn.microsoft.com/en-us/windows-hardware/drivers/develop/target-platforms). CI #143's Windows Driver target is an alternate compile experiment, not proof that Universal caused the bind failure.
 
 The Bluetooth INF class remains appropriate for the BTHENUM profile device; MEDIA in the AudioCodec sample reflects its ROOT-enumerated audio-codec topology. The leading unresolved variable remains ACX class version (driver 1.1 versus host class 1.0).
+
+## Runtime class-version evidence — 2026-11-22
+
+The hosted Server 2022 LiveKD probe [run #10](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45057090987) executed the Microsoft-documented command !wdfldr acx01000 and returned CLASS_MODULE Version v1.0, WDF Version v1.31, with CLIENT_MODULE WDF v1.31 bound to Wdf01000.sys runtime v1.33. The physical host's earlier WinDbg result is the same: ACX class v1.0 / WDF 1.31 / runtime 1.33.
+
+This means the ACX 1.0 CI candidate is aligned with the measured Server 2022 runtime, while the successful WDK 26100 baseline run #129 was built against ACX 1.1. This strengthens the ACX class-version mismatch hypothesis, but physical ACX 1.0 driver loading and DriverEntry remain untested. ACX 1.0 is still documented as pre-release/not recommended for new development, so this remains a Server 2022 compatibility experiment rather than a general production recommendation.
+
+Detailed evidence: [2026-11-22-LIVEKD-RUN10-ACX-VERSION.md](2026-11-22-LIVEKD-RUN10-ACX-VERSION.md).
