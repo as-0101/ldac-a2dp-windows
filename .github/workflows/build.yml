@@ -113,9 +113,11 @@ jobs:
             throw 'This hosted-load workflow must build against ACX 1.0 (ACX_VERSION_MAJOR=1, ACX_VERSION_MINOR=0).'
           }
           $cert = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new($cer.FullName)
-          if ($cert.Subject -notmatch 'LDAC A2DP OPPO Physical Server 2022 Test Only' -or
-              $cert.Thumbprint -ne '4A4E17BFC74DBE7220CA0606763FB81BA85A947B') {
-            throw 'Unexpected ACX 1.0 test certificate subject or thumbprint.'
+          $expectedSubject = 'CN=LDAC A2DP OPPO Physical Server 2022 Test Only'
+          $now = [DateTime]::UtcNow
+          if ($cert.Subject -ne $expectedSubject -or $cert.Issuer -ne $expectedSubject -or
+              $cert.NotBefore.ToUniversalTime() -gt $now -or $cert.NotAfter.ToUniversalTime() -le $now) {
+            throw 'Unexpected test certificate subject, issuer, or validity interval.'
           }
           $bcd = & bcdedit.exe /enum '{current}' 2>&1
           $bcd | Select-String -Pattern 'testsigning' | Out-File (Join-Path $root 'bcd-policy.txt') -Encoding utf8
@@ -152,6 +154,9 @@ jobs:
           $root = Join-Path $env:RUNNER_TEMP 'acx10-hosted-load'
           $pkg = Join-Path $root 'package'
           $cer = Get-ChildItem -LiteralPath $pkg -Filter 'ldac-a2dp-test.cer' -Recurse | Select-Object -First 1
+          $preflight = Get-Content -LiteralPath (Join-Path $root 'preflight.json') -Raw | ConvertFrom-Json
+          $cert = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new($cer.FullName)
+          if ($cert.Thumbprint -ne $preflight.CertificateThumbprint) { throw 'Package certificate changed after preflight.' }
           $devgenPath = (Get-Content -LiteralPath (Join-Path $root 'devgen-path.txt') -Raw).Trim().Substring(12)
           Import-Certificate -FilePath $cer.FullName -CertStoreLocation 'Cert:\LocalMachine\Root' | Out-Null
           Import-Certificate -FilePath $cer.FullName -CertStoreLocation 'Cert:\LocalMachine\TrustedPublisher' | Out-Null
@@ -240,9 +245,15 @@ jobs:
               'Synthetic device already absent; no DevGen removal required.' | Out-File (Join-Path $root 'devgen-remove.txt') -Encoding utf8
             }
           }
-          $thumbprint = '4A4E17BFC74DBE7220CA0606763FB81BA85A947B'
-          foreach ($store in @('Cert:\LocalMachine\Root','Cert:\LocalMachine\TrustedPublisher')) {
-            Get-ChildItem -LiteralPath $store -ErrorAction SilentlyContinue | Where-Object { $_.Thumbprint -eq $thumbprint } | Remove-Item -Force -ErrorAction SilentlyContinue
+          $preflightPath = Join-Path $root 'preflight.json'
+          if (Test-Path $preflightPath) {
+            $preflight = Get-Content -LiteralPath $preflightPath -Raw | ConvertFrom-Json
+            $thumbprint = [string]$preflight.CertificateThumbprint
+            if ($thumbprint) {
+              foreach ($store in @('Cert:\LocalMachine\Root','Cert:\LocalMachine\TrustedPublisher')) {
+                Get-ChildItem -LiteralPath $store -ErrorAction SilentlyContinue | Where-Object { $_.Thumbprint -eq $thumbprint } | Remove-Item -Force -ErrorAction SilentlyContinue
+              }
+            }
           }
 
       - name: Upload hosted ACX 1.0 load report
