@@ -1,0 +1,39 @@
+[Version]
+Signature="$WINDOWS NT$"
+Class=MEDIA
+ClassGuid={4d36e96c-e325-11ce-bfc1-08002be10318}
+Provider=%Provider%
+DriverVer=11/22/2026,1.0.0.0
+CatalogFile=AcxBindProbe.cat
+PnpLockDown=1
+[Manufacturer]
+%Mfg%=Models,NTamd64.10.0...20348
+[Models.NTamd64.10.0...20348]
+%DeviceDesc%=Install,ROOT\AcxBindProbe
+[Install.NT]
+CopyFiles=DriverCopy
+[DriverCopy]
+AcxBindProbe.sys
+[Install.NT.Services]
+AddService=AcxBindProbe,0x00000002,Service
+[Service]
+DisplayName=%DeviceDesc%
+ServiceType=1
+StartType=3
+ErrorControl=1
+ServiceBinary=%13%\AcxBindProbe.sys
+[Install.NT.Wdf]
+KmdfService=AcxBindProbe,WdfSection
+[WdfSection]
+KmdfLibraryVersion=1.31
+[DestinationDirs]
+DefaultDestDir=13
+[SourceDisksNames]
+1=%Disk%
+[SourceDisksFiles]
+AcxBindProbe.sys=1
+[Strings]
+Provider="LDAC A2DP Research"
+Mfg="LDAC A2DP Research"
+DeviceDesc="ACX 1.0 Bind Probe"
+Disk="ACX 1.0 Bind Probe"
