@@ -1,0 +1,86 @@
+name: ACX runtime LiveKD probe
+
+on:
+  push:
+    branches:
+      - research/acx-runtime-livekd
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    name: Inspect hosted Server 2022 ACX class through LiveKD
+    runs-on: windows-2022
+    timeout-minutes: 20
+    steps:
+      - name: Install WinDbg
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          winget install --id Microsoft.WinDbg --exact --silent --accept-source-agreements --accept-package-agreements
+          if ($LASTEXITCODE -ne 0) { throw "WinDbg installation failed with exit code $LASTEXITCODE" }
+          $windbg = (Get-Command WinDbgX.exe -ErrorAction SilentlyContinue).Source
+          if (-not $windbg) {
+            $pkg = Get-AppxPackage -Name Microsoft.WinDbg | Sort-Object Version -Descending | Select-Object -First 1
+            if ($pkg) { $windbg = Join-Path $pkg.InstallLocation 'WinDbgX.exe' }
+          }
+          if (-not $windbg -or -not (Test-Path $windbg)) { throw 'WinDbgX.exe not found after installation' }
+          "WINDBG=$windbg" | Out-File "$env:RUNNER_TEMP\windbg-path.txt" -Encoding utf8
+          Write-Host "WinDbg: $windbg"
+
+      - name: Capture and inspect live kernel state
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $root = Join-Path $env:RUNNER_TEMP 'acx-livekd'
+          New-Item -ItemType Directory -Path $root -Force | Out-Null
+
+          $os = Get-CimInstance Win32_OperatingSystem
+          $cv = Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion'
+          $sys = foreach ($name in @('Acx01000.sys','Wdf01000.sys')) {
+            $path = Join-Path $env:windir "System32\drivers\$name"
+            if (Test-Path $path) {
+              $f = Get-Item $path
+              $h = Get-FileHash $path -Algorithm SHA256
+              [pscustomobject]@{Name=$name;FileVersion=$f.VersionInfo.FileVersion;Length=$f.Length;SHA256=$h.Hash;LastWriteTimeUtc=$f.LastWriteTimeUtc}
+            }
+          }
+          [pscustomobject]@{OS=$os.Caption;Version=$os.Version;Build=$os.BuildNumber;UBR=$cv.UBR;Drivers=$sys;HotFixes=(Get-HotFix | Sort-Object InstalledOn -Descending | Select-Object -First 8 HotFixID,InstalledOn)} |
+            ConvertTo-Json -Depth 6 | Set-Content (Join-Path $root 'system-info.json') -Encoding utf8
+
+          $zip = Join-Path $root 'LiveKD.zip'
+          Invoke-WebRequest 'https://download.sysinternals.com/files/LiveKD.zip' -OutFile $zip
+          Expand-Archive -LiteralPath $zip -DestinationPath (Join-Path $root 'livekd') -Force
+          $livekd = Get-ChildItem (Join-Path $root 'livekd') -Filter livekd.exe -Recurse | Select-Object -First 1
+          if (-not $livekd) { throw 'LiveKD executable not found in official Sysinternals archive' }
+
+          New-Item -Path 'HKCU:\Software\Sysinternals\LiveKd' -Force | Out-Null
+          New-ItemProperty -Path 'HKCU:\Software\Sysinternals\LiveKd' -Name EulaAccepted -PropertyType DWord -Value 1 -Force | Out-Null
+
+          $windbg = (Get-Content "$env:RUNNER_TEMP\windbg-path.txt" -Raw).Trim().Substring(7)
+          $log = Join-Path $root 'wdfldr-output.txt'
+          $cmd = '.symfix C:\Symbols; .reload /f; !wdfkd.wdfldr Acx01000.sys; q'
+          Write-Host "Running LiveKD native live-dump mode and querying ACX class binding..."
+          & $livekd.FullName -k $windbg -ml -logo $log -c $cmd
+          $exit = $LASTEXITCODE
+          Write-Host "LiveKD/WinDbg exit code: $exit"
+          if (Test-Path $log) {
+            Write-Host '----- WDF/ACX debugger output -----'
+            Get-Content $log
+            Write-Host '----- end debugger output -----'
+          } else {
+            Write-Warning 'WinDbg did not create the expected log file'
+          }
+          "LIVEKD_EXIT=$exit" | Out-File (Join-Path $root 'result.txt') -Encoding utf8
+          if ($exit -ne 0) { throw "LiveKD/WinDbg failed with exit code $exit" }
+
+      - name: Upload text report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acx-runtime-livekd-report
+          path: \${{ runner.temp }}/acx-livekd/*.txt
+          if-no-files-found: warn
+          retention-days: 7
