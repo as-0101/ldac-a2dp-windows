@@ -216,3 +216,14 @@ Follow-up workflow commit [218b457e9df2bf7ccf58e4d4ad18e40c2bb8d383](https://git
 Run #9 artifact 14768155168, SHA-256 bb29ddd8613eb94d350c6ad08818369d8c169ebd962ec6796f28939955687d8c, Files Library ID libfile_574b6bc225f08191acf43df2c939095c, path /Bluetooth LDAC Research/Artifacts/ACX-runtime-LiveKD-run9-report.zip. Full analysis: [2026-11-22-LIVEKD-RUN9-UPDATE.md](2026-11-22-LIVEKD-RUN9-UPDATE.md).
 
 Next action: inspect the run triggered by commit 218b457e9df2bf7ccf58e4d4ad18e40c2bb8d383. Do not infer hosted ACX class version from file version or from unqualified !wdfldr output. Physical server remains unchanged; the CI #133 ACX 1.0 test is still gated by read-only pre-check and explicit authorization.
+
+
+## Hosted Server 2022 ACX class version — 2026-11-22 20:48 Kyiv
+
+[LiveKD run #10](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45057090987), commit 218b457e9df2bf7ccf58e4d4ad18e40c2bb8d383, successfully executed the documented !wdfldr acx01000 query. It returned CLIENT_MODULE Acx01000.sys with WDF v1.31 bound to Wdf01000.sys runtime v1.33, and CLASS_MODULE Acx01000.sys with WDF v1.31 / Version v1.0. The class module's client list is empty on the runner because no ACX client driver was loaded.
+
+This matches the physical host's earlier CLASS_MODULE Version v1.0 / WDF 1.31 / runtime 1.33 output. The hosted Server 2022 image independently confirms ACX class v1.0. Therefore the ACX 1.1 LDAC client versus ACX 1.0 Server 2022 class mismatch is STRONGLY SUPPORTED as the leading explanation for the pre-DriverEntry STATUS_INVALID_PARAMETER; other binding metadata mismatches are not excluded.
+
+Run #10 artifact 14768205866, SHA-256 aed85ff189ca817191383edb38945f69c27e50a86832ea8819c2e3b42674ade7, Files Library ID libfile_4ab21e3426e0819190b2fa201822980c, path /Bluetooth LDAC Research/Artifacts/ACX-runtime-LiveKD-run10-report.zip. Full report: [2026-11-22-LIVEKD-RUN10-ACX-VERSION.md](2026-11-22-LIVEKD-RUN10-ACX-VERSION.md).
+
+Hosted class-version uncertainty is resolved. Next discriminating test is CI #133 / Universal / ACX 1.0 on the physical host, gated by the read-only package status pre-check and separate explicit authorization. No physical server changes have been made.
