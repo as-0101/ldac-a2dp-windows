@@ -2,7 +2,7 @@
 #include <wdf.h>
 #include <acx.h>
 
-DRIVER_INITIALIZE DriverEntry;
+extern "C" DRIVER_INITIALIZE DriverEntry;
 EVT_WDF_DRIVER_DEVICE_ADD AcxAudioCodecProbeEvtDeviceAdd;
 EVT_WDF_DRIVER_UNLOAD AcxAudioCodecProbeEvtDriverUnload;
 
@@ -25,6 +25,7 @@ NTSTATUS AcxAudioCodecProbeEvtDeviceAdd(WDFDRIVER Driver, PWDFDEVICE_INIT Device
     return STATUS_NOT_SUPPORTED;
 }
 
+INIT_CODE_SEG
 _Use_decl_annotations_
 NTSTATUS DriverEntry(PDRIVER_OBJECT DriverObject, PUNICODE_STRING RegistryPath)
 {

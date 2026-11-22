@@ -32,6 +32,24 @@ $msbuildVersion = (Get-Item -LiteralPath $msbuild).VersionInfo.FileVersion
 if ($msbuildVersion -notmatch '^17\.') { throw "WDK 10.0.26100.6584 requires VS2022/MSBuild 17.x; found $msbuildVersion" }
 $stampInfVersion = (Get-Item -LiteralPath $stampInf).VersionInfo.FileVersion
 $stampInfHash = (Get-FileHash -LiteralPath $stampInf -Algorithm SHA256).Hash
+$preflight = [ordered]@{
+    MSBuildPath = $msbuild
+    MSBuildVersion = $msbuildVersion
+    StampInfPath = $stampInf
+    StampInfVersion = $stampInfVersion
+    StampInfSHA256 = $stampInfHash
+    WdkNuGetPackage = $wdkPackage
+    WdkNuGetVersion = '10.0.26100.6584'
+    WdkBuildVersion = '10.0.26100.0'
+    SDKVersion = '10.0.26100.0'
+    AcxVersion = '1.0'
+    KmdfVersion = '1.31'
+    BuildOS = [Environment]::OSVersion.VersionString
+    RunnerName = $env:RUNNER_NAME
+}
+$preflightPath = Join-Path $reportRoot 'build-preflight.json'
+$preflight | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $preflightPath -Encoding utf8
+Write-Host "PROBE_BUILD_PREFLIGHT=$preflightPath"
 
 $project = Join-Path $PSScriptRoot 'AcxAudioCodecProbe.vcxproj'
 $consoleLog = Join-Path $buildRoot 'msbuild-console.log'
@@ -206,4 +224,3 @@ if ($env:GITHUB_STEP_SUMMARY) {
         '- InfVerif /w: PASS',
         "- SYS SHA-256: $($hashes['AcxAudioCodecProbe.sys'].SHA256)"
     ) | Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY
-}
