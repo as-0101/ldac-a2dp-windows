@@ -203,3 +203,16 @@ Latest full analysis: [2026-11-22 run #129 / PnP / LiveKD update](2026-11-22-RUN
 Current root-cause assessment: ACX class version mismatch (driver 1.1 versus physical host class 1.0) remains SUPPORTED, not proven. INF/service selection, Bluetooth setup class, Universal target and KMDF 1.31/runtime 1.33 are not leading suspects.
 
 Next action: read-only status pre-check for CI #133 / Universal / ACX 1.0 after extraction to C:\\LDAC-Test\\ACX10-Universal. No prepare, certificate import, upgrade, device restart, rollback, BCD change, driver change or OS update without separate explicit authorization.
+
+
+## LiveKD run #9 and next class query — 2026-11-22 20:44 Kyiv
+
+[Run #9](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45056585788), commit 02dcde601f08e1e52ac9cf073dbf99b6e0e0a8a3, completed successfully. LiveKD captured a native dump; KD opened it and loaded Acx01000.sys symbols. Unqualified !wdfldr showed Wdf01000.sys runtime v1.33 and 43 associated clients. The first unnamed client was WDF v1.31 at the exact Acx01000.sys image base and size. This is consistent with ACX being a WDF 1.31 client on WDF runtime 1.33 on the hosted runner, but does not reveal the ACX CLASS_MODULE version.
+
+The command !wdfkd.wdfldr Acx01000.sys returned “Unable to find the specified WDF driver”. Microsoft's official [!acxkd documentation](https://learn.microsoft.com/en-us/windows-hardware/drivers/debuggercmds/-acxkd) demonstrates the correct class-binding query as !wdfldr acx01000, which prints CLIENT_MODULE and CLASS_MODULE including the ACX Version field.
+
+Follow-up workflow commit [218b457e9df2bf7ccf58e4d4ad18e40c2bb8d383](https://github.com/as-0101/ldac-a2dp-windows/commit/218b457e9df2bf7ccf58e4d4ad18e40c2bb8d383) adds that exact command to the KD script. No CI run had yet been observed for this commit. Hosted runner ACX class version remains UNKNOWN.
+
+Run #9 artifact 14768155168, SHA-256 bb29ddd8613eb94d350c6ad08818369d8c169ebd962ec6796f28939955687d8c, Files Library ID libfile_574b6bc225f08191acf43df2c939095c, path /Bluetooth LDAC Research/Artifacts/ACX-runtime-LiveKD-run9-report.zip. Full analysis: [2026-11-22-LIVEKD-RUN9-UPDATE.md](2026-11-22-LIVEKD-RUN9-UPDATE.md).
+
+Next action: inspect the run triggered by commit 218b457e9df2bf7ccf58e4d4ad18e40c2bb8d383. Do not infer hosted ACX class version from file version or from unqualified !wdfldr output. Physical server remains unchanged; the CI #133 ACX 1.0 test is still gated by read-only pre-check and explicit authorization.
