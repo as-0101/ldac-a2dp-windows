@@ -91,14 +91,14 @@ jobs:
 
           $dump = Join-Path $root 'kernel-live.dmp'
           Write-Host 'Capturing a native kernel live dump with Sysinternals LiveKD...'
-          & $livekd.FullName -ml -o $dump
+          & $livekd.FullName -o $dump -ml
           $livekdExit = $LASTEXITCODE
           "LIVEKD_EXIT=$livekdExit" | Out-File (Join-Path $root 'result.txt') -Encoding utf8
           if ($livekdExit -ne 0 -or -not (Test-Path $dump)) { throw "LiveKD dump capture failed, exit=$livekdExit" }
           $dumpInfo = Get-Item $dump
           Write-Host "Kernel dump size: $($dumpInfo.Length)"
 
-          $kdPath = (Get-Content (Join-Path $root 'kd-path.txt' -Raw)).Trim().Substring(8)
+          $kdPath = (Get-Content -LiteralPath (Join-Path $root 'kd-path.txt') -Raw).Trim().Substring(8)
           $log = Join-Path $root 'wdfldr-output.txt'
           $cmd = '.symfix C:\Symbols; .reload /f; !wdfkd.wdfldr Acx01000.sys; q'
           Write-Host 'Running KD against the live dump and querying ACX class binding...'
