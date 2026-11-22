@@ -227,3 +227,14 @@ This matches the physical host's earlier CLASS_MODULE Version v1.0 / WDF 1.31 / 
 Run #10 artifact 14768205866, SHA-256 aed85ff189ca817191383edb38945f69c27e50a86832ea8819c2e3b42674ade7, Files Library ID libfile_4ab21e3426e0819190b2fa201822980c, path /Bluetooth LDAC Research/Artifacts/ACX-runtime-LiveKD-run10-report.zip. Full report: [2026-11-22-LIVEKD-RUN10-ACX-VERSION.md](2026-11-22-LIVEKD-RUN10-ACX-VERSION.md).
 
 Hosted class-version uncertainty is resolved. Next discriminating test is CI #133 / Universal / ACX 1.0 on the physical host, gated by the read-only package status pre-check and separate explicit authorization. No physical server changes have been made.
+
+
+## UBR 5870 comparison and hosted ACX 1.0 load test — 2026-11-22 21:02 Kyiv
+
+Metadata run #12 / 45057605446 confirms a more recently serviced hosted Server 2022 Datacenter image: UBR 5870, KB5070761 installed 2026-11-19, Acx01000.sys 10.0.20348.5866 (SHA-256 D10924E8B8F3E609EA696BFE4724B96460453D654DCBDEEC83E88D07214DA5D0), Wdf01000.sys 1.33.20348.1 (SHA-256 32C3A7A3E47765E3B20EC291E73E88664A56C30EA38EDC983F13A812075C943B), BCD testsigning Yes. Run #10 measured CLASS_MODULE v1.0 on this image. Physical host UBR 5761 / Acx01000.sys 10.0.20348.3451 also has CLASS_MODULE v1.0. This strongly weakens OS servicing as a route to ACX 1.1; file version is not class version.
+
+Separate branch experiment/acx10-hosted-load preflight run #1 / 45058127024 verified the CI #133 package, DriverVer 0.2.326.1634, SYS SHA-256 435905E1553CB06D089F1477D1CFF57C15BBEB84EF3141CA1B3B500A73898F3E, test certificate thumbprint 4A4E17BFC74DBE7220CA0606763FB81BA85A947B, test signing Yes, and DevGen availability.
+
+Build run #230 / 45058265287 on commit 86a1d46aa7c4bc3561e96ded77442b03b34789f0 adds a disposable-runner ACX 1.0 load test: create an SWD device with BTHENUM A2DP IDs, import the test certificate, install the INF, capture PnP state/events, then inspect !wdfldr acx01000 clients. No prepare script or BCD change is used. Run #230 was in progress at the time of this update.
+
+Full report: [2026-11-22-UBR5870-ACX10-HOSTED-PREFLIGHT.md](2026-11-22-UBR5870-ACX10-HOSTED-PREFLIGHT.md). Next: inspect run #230; if it proves ACX 1.0 driver binding on the hosted image, request only the read-only pre-check for the physical package before any separate authorization.
