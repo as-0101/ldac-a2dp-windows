@@ -47,5 +47,5 @@ If any source conflicts with this snapshot, do not silently choose. Record the c
 
 Read [docs/agent/SAMPLE_COMPARISON.md](docs/agent/SAMPLE_COMPARISON.md) for the detailed comparison with Microsoft's official ACX AudioCodec sample, the ACX 1.0 API scan, INF/service analysis, target-platform A/B branch, and ETW unload timeline.
 
-Current A/B branch: [experiment/acx10-windowsdriver-platform](https://github.com/as-0101/ldac-a2dp-windows/tree/experiment/acx10-windowsdriver-platform), draft [PR #3](https://github.com/as-0101/ldac-a2dp-windows/pull/3), CI #143 run 45050062916 (driver job was still running at snapshot).
+Current A/B branch: [experiment/acx10-windowsdriver-platform](https://github.com/as-0101/ldac-a2dp-windows/tree/experiment/acx10-windowsdriver-platform), draft [PR #3](https://github.com/as-0101/ldac-a2dp-windows/pull/3), CI #143 run 45050062916 completed successfully; all three jobs passed. Artifacts are preserved in the Files Library; see PROJECT_STATE.md.
 
