@@ -5,7 +5,7 @@
 - CI #133 proves the ACX 1.0 branch compiles, links and packages on a Windows Server 2022 runner using WDK/SDK NuGet 10.0.26100.6584. The project selects ACX 1.0 headers and acxstub.lib through ACX_VERSION_MINOR=0; the captured build log does not echo expanded paths, but compile/link success is consistent with that selection. CI #133 is not a physical bind test.
 - The LdacA2dp sources use none of the ACX 1.1-only DDIs listed in Microsoft's ACX version overview; scans of audio.c, driver.c and driver.h found no matches. CI #133 additionally compiles/links the full driver against the ACX 1.0 configuration.
 - The Microsoft AudioCodec sample uses ACX 1.1, KMDF 1.31 and DriverTargetPlatform=Windows Driver; LdacA2dp uses KMDF 1.31 and Universal. Microsoft lists Server 2022 as supported for Universal drivers too, so this difference is not a proven cause. A one-variable A/B branch changes only the target platform.
-- CI #143 / https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45050062916 for branch experiment/acx10-windowsdriver-platform, commit 6656e2d1fcda8d731f6795bd2e7a2950d5ba8309, was in progress at snapshot: core and utility jobs passed; KMDF driver job still running. Draft PR #3: https://github.com/as-0101/ldac-a2dp-windows/pull/3; do not merge.
+- CI #143 / https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45050062916 for branch experiment/acx10-windowsdriver-platform, commit 6656e2d1fcda8d731f6795bd2e7a2950d5ba8309, completed successfully: all three jobs passed, including KMDF driver. The driver built on a Windows Server 2022 runner; signability reported no errors/warnings; final build reported 0 warnings and 0 errors. INF DriverVer was 0.2.326.1734. Draft PR #3: https://github.com/as-0101/ldac-a2dp-windows/pull/3; do not merge.
 - Archived ETW shows ACX DriverInit returned status 0, then ACX unload completed; LDAC Event 227 returned 0xC000000D 23.5–33.7 microseconds later on the same kernel thread. This supports interpreting ACX unload as possible failed-bind cleanup, not as the cause; causality is not proven.
 - Microsoft ACX version overview describes ACX 1.0 as pre-release and not recommended for new driver development; it lists ACX 1.1 as the public release for Windows 10 2004. The table does not list Server 2022. Treat ACX 1.0 as a host-specific compatibility experiment, not a general supported target.
 
@@ -114,3 +114,18 @@ Detailed static review: [CI133_PACKAGE_REVIEW.md](CI133_PACKAGE_REVIEW.md).
 - Current INF uses Class=Bluetooth; old `docs/stage5-audio-options.md` saying MEDIA is stale. Microsoft Bluetooth profile driver docs support the Bluetooth class; do not change class without a separate test.
 - Current physical host last recorded as build 20348.2849 (2024-11). Microsoft has since published cumulative build 20348.5873 (2026-11-13). Whether servicing changes the ACX runtime version is UNKNOWN; treat OS servicing as a separate experiment and inspect `Acx01000.sys` file version / `!wdfldr` before deciding.
 - No package preparation, certificate import, BCD/testsigning change, device restart, driver installation, or OS update was performed.
+
+
+### CI #143 artifacts — persisted in Files Library
+
+| Artifact | GitHub ID | SHA-256 | Files Library path | library_file_id |
+|---|---:|---|---|---|
+| Test package | 14764868818 | a82e4fd60cec5ed17eaff3e4a0897cf4b8181674e4a5933da380565ac5e4f757 | /Bluetooth LDAC Research/Artifacts/CI-143-ACX10-WindowsDriver-test.zip | libfile_4373693dd6488191ae530414a6771b2a |
+| Unsigned driver | 14764794032 | 8d324266491d4c943b270db8f09e8a01341c428fb51a08c7ebdd7884c6bf70dc | /Bluetooth LDAC Research/Artifacts/CI-143-ACX10-WindowsDriver-driver-unsigned.zip | libfile_a459d41b27348191a9515efe8d31b3fc |
+
+### CI #133 artifacts — persisted in Files Library
+
+| Artifact | GitHub ID | SHA-256 | Files Library path | library_file_id |
+|---|---:|---|---|---|
+| Test package | 14763242251 | f3414c19042e51488c9a5a9b00e133eb5a1af26b16ed75b3b1bb96fb34ade1ad | /Bluetooth LDAC Research/Artifacts/CI-133-ACX10-Universal-test.zip | libfile_fac18af78e50819181cc6ed246a9bb4a |
+| Unsigned driver | 14763157658 | 1302c21c3278af9134b5959577a6daa629d0649fd1405148012e074e8147db9c | /Bluetooth LDAC Research/Artifacts/CI-133-ACX10-Universal-driver-unsigned.zip | libfile_950a60b65b38819193414b34670af657 |
