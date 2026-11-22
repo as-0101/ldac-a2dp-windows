@@ -30,24 +30,24 @@ NTSTATUS DriverEntry(_In_ PDRIVER_OBJECT DriverObject, _In_ PUNICODE_STRING Regi
     ACX_DRIVER_CONFIG_INIT(&acxConfig);
     status = AcxDriverInitialize(driver, &acxConfig);
     DbgPrintEx(DPFLTR_IHVDRIVER_ID, NT_SUCCESS(status) ? DPFLTR_INFO_LEVEL : DPFLTR_ERROR_LEVEL,
-               "LdacA2dp: AcxDriverInitialize(ACX 1.1) -> 0x%08X.\n", status);
+               "LdacA2dp: AcxDriverInitialize(ACX 1.0) -> 0x%08X.\n", status);
     if (!NT_SUCCESS(status))
         return status;
 
     /*
-     * The binary is built against ACX 1.1 headers. Verify the runtime actually
-     * exposes ACX 1.1 before any ACX device/circuit objects are created.
+     * The binary is built against ACX 1.0 headers. Verify the runtime actually
+     * exposes ACX 1.0 before any ACX device/circuit objects are created.
      * This is a fail-closed compatibility gate, not a substitute for testing
      * the individual DDI imports on the target OS.
      */
-    ACX_DRIVER_VERSION_AVAILABLE_PARAMS_INIT(&acxVersion, 1, 1);
+    ACX_DRIVER_VERSION_AVAILABLE_PARAMS_INIT(&acxVersion, 1, 0);
     {
         BOOLEAN acxAvailable = AcxDriverIsVersionAvailable(driver, &acxVersion);
         DbgPrintEx(DPFLTR_IHVDRIVER_ID, acxAvailable ? DPFLTR_INFO_LEVEL : DPFLTR_ERROR_LEVEL,
-                   "LdacA2dp: AcxDriverIsVersionAvailable(1.1) -> %u.\n", acxAvailable);
+                   "LdacA2dp: AcxDriverIsVersionAvailable(1.0) -> %u.\n", acxAvailable);
         if (!acxAvailable) {
         DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_ERROR_LEVEL,
-                   "LdacA2dp: ACX runtime 1.1 unavailable; refusing to load.\n");
+                   "LdacA2dp: ACX runtime 1.0 unavailable; refusing to load.\n");
         return STATUS_REVISION_MISMATCH;
         }
     }
