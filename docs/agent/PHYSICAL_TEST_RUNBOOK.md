@@ -100,3 +100,19 @@ Preferred non-BCD route under validation: Sysinternals LiveKD `-ml` native live-
 - Do not execute preparation, upgrade, restart or rollback without explicit user authorization.
 - If the pre-check reports multiple A2DP devnodes, a different current driver/service, or an unsupported build, stop. Never bypass the tool's safety gates.
 - The first physical test must use CI #133 / Universal / ACX 1.0 to isolate ACX version as the only intended variable.
+
+
+## Runtime evidence update — 2026-11-22 20:48 Kyiv
+
+The ACX class-version hypothesis now has direct evidence from two Server 2022 environments:
+- Physical host: earlier WinDbg !wdfldr output reported CLASS_MODULE Version v1.0 / WDF v1.31 / Wdf01000 runtime v1.33.
+- Hosted Server 2022 runner: [LiveKD run #10](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45057090987) using !wdfldr acx01000 reported the same CLASS_MODULE v1.0 / WDF v1.31 / runtime v1.33.
+- The active physical LDAC driver is ACX 1.1 / DriverVer 0.2.325.1600 and fails before DriverEntry with ProblemStatus 0xC000000D.
+
+This makes the ACX 1.1 client versus ACX 1.0 class mismatch the leading explanation, but not a complete proof of all binding metadata. CI #133 / Universal / ACX 1.0 is aligned with the measured Server 2022 class version. It remains an experimental candidate because Microsoft labels ACX 1.0 pre-release/not recommended for new development.
+
+Before any install, the only requested action is the read-only package status check after extraction to C:\\LDAC-Test\\ACX10-Universal:
+
+    & 'C:\\LDAC-Test\\ACX10-Universal\\oppo-driver-tool.exe' status 2>&1 | Tee-Object -FilePath "$env:USERPROFILE\\Desktop\\ldac-acx10-precheck.txt"
+
+No prepare, certificate import, driver installation, upgrade, device restart, rollback, BCD change or OS update is authorized by this runbook. The rollback script selects inbox bth.inf; it does not restore the previous run #129 WDK 26100 baseline package.
