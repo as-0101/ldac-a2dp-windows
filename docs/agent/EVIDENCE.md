@@ -110,3 +110,12 @@ The exact ACX function count in the Server 2022 10.0.20348.3451 class module has
 | ID | Claim | Status | Source | Interpretation |
 |---|---|---|---|---|
 | E-049 | Hosted Server 2022 run #10 reports ACX CLASS_MODULE Version v1.0, WDF Version v1.31, and CLIENT_MODULE Acx01000.sys WDF v1.31 bound to Wdf01000.sys runtime v1.33. | CONFIRMED | [Run #10](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45057090987), artifact 14768205866 | Independently matches the physical host's earlier ACX class v1.0 / WDF 1.31 / runtime 1.33 output. Strongly supports ACX 1.1 client versus ACX 1.0 class mismatch as the leading cause; not a complete proof of all binding metadata. |
+
+
+## Evidence additions — 2026-11-22 21:02 Kyiv
+
+| ID | Claim | Status | Source | Interpretation |
+|---|---|---|---|---|
+| E-050 | A more recently serviced hosted Server 2022 image (UBR 5870, KB5070761) has Acx01000.sys 10.0.20348.5866 and ACX CLASS_MODULE v1.0. | CONFIRMED | Metadata run #12 / 45057605446 and class query run #10 / 45057090987 | Physical host UBR 5761 / Acx01000.sys 10.0.20348.3451 also has class v1.0. OS update is not supported as a route to ACX 1.1 on current evidence; file version is not class version. |
+| E-051 | CI #133 ACX 1.0 package preflight succeeds on a disposable Server 2022 runner: DriverVer 0.2.326.1634, expected SYS hash, expected test certificate, BCD testsigning Yes, DevGen available. | CONFIRMED | Preflight run #1 / 45058127024, artifact 14768550673 | A safe hosted load test can proceed without changing the physical host or BCD. |
+| E-052 | Hosted ACX 1.0 load test job was added to build run #230 / 45058265287. | IN PROGRESS at this evidence timestamp | Commit 86a1d46aa7c4bc3561e96ded77442b03b34789f0 | Wait for PnP and ACX client-list result; no success/failure conclusion yet. |
