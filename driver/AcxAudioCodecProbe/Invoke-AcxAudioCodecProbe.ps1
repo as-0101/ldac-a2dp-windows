@@ -24,6 +24,97 @@ function Test-DriverServiceRunning([string]$Name) {
     return (($output -join [Environment]::NewLine) -match '(?im)^\s*STATE\s*:\s*4\s+RUNNING')
 }
 
+function Get-WdfServiceDiagnosticsSnapshot([string]$ServiceName) {
+    $keyPath = "HKLM:\SYSTEM\CurrentControlSet\Services\$ServiceName\Parameters\Wdf"
+    $keyExisted = Test-Path -LiteralPath $keyPath
+    $key = if ($keyExisted) { Get-Item -LiteralPath $keyPath } else { $null }
+    $values = [ordered]@{}
+    foreach ($name in @('VerboseOn','LogPages')) {
+        $exists = $false
+        $value = $null
+        $kind = $null
+        if ($key) {
+            $exists = $key.GetValueNames() -contains $name
+            if ($exists) {
+                $kind = [string]$key.GetValueKind($name)
+                if ($kind -ne 'DWord') { throw "Existing $ServiceName WDF $name value has unexpected registry type: $kind." }
+                $value = [int]$key.GetValue($name)
+            }
+        }
+        $values[$name] = [ordered]@{ Exists = $exists; Value = $value; Kind = $kind }
+    }
+    return [ordered]@{
+        ServiceName = $ServiceName
+        KeyPath = $keyPath
+        KeyExisted = $keyExisted
+        Values = $values
+        EnabledByProbe = $false
+    }
+}
+
+function Enable-WdfServiceDiagnostics([object]$Snapshot) {
+    if (-not (Test-Path -LiteralPath $Snapshot.KeyPath)) { New-Item -Path $Snapshot.KeyPath -Force | Out-Null }
+    New-ItemProperty -LiteralPath $Snapshot.KeyPath -Name 'VerboseOn' -PropertyType DWord -Value 1 -Force | Out-Null
+    New-ItemProperty -LiteralPath $Snapshot.KeyPath -Name 'LogPages' -PropertyType DWord -Value 16 -Force | Out-Null
+    $verbose = [int](Get-ItemPropertyValue -LiteralPath $Snapshot.KeyPath -Name 'VerboseOn' -ErrorAction Stop)
+    $pages = [int](Get-ItemPropertyValue -LiteralPath $Snapshot.KeyPath -Name 'LogPages' -ErrorAction Stop)
+    if ($verbose -ne 1 -or $pages -ne 16) { throw "WDF diagnostics values for $($Snapshot.ServiceName) did not verify (VerboseOn=$verbose, LogPages=$pages)." }
+    $Snapshot.EnabledValues = [ordered]@{ VerboseOn = $verbose; LogPages = $pages }
+    $Snapshot.EnabledAtUtc = [DateTime]::UtcNow.ToString('o')
+}
+
+function Restore-WdfServiceDiagnostics([object]$Snapshot,[System.Collections.Generic.List[string]]$Errors,[System.Collections.Generic.List[string]]$Warnings) {
+    if (-not $Snapshot -or -not $Snapshot.EnabledByProbe) { return }
+    $keyPath = [string]$Snapshot.KeyPath
+    try {
+        if (-not (Test-Path -LiteralPath $keyPath) -and ($Snapshot.Values.VerboseOn.Exists -or $Snapshot.Values.LogPages.Exists)) {
+            New-Item -Path $keyPath -Force | Out-Null
+        }
+        foreach ($name in @('VerboseOn','LogPages')) {
+            $entry = $Snapshot.Values.$name
+            if ($entry.Exists) {
+                New-ItemProperty -LiteralPath $keyPath -Name $name -PropertyType DWord -Value ([int]$entry.Value) -Force | Out-Null
+            } elseif (Test-Path -LiteralPath $keyPath) {
+                Remove-ItemProperty -LiteralPath $keyPath -Name $name -ErrorAction SilentlyContinue
+            }
+        }
+        if (-not $Snapshot.KeyExisted -and (Test-Path -LiteralPath $keyPath)) {
+            $key = Get-Item -LiteralPath $keyPath
+            if ($key.ValueCount -eq 0 -and $key.SubKeyCount -eq 0) {
+                Remove-Item -LiteralPath $keyPath -Force
+            } else {
+                $Warnings.Add("WDF Parameters key for $($Snapshot.ServiceName) was created by the probe but contains other data; it was preserved after restoring VerboseOn/LogPages.")
+            }
+        }
+        $restored = $true
+        $keyExistsAfter = Test-Path -LiteralPath $keyPath
+        $key = if ($keyExistsAfter) { Get-Item -LiteralPath $keyPath } else { $null }
+        foreach ($name in @('VerboseOn','LogPages')) {
+            $entry = $Snapshot.Values.$name
+            $existsAfter = $false
+            $valueAfter = $null
+            if ($key) {
+                $existsAfter = $key.GetValueNames() -contains $name
+                if ($existsAfter) { $valueAfter = [int]$key.GetValue($name) }
+            }
+            if ($entry.Exists) {
+                if (-not $existsAfter -or $valueAfter -ne [int]$entry.Value) { $restored = $false }
+            } elseif ($existsAfter) {
+                $restored = $false
+            }
+        }
+        if ($restored) {
+            $Snapshot.EnabledByProbe = $false
+            $Snapshot.RestoredAtUtc = [DateTime]::UtcNow.ToString('o')
+        } else {
+            $Errors.Add("WDF VerboseOn/LogPages for $($Snapshot.ServiceName) did not return to their original values.")
+        }
+        $Snapshot | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $reportRoot 'acx01000-wdf-diagnostics-restored.json') -Encoding utf8
+    } catch {
+        $Errors.Add("WDF service diagnostics restore failed for $($Snapshot.ServiceName): $($_.Exception.Message)")
+    }
+}
+
 function Invoke-LiveKdDump([string]$Phase,[string[]]$Commands) {
     $kdPath = $env:KD_PATH
     $liveKdPath = $env:LIVEKD_PATH
@@ -31,16 +122,24 @@ function Invoke-LiveKdDump([string]$Phase,[string[]]$Commands) {
     if (-not $liveKdPath -or -not (Test-Path -LiteralPath $liveKdPath)) { throw 'LIVEKD_PATH missing or livekd.exe absent.' }
     if (-not $env:_NT_SYMBOL_PATH) { throw '_NT_SYMBOL_PATH is not set.' }
 
-    $dump = Join-Path $privateRoot "$Phase-mirror.dmp"
+    $dump = Join-Path $privateRoot "$Phase-native.dmp"
     $captureLog = Join-Path $reportRoot "$Phase-livekd-capture.txt"
     $commandFile = Join-Path $privateRoot "$Phase-kd-commands.txt"
     $kdLog = Join-Path $reportRoot "$Phase-kd-output.txt"
     $Commands | Set-Content -LiteralPath $commandFile -Encoding ascii
 
-    $liveOutput = & $liveKdPath -o $dump -m -b 2>&1
+    $liveMode = 'native-live-dump'
+    $liveOutput = & $liveKdPath -o $dump -ml 2>&1
     $liveExit = $LASTEXITCODE
-    $liveOutput | Out-File -LiteralPath $captureLog -Encoding utf8
-    if ($liveExit -ne 0 -or -not (Test-Path -LiteralPath $dump)) { throw "LiveKD $Phase capture failed: $liveExit" }
+    if ($liveExit -ne 0 -or -not (Test-Path -LiteralPath $dump)) {
+        $liveMode = 'mirror-all-regions-0x3FFF'
+        Remove-Item -LiteralPath $dump -Force -ErrorAction SilentlyContinue
+        $liveOutput = & $liveKdPath -o $dump '-m0x3FFF' 2>&1
+        $liveExit = $LASTEXITCODE
+    }
+    "LiveKD_MODE=$liveMode" | Set-Content -LiteralPath $captureLog -Encoding utf8
+    if ($liveOutput) { $liveOutput | Out-File -LiteralPath $captureLog -Append -Encoding utf8 }
+    if ($liveExit -ne 0 -or -not (Test-Path -LiteralPath $dump)) { throw "LiveKD $Phase capture failed: $liveExit ($liveMode)" }
 
     $kdOutput = & $kdPath -z $dump -y $env:_NT_SYMBOL_PATH -logo $kdLog -cf $commandFile 2>&1
     $kdExit = $LASTEXITCODE
@@ -55,81 +154,6 @@ function Invoke-LiveKdDump([string]$Phase,[string[]]$Commands) {
     $content = Get-Content -LiteralPath $kdLog -Raw
     Remove-Item -LiteralPath $dump -Force -ErrorAction SilentlyContinue
     return $content
-}
-
-function Get-WdfLoaderDiagnosticsSnapshot {
-    $keyPath = 'HKLM:\SYSTEM\CurrentControlSet\Control\Wdf\Kmdf\Diagnostics'
-    $keyExisted = Test-Path -LiteralPath $keyPath
-    $valueExisted = $false
-    $originalValue = $null
-    $originalKind = $null
-    if ($keyExisted) {
-        $key = Get-Item -LiteralPath $keyPath
-        $valueExisted = $key.GetValueNames() -contains 'DbgPrintOn'
-        if ($valueExisted) {
-            $originalKind = [string]$key.GetValueKind('DbgPrintOn')
-            if ($originalKind -ne 'DWord') {
-                throw "Existing WDF DbgPrintOn value has unexpected registry type: $originalKind. Refusing to overwrite it."
-            }
-            $originalValue = [int]$key.GetValue('DbgPrintOn')
-        }
-    }
-    return [ordered]@{
-        KeyPath = $keyPath
-        KeyExisted = $keyExisted
-        ValueExisted = $valueExisted
-        OriginalValue = $originalValue
-        OriginalKind = $originalKind
-        EnabledByProbe = $false
-    }
-}
-
-function Restore-WdfLoaderDiagnostics([object]$Diagnostics,[System.Collections.IDictionary]$Cleanup,[System.Collections.Generic.List[string]]$Errors,[System.Collections.Generic.List[string]]$Warnings) {
-    if (-not $Diagnostics -or -not $Diagnostics.EnabledByProbe) { return }
-    $keyPath = [string]$Diagnostics.KeyPath
-    try {
-        if ($Diagnostics.ValueExisted) {
-            if (-not (Test-Path -LiteralPath $keyPath)) { New-Item -Path $keyPath -Force | Out-Null }
-            New-ItemProperty -LiteralPath $keyPath -Name 'DbgPrintOn' -PropertyType DWord -Value ([int]$Diagnostics.OriginalValue) -Force | Out-Null
-        } elseif (Test-Path -LiteralPath $keyPath) {
-            Remove-ItemProperty -LiteralPath $keyPath -Name 'DbgPrintOn' -ErrorAction SilentlyContinue
-        }
-
-        if (-not $Diagnostics.KeyExisted -and (Test-Path -LiteralPath $keyPath)) {
-            $key = Get-Item -LiteralPath $keyPath
-            if ($key.ValueCount -eq 0 -and $key.SubKeyCount -eq 0) {
-                Remove-Item -LiteralPath $keyPath -Force
-            } else {
-                $Warnings.Add('WDF Diagnostics key was created by the probe but contains other data; the key was preserved after removing DbgPrintOn.')
-            }
-        }
-
-        $keyExistsAfter = Test-Path -LiteralPath $keyPath
-        $valueExistsAfter = $false
-        $valueAfter = $null
-        if ($keyExistsAfter) {
-            $key = Get-Item -LiteralPath $keyPath
-            $valueExistsAfter = $key.GetValueNames() -contains 'DbgPrintOn'
-            if ($valueExistsAfter) { $valueAfter = [int]$key.GetValue('DbgPrintOn') }
-        }
-        if ($Diagnostics.ValueExisted) {
-            $restored = $valueExistsAfter -and ($valueAfter -eq [int]$Diagnostics.OriginalValue)
-        } else {
-            $restored = -not $valueExistsAfter
-        }
-        if ($restored) {
-            $Cleanup.WdfDbgPrintOnRestored = $true
-            $Cleanup.WdfDiagnosticsKeyExistedBefore = [bool]$Diagnostics.KeyExisted
-            $Diagnostics.EnabledByProbe = $false
-            $Diagnostics.RestoredAtUtc = [DateTime]::UtcNow.ToString('o')
-            $Diagnostics.RestoredValue = if ($Diagnostics.ValueExisted) { [int]$Diagnostics.OriginalValue } else { $null }
-        } else {
-            $Errors.Add('WDF DbgPrintOn registry value did not return to its original state.')
-        }
-        $Diagnostics | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $reportRoot 'wdf-diagnostics-restored.json') -Encoding utf8
-    } catch {
-        $Errors.Add("WDF loader diagnostics restore failed: $($_.Exception.Message)")
-    }
 }
 
 function Invoke-Cleanup([switch]$Strict) {
@@ -182,6 +206,28 @@ function Invoke-Cleanup([switch]$Strict) {
             $cleanup.DriverStoreDeleteExitCode = $LASTEXITCODE
         }
 
+        if (-not $state.ProbeServiceExistedBefore) {
+            $probeServiceKey = 'HKLM:\SYSTEM\CurrentControlSet\Services\AcxAudioCodecProbe'
+            $probeServiceQuery = & sc.exe query AcxAudioCodecProbe 2>&1
+            if ($LASTEXITCODE -eq 0) {
+                if (Test-DriverServiceRunning 'AcxAudioCodecProbe') {
+                    & sc.exe stop AcxAudioCodecProbe 2>&1 | Out-File (Join-Path $reportRoot 'cleanup-probe-service-stop.txt') -Encoding utf8
+                    Start-Sleep -Seconds 2
+                }
+                & sc.exe delete AcxAudioCodecProbe 2>&1 | Out-File (Join-Path $reportRoot 'cleanup-probe-service-delete.txt') -Encoding utf8
+                $cleanup.ProbeServiceDeleteExitCode = $LASTEXITCODE
+                Start-Sleep -Seconds 1
+            }
+            if (Test-Path -LiteralPath $probeServiceKey) {
+                Remove-Item -LiteralPath $probeServiceKey -Recurse -Force -ErrorAction SilentlyContinue
+            }
+            $probeServiceAfter = & sc.exe query AcxAudioCodecProbe 2>&1
+            $cleanup.ProbeServiceRemoved = ($LASTEXITCODE -ne 0 -and -not (Test-Path -LiteralPath $probeServiceKey))
+            if (-not $cleanup.ProbeServiceRemoved) { $errors.Add('AcxAudioCodecProbe service or registry key remains after cleanup.') }
+        } else {
+            $cleanup.ProbeServiceWasPreexisting = $true
+        }
+
         $thumb = [string]$state.CertThumbprint
         $subject = [string]$state.CertSubject
         foreach ($store in @('Cert:\LocalMachine\My','Cert:\LocalMachine\Root','Cert:\LocalMachine\TrustedPublisher')) {
@@ -226,8 +272,9 @@ function Invoke-Cleanup([switch]$Strict) {
             $cleanup.AcxServiceRestored = $true
         }
 
-        if ($state.WdfDiagnostics) {
-            Restore-WdfLoaderDiagnostics -Diagnostics $state.WdfDiagnostics -Cleanup $cleanup -Errors $errors -Warnings $warnings
+        if ($state.AcxWdfDiagnostics) {
+            Restore-WdfServiceDiagnostics -Snapshot $state.AcxWdfDiagnostics -Errors $errors -Warnings $warnings
+            $cleanup.AcxWdfDiagnosticsRestored = -not [bool]$state.AcxWdfDiagnostics.EnabledByProbe
         }
 
     }
@@ -297,6 +344,8 @@ $state = [ordered]@{
     CandidateSelected = $false
     AcxWasRunning = $false
     AcxStartedByProbe = $false
+    AcxWdfDiagnostics = $null
+    ProbeServiceExistedBefore = $false
     TestAttempted = $false
     CleanupComplete = $false
     CleanupResult = $null
@@ -331,23 +380,6 @@ try {
         throw 'Runner is not already in testsigning mode. No BCD change or device creation will be attempted.'
     }
 
-    # Enable the documented KMDF loader diagnostics only on this disposable hosted runner.
-    # DbgPrintOn causes WDF to emit driver-load and framework-bind messages to the kernel debugger.
-    $state.WdfDiagnostics = Get-WdfLoaderDiagnosticsSnapshot
-    $state.WdfDiagnostics.EnabledByProbe = $true
-    $state.WdfDiagnostics | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $reportRoot 'wdf-diagnostics-before.json') -Encoding utf8
-    Save-State $state
-    if (-not $state.WdfDiagnostics.KeyExisted) {
-        New-Item -Path $state.WdfDiagnostics.KeyPath -Force | Out-Null
-    }
-    New-ItemProperty -LiteralPath $state.WdfDiagnostics.KeyPath -Name 'DbgPrintOn' -PropertyType DWord -Value 1 -Force | Out-Null
-    $dbgPrintOn = [int](Get-ItemPropertyValue -LiteralPath $state.WdfDiagnostics.KeyPath -Name 'DbgPrintOn' -ErrorAction Stop)
-    if ($dbgPrintOn -ne 1) { throw "WDF DbgPrintOn did not enable (observed $dbgPrintOn)." }
-    $state.WdfDiagnostics.EnabledValue = $dbgPrintOn
-    $state.WdfDiagnostics.EnabledAtUtc = [DateTime]::UtcNow.ToString('o')
-    $state.WdfDiagnostics | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $reportRoot 'wdf-diagnostics-enabled.json') -Encoding utf8
-    Save-State $state
-
     $serviceBefore = & sc.exe query Acx01000 2>&1
     $serviceBeforeExit = $LASTEXITCODE
     $serviceBeforeText = $serviceBefore -join [Environment]::NewLine
@@ -355,6 +387,13 @@ try {
     if ($serviceBeforeExit -ne 0) { throw "Acx01000 service query failed or service is not registered: $serviceBeforeExit" }
     $state.AcxWasRunning = ($serviceBeforeText -match '(?im)^\s*STATE\s*:\s*4\s+RUNNING')
     if (-not $state.AcxWasRunning) {
+        $state.AcxWdfDiagnostics = Get-WdfServiceDiagnosticsSnapshot 'Acx01000'
+        $state.AcxWdfDiagnostics.EnabledByProbe = $true
+        $state.AcxWdfDiagnostics | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $reportRoot 'acx01000-wdf-diagnostics-before.json') -Encoding utf8
+        Save-State $state
+        Enable-WdfServiceDiagnostics -Snapshot $state.AcxWdfDiagnostics
+        $state.AcxWdfDiagnostics | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $reportRoot 'acx01000-wdf-diagnostics-enabled.json') -Encoding utf8
+        Save-State $state
         & sc.exe start Acx01000 2>&1 | Out-File -LiteralPath (Join-Path $reportRoot 'acx-service-start.txt') -Encoding utf8
         $startExit = $LASTEXITCODE
         if ($startExit -ne 0 -and $startExit -ne 1056) { throw "sc.exe start Acx01000 failed: $startExit" }
@@ -386,6 +425,10 @@ try {
         '!wdfldr',
         '!wdfkd.wdfldr Acx01000.sys',
         '!wdfldr acx01000',
+        '!wdfkd.wdflogdump Acx01000 -f',
+        '!wdfkd.wdflogdump Acx01000 -d',
+        'x Wdf01000!*WdfLdrDbgPrintOn*',
+        'dd Wdf01000!WdfLdrDbgPrintOn L1',
         '!dbgprint',
         'x Acx01000!*AcxFunctionCount*',
         'x Acx01000!*AcxStructureCount*',
@@ -501,6 +544,11 @@ try {
     Save-State $state
     $device.InstanceId | Set-Content -LiteralPath (Join-Path $reportRoot 'device-instance-id.txt') -Encoding utf8
 
+    $probeServiceBefore = & sc.exe query AcxAudioCodecProbe 2>&1
+    $state.ProbeServiceExistedBefore = ($LASTEXITCODE -eq 0)
+    $probeServiceBefore | Out-File -LiteralPath (Join-Path $reportRoot 'probe-service-before.txt') -Encoding utf8
+    Save-State $state
+
     $testStart = Get-Date
     $state.TestAttempted = $true
     Save-State $state
@@ -575,15 +623,36 @@ try {
         $matches | Select-Object -Last 120 | Out-String | Set-Content -LiteralPath (Join-Path $reportRoot 'setupapi-device-install.txt') -Encoding utf8
     }
 
-    $postCommands = @('.symfix C:\Symbols','.reload /f nt','.reload /f Wdf01000.sys','.reload /f Acx01000.sys','lmvm AcxAudioCodecProbe','!wdfkd.wdfldr AcxAudioCodecProbe.sys','!wdfldr','!wdfldr acx01000','!dbgprint','q')
+    $postCommands = @(
+        '.symfix C:\Symbols',
+        '.reload /f nt',
+        '.reload /f Wdf01000.sys',
+        '.reload /f Acx01000.sys',
+        'lmvm AcxAudioCodecProbe',
+        '!wdfkd.wdfldr AcxAudioCodecProbe.sys',
+        '!wdfldr',
+        '!wdfldr acx01000',
+        '!wdfkd.wdflogdump Acx01000 -f',
+        '!wdfkd.wdflogdump Acx01000 -d',
+        '!wdfkd.wdflogdump AcxAudioCodecProbe -f',
+        '!wdfkd.wdflogdump AcxAudioCodecProbe -d',
+        '!wdfkd.wdflogdump Wdf01000 -f',
+        'x Wdf01000!*WdfLdrDbgPrintOn*',
+        'dd Wdf01000!WdfLdrDbgPrintOn L1',
+        '!dbgprint',
+        'q'
+    )
     $postLog = Invoke-LiveKdDump -Phase 'postinstall' -Commands $postCommands
     $driverEntrySeen = $postLog -match 'AcxAudioCodecProbe: DriverEntry ENTER'
     $wdfMatch = [regex]::Match($postLog, 'AcxAudioCodecProbe: WdfDriverCreate STATUS=0x(?<status>[0-9A-Fa-f]{8})')
     $acxMatch = [regex]::Match($postLog, 'AcxAudioCodecProbe: AcxDriverInitialize STATUS=0x(?<status>[0-9A-Fa-f]{8})')
     $deviceAddSeen = $postLog -match 'AcxAudioCodecProbe: EvtDeviceAdd REACHED'
-    $wdfBindDebugLines = @($postLog -split '\r?\n' | Where-Object { $_ -match 'FxStub|BindClasses|VersionBindClass|InitTypes|WdfVersionBindClass|AcxAudioCodecProbe:' })
+    $wdfIfrLines = @($postLog -split '\r?\n' | Where-Object { $_ -match '(?i)(wdflogdump|FxStub|BindClasses|VersionBindClass|InitTypes|WdfVersionBindClass|AcxAudioCodecProbe|Acx01000|STATUS_INVALID_PARAMETER|0xC000000D)' })
+    $wdfIfrLines | Set-Content -LiteralPath (Join-Path $reportRoot 'wdf-ifr-lines.txt') -Encoding utf8
+    $wdfBindDebugLines = @($wdfIfrLines | Where-Object { $_ -match '(?i)(FxStub|BindClasses|VersionBindClass|InitTypes|WdfVersionBindClass|STATUS_INVALID_PARAMETER|0xC000000D)' })
     $wdfBindDebugLines | Set-Content -LiteralPath (Join-Path $reportRoot 'wdf-bind-debug-lines.txt') -Encoding utf8
-    $wdfBindFailureLine = $wdfBindDebugLines | Where-Object { $_ -match '(?i)(returned status|status\s+0xC000000D|0xC000000D)' } | Select-Object -First 1
+    $wdfBindFailureLine = $wdfBindDebugLines | Where-Object { $_ -match '(?i)(returned status|STATUS_INVALID_PARAMETER|0xC000000D|bind.*fail|fail.*bind)' } | Select-Object -First 1
+    $wdfIfrFailureLine = $wdfIfrLines | Where-Object { $_ -match '(?i)(returned status|STATUS_INVALID_PARAMETER|0xC000000D|bind.*fail|fail.*bind)' } | Select-Object -First 1
     $wdfStatus = if ($wdfMatch.Success) { '0x' + $wdfMatch.Groups['status'].Value.ToUpperInvariant() } else { $null }
     $acxStatus = if ($acxMatch.Success) { '0x' + $acxMatch.Groups['status'].Value.ToUpperInvariant() } else { $null }
 
@@ -599,12 +668,15 @@ try {
     } elseif ($driverEntrySeen -and $wdfStatus -eq '0x00000000' -and $acxStatus -eq '0x00000000') {
         $classification = 'DRIVERENTRY_AND_ACX_INITIALIZE_SUCCEEDED; EvtDeviceAdd marker not observed.'
         $firstStage = 'After AcxDriverInitialize; EvtDeviceAdd not observed'
+    } elseif ($problemStatusHex -eq '0xC000000D' -and $wdfIfrFailureLine) {
+        $classification = "NO_DRIVERENTRY_MARKER; PnP reports STATUS_INVALID_PARAMETER; WDF IFR trace: $wdfIfrFailureLine"
+        $firstStage = $wdfIfrFailureLine
     } elseif ($problemStatusHex -eq '0xC000000D' -and $wdfBindFailureLine) {
-        $classification = "NO_DRIVERENTRY_MARKER; PnP reports STATUS_INVALID_PARAMETER; WDF loader trace: $wdfBindFailureLine"
+        $classification = "NO_DRIVERENTRY_MARKER; PnP reports STATUS_INVALID_PARAMETER; WDF bind trace: $wdfBindFailureLine"
         $firstStage = $wdfBindFailureLine
     } elseif ($problemStatusHex -eq '0xC000000D') {
-        $classification = 'NO_DRIVERENTRY_MARKER; PnP reports STATUS_INVALID_PARAMETER. Failure is before DriverEntry; WDF/ACX internal substage is not exposed even with DbgPrintOn.'
-        $firstStage = 'Pre-DriverEntry WDF/ACX load/bind stage; internal substage not exposed'
+        $classification = 'NO_DRIVERENTRY_MARKER; PnP reports STATUS_INVALID_PARAMETER. WDF IFR dumps were attempted; no internal bind stage was identified.'
+        $firstStage = 'Pre-DriverEntry WDF/ACX load/bind stage; IFR log did not expose internal substage'
     } else {
         $classification = 'INCONCLUSIVE; candidate INF selected, but debugger output has no decisive DriverEntry/ACX status marker.'
         $firstStage = 'Unresolved'
@@ -629,7 +701,10 @@ try {
         PreinstallWdfClientVisible = $wdfClientVisible
         WdfBindDebugLines = $wdfBindDebugLines
         WdfBindFailureLine = $wdfBindFailureLine
-        WdfDiagnostics = $state.WdfDiagnostics
+        WdfIfrLines = $wdfIfrLines
+        WdfIfrFailureLine = $wdfIfrFailureLine
+        AcxWdfDiagnostics = $state.AcxWdfDiagnostics
+        ProbeServiceExistedBefore = $state.ProbeServiceExistedBefore
         CertificateThumbprint = $cert.Thumbprint
         SignTool = $signTool.FullName
         RepositoryCommit = $env:GITHUB_SHA
