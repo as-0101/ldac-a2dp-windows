@@ -90,3 +90,16 @@ The CI job log does show a Windows Server 2022 build runner (10.0.20348), NuGet 
 - [Draft PR #2](https://github.com/as-0101/ldac-a2dp-windows/pull/2)
 - [Microsoft !acxkd documentation](https://learn.microsoft.com/windows-hardware/drivers/debuggercmds/-acxkd)
 - [Microsoft ACX version overview](https://learn.microsoft.com/windows-hardware/drivers/audio/acx-version-overview)
+
+
+## CI #133 package/binary review — 2026-11-22
+
+Detailed static review: [CI133_PACKAGE_REVIEW.md](CI133_PACKAGE_REVIEW.md).
+
+- Inspected nested test ZIP and compared its `LdacA2dp.sys` byte-for-byte with the CI #133 unsigned artifact; they are identical.
+- Package INF DriverVer: `0.2.326.1634`; SYS SHA-256: `435905e1553cb06d089f1477d1cff57c15bbeb84ef3141ca1b3b500a73898f3e`.
+- Compared PDBs: CI #126 exposes 221 ACX `*TableIndex` symbols; CI #133 exposes 210. All 11 Microsoft-documented ACX 1.1-only DDI names occur in #126 and are absent from #133. All 36 ACX calls used by this project are present in the CI #133 PDB table. This is strong binary evidence of a genuine ACX 1.0 API/stub build.
+- Microsoft documents ACX 1.0 as pre-release (Windows 10 1903) and not recommended for new driver development; ACX 1.1 is the public release/current recommended version. Thus ACX 1.0 is a target-specific compatibility experiment, not a production-support claim.
+- Current INF uses Class=Bluetooth; old `docs/stage5-audio-options.md` saying MEDIA is stale. Microsoft Bluetooth profile driver docs support the Bluetooth class; do not change class without a separate test.
+- Current physical host last recorded as build 20348.2849 (2024-11). Microsoft has since published cumulative build 20348.5873 (2026-11-13). Whether servicing changes the ACX runtime version is UNKNOWN; treat OS servicing as a separate experiment and inspect `Acx01000.sys` file version / `!wdfldr` before deciding.
+- No package preparation, certificate import, BCD/testsigning change, device restart, driver installation, or OS update was performed.
