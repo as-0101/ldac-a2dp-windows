@@ -61,7 +61,7 @@ An isolated branch was created:
 - Base: ACX 1.0 experiment commit `593e8f407ec18e72a332edbec323a4ddbbd27774`.
 - Only source change: `DriverTargetPlatform` Universal → Windows Driver.
 - Draft PR: [#3](https://github.com/as-0101/ldac-a2dp-windows/pull/3), opened for CI only; never merge automatically.
-- CI run #143: [run 45050062916](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45050062916), in progress at time of this snapshot; core and utility jobs passed, KMDF driver job still running.
+- CI run #143: [run 45050062916](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45050062916), completed successfully; all three jobs passed.
 
 ### 5. ACX 1.0 API surface
 
