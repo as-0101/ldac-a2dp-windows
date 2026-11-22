@@ -158,3 +158,10 @@ The hosted Server 2022 LiveKD probe [run #10](https://github.com/as-0101/ldac-a2
 This means the ACX 1.0 CI candidate is aligned with the measured Server 2022 runtime, while the successful WDK 26100 baseline run #129 was built against ACX 1.1. This strengthens the ACX class-version mismatch hypothesis, but physical ACX 1.0 driver loading and DriverEntry remain untested. ACX 1.0 is still documented as pre-release/not recommended for new development, so this remains a Server 2022 compatibility experiment rather than a general production recommendation.
 
 Detailed evidence: [2026-11-22-LIVEKD-RUN10-ACX-VERSION.md](2026-11-22-LIVEKD-RUN10-ACX-VERSION.md).
+
+
+## More recent Server 2022 servicing check — 2026-11-22
+
+The hosted runner at UBR 5870 (KB5070761 installed 2026-11-19) has Acx01000.sys file version 10.0.20348.5866, yet the measured ACX CLASS_MODULE remains v1.0. The physical host at UBR 5761 has Acx01000.sys 10.0.20348.3451 and the same class version v1.0. This confirms that the binary file version is not a proxy for the ACX class-module version and weakens the idea that updating the physical Server 2022 OS will produce ACX 1.1.
+
+The hosted ACX 1.0 load test is in build run #230 / 45058265287. It is intended to determine whether the ACX 1.0 candidate reaches the ACX class client list on a disposable Server 2022 image before any physical installation.
