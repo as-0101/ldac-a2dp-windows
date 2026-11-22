@@ -94,7 +94,7 @@ jobs:
           "DUMP_SIZE=$((Get-Item $dump).Length)" | Out-File (Join-Path $root 'result.txt') -Append -Encoding utf8
 
           $cmdFile = Join-Path $root 'inspect-wdfldr.txt'
-          @('.symfix C:\Symbols', '.reload /f Wdf01000.sys', '.reload /f Acx01000.sys', 'lmvm Acx01000', '!wdfkd.wdfldr Acx01000.sys', '!wdfldr acx01000', 'q') | Set-Content -LiteralPath $cmdFile -Encoding ascii
+          @('.symfix C:\Symbols', '.reload /f Wdf01000.sys', '.reload /f Acx01000.sys', 'lmvm Acx01000', 'lm u', '!wdfldr', '!wdfkd.wdfldr Acx01000.sys', '!wdfldr acx01000', 'x Acx01000!*AcxFunctionCount*', 'x Acx01000!*AcxStructureCount*', 'x Acx01000!*AcxMinimumVersionRequired*', 'x Acx01000!*AcxClientVersionHigherThanFramework*', 'x Acx01000!*Acx_BIND_INFO*', 'q') | Set-Content -LiteralPath $cmdFile -Encoding ascii
           Write-Host 'Opening saved mirror dump with KD and querying ACX CLIENT_MODULE and CLASS_MODULE versions.'
           & $kdPath -z $dump -y $env:_NT_SYMBOL_PATH -logo $log -cf $cmdFile
           $kdExit = $LASTEXITCODE
