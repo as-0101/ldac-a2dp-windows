@@ -40,3 +40,19 @@ flowchart TD
 - EXP-001 `AIMS_TO_TEST` HYP-001 on physical hardware.
 - FACT-005 does not prove TEST-001.
 - KMDF runtime difference and ACX unload ordering are deliberately non-causal side observations.
+
+
+## New evidence and branch in the graph
+
+- **FACT-006:** CI #133 package SYS is byte-identical to the unsigned driver artifact; INF version 0.2.326.1634.
+- **FACT-007:** PDB comparison shows 221 ACX API table symbols in #126 and 210 in #133; the 11 Microsoft-listed ACX 1.1-only DDIs are absent from #133.
+- **FACT-008:** all 36 ACX calls used by LDAC are present in the #133 PDB API table.
+- **FACT-009:** Microsoft labels ACX 1.0 pre-release/not recommended for new development; ACX 1.1 is the public current recommendation.
+- **FACT-010:** target's last recorded OS build is 20348.2849 (2024-11); later cumulative build 20348.5873 exists (2026-11).
+- **HYP-002:** a later OS cumulative update may change the installed ACX runtime/class version. No evidence yet; do not assume it does.
+
+Edges:
+- FACT-007 + FACT-008 `CORROBORATE` that CI #133 is a genuine ACX 1.0 build.
+- FACT-009 `QUALIFIES` EXP-001: compatibility experiment only, not production-support status.
+- FACT-010 `MOTIVATES` HYP-002, but does not prove it.
+- HYP-002 `REQUIRES_TEST` file version and `!wdfldr` comparison on an updated image/host before any driver installation test.
