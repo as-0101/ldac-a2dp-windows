@@ -176,6 +176,24 @@ jobs:
           $pkg = Join-Path $root 'package'
           $inf = Get-ChildItem -LiteralPath $pkg -Filter 'LdacA2dp.inf' -Recurse | Select-Object -First 1
           $start = Get-Date
+          $acxService = Get-CimInstance Win32_SystemDriver -Filter "Name='Acx01000'"
+          if (-not $acxService) { throw 'Acx01000 service is not registered on the hosted Server 2022 runner.' }
+          $acxPath = Join-Path $env:windir 'System32\drivers\Acx01000.sys'
+          if (-not (Test-Path -LiteralPath $acxPath)) { throw 'Acx01000.sys is missing on the hosted runner.' }
+          $acxFile = Get-Item -LiteralPath $acxPath
+          $acxHash = (Get-FileHash -LiteralPath $acxPath -Algorithm SHA256).Hash
+          @("ACX_FILEVERSION=$($acxFile.VersionInfo.FileVersion)","ACX_SHA256=$acxHash") | Set-Content -LiteralPath (Join-Path $root 'acx-runtime-preinstall.txt')
+          if (-not $acxService.Started) {
+            & sc.exe start Acx01000 2>&1 | Tee-Object -FilePath (Join-Path $root 'acx-service-start.txt')
+            $acxStartExit = $LASTEXITCODE
+            if ($acxStartExit -ne 0) { throw "Acx01000 failed to start on the disposable runner: $acxStartExit" }
+          } else {
+            'Acx01000 was already running before the LDAC test.' | Out-File (Join-Path $root 'acx-service-start.txt') -Encoding utf8
+          }
+          Start-Sleep -Seconds 2
+          $acxState = & sc.exe query Acx01000 2>&1
+          $acxState | Out-File (Join-Path $root 'acx-service-state-preinstall.txt') -Encoding utf8
+          if (($acxState -join [Environment]::NewLine) -notmatch 'STATE\s+:\s+4\s+RUNNING') { throw 'Acx01000 is not RUNNING; aborting the LDAC load attempt.' }
           & pnputil.exe /add-driver $inf.FullName /install 2>&1 | Tee-Object -FilePath (Join-Path $root 'pnputil-install.txt')
           $pnputilExit = $LASTEXITCODE
           "PNPUTIL_EXIT=$pnputilExit" | Out-File (Join-Path $root 'install-result.txt') -Append -Encoding utf8
@@ -187,8 +205,19 @@ jobs:
           } else {
             'Synthetic LDAC device not found after pnputil install.' | Out-File (Join-Path $root 'pnp-device.txt') -Encoding utf8
           }
-          & sc.exe query LdacA2dp 2>&1 | Out-File (Join-Path $root 'service-state.txt') -Encoding utf8
-          Get-WinEvent -FilterHashtable @{LogName='System';StartTime=$start} -ErrorAction SilentlyContinue | Where-Object { $_.ProviderName -match 'Kernel-PnP' -and $_.Id -in 219,227 } | Select-Object -First 20 TimeCreated,Id,LevelDisplayName,Message | Format-List | Out-File (Join-Path $root 'kernel-pnp-events.txt') -Encoding utf8
+          '=== ACX01000 ===' | Out-File (Join-Path $root 'service-state.txt') -Encoding utf8
+          & sc.exe query Acx01000 2>&1 | Out-File (Join-Path $root 'service-state.txt') -Append -Encoding utf8
+          '=== LdacA2dp ===' | Out-File (Join-Path $root 'service-state.txt') -Append -Encoding utf8
+          & sc.exe query LdacA2dp 2>&1 | Out-File (Join-Path $root 'service-state.txt') -Append -Encoding utf8
+          $eventLogs = @('System') + @((Get-WinEvent -ListLog '*Kernel-PnP*' -ErrorAction SilentlyContinue | Where-Object { $_.IsEnabled } | Select-Object -ExpandProperty LogName))
+          $events = foreach ($logName in ($eventLogs | Sort-Object -Unique)) {
+            Get-WinEvent -FilterHashtable @{LogName=$logName;StartTime=$start} -ErrorAction SilentlyContinue | Where-Object { $_.ProviderName -match 'Kernel-PnP' -and $_.Id -in 219,227 } | Select-Object @{n='LogName';e={$logName}},TimeCreated,ProviderName,Id,LevelDisplayName,Message
+          }
+          $events | Format-List | Out-File (Join-Path $root 'kernel-pnp-events.txt') -Encoding utf8
+          $setupLog = Join-Path $env:windir 'inf\setupapi.dev.log'
+          if (Test-Path $setupLog) {
+            Select-String -Path $setupLog -Pattern 'SWD\\DEVGEN\\LDAC_A2DP_CI_TEST' -Context 4,12 | Select-Object -Last 30 | Out-String | Set-Content (Join-Path $root 'setupapi-device-install.txt') -Encoding utf8
+          }
 
       - name: Install Windows SDK Debugging Tools and inspect ACX class clients
         if: always()
@@ -241,10 +270,16 @@ jobs:
             $device = Get-PnpDevice -PresentOnly -ErrorAction SilentlyContinue | Where-Object { $_.InstanceId -like '*LDAC_A2DP_CI_TEST*' -or $_.FriendlyName -eq 'LDAC A2DP Source' } | Select-Object -First 1
             if ($device) {
               & $devgenPath /remove $device.InstanceId /subtree 2>&1 | Tee-Object -FilePath (Join-Path $root 'devgen-remove.txt')
+              if ($LASTEXITCODE -ne 0) {
+                & pnputil.exe /remove-device $device.InstanceId 2>&1 | Tee-Object -FilePath (Join-Path $root 'pnputil-remove-device.txt')
+                "PNPUTIL_REMOVE_EXIT=$LASTEXITCODE" | Out-File (Join-Path $root 'devgen-remove.txt') -Append -Encoding utf8
+              }
             } else {
-              'Synthetic device already absent; no DevGen removal required.' | Out-File (Join-Path $root 'devgen-remove.txt') -Encoding utf8
+              'Synthetic device already absent; no removal required.' | Out-File (Join-Path $root 'devgen-remove.txt') -Encoding utf8
             }
           }
+          $stillPresent = Get-PnpDevice -PresentOnly -ErrorAction SilentlyContinue | Where-Object { $_.InstanceId -like '*LDAC_A2DP_CI_TEST*' }
+          if ($stillPresent) { $stillPresent | Format-List * | Out-File (Join-Path $root 'cleanup-device-still-present.txt') -Encoding utf8 }
           $preflightPath = Join-Path $root 'preflight.json'
           if (Test-Path $preflightPath) {
             $preflight = Get-Content -LiteralPath $preflightPath -Raw | ConvertFrom-Json
