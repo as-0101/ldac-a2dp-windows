@@ -325,3 +325,19 @@ Full report: [2026-11-22-UBR5870-ACX10-HOSTED-PREFLIGHT.md](2026-11-22-UBR5870-A
 3. Optionally capture a pre-install LiveKD dump in the same run to show CLASS_MODULE v1.0 immediately before the LDAC load attempt; current preinstall service/file check plus identical baseline hash is strong but indirect.
 4. Correct stale ACX 1.1 comment in build_driver.cmd on the ACX 1.0 experiment branch; it is documentation only.
 - Physical host remains unchanged: no certificate import, driver install, BCD change, device restart, rollback, reboot or OS update.
+
+## Continuation update — 2026-11-22 22:00 Kyiv
+
+### WDK 26100 ACX stub library / bind metadata
+- CI #255 run 45060819535, branch experiment/acx10-hosted-load, head commit 085705abb4bf8e52dd5bcb5bccb532352fbb132e, succeeded. Artifact 14769755224, SHA-256 8d23900221ae823eeb4044f9d7ca8169c7b5491cd512a323e65ed418a27ba5ce, contains the actual WDK stub libraries and manifest.
+- WDK NuGet package Microsoft.Windows.WDK.x64 10.0.26100.6584:
+  - ACX 1.0 acxstub.lib path c/Lib/10.0.26100.0/km/x64/acx/km/1.0/acxstub.lib; 1,362,352 bytes; SHA-256 9846617F4DFB2B5C60A33FC531D53825562C6C8CE15B04013079CE74E6DFCF74.
+  - ACX 1.1 acxstub.lib path c/Lib/10.0.26100.0/km/x64/acx/km/1.1/acxstub.lib; 1,366,656 bytes; SHA-256 86F1A9A63A1A6D1F232C70AA98623ECE9A61A1299444399F170F5426C6234A87.
+- GNU ar/objdump inspection of each stub.obj shows .kmdfclassbind$b descriptor size 0x78. ACX 1.0 encodes class major/minor 1.0, 210 function-table entries (0xD2), 62 structures (0x3E); ACX 1.1 encodes 1.1, 221 functions (0xDD), 62 structures. Both Pch.obj copies encode WDF minimum version 0x1F (31 = KMDF 1.31).
+- Parsed actual CI #246 LdacA2dp.sys descriptor at file offset 0xC240: ACX major/minor 1.0, function count 210, structure count 62. This proves the linked candidate uses the 1.0 class-bind descriptor, not merely 1.0 source macros. Its WDF minimum version 1.31 is compatible with runtime 1.33 and matches ACX runtime's WDF client 1.31.
+- Therefore the persistent 0xC000000D is not explained by the candidate accidentally requesting ACX 1.1 or by a too-high WDF minimum. Remaining key question: whether Server 2022 Acx01000.sys CLASS_MODULE v1.0 exposes the same 210-function/62-structure interface expected by the WDK 26100 ACX 1.0 stub, or whether another bind-info/registration invariant differs.
+
+### Next exact actions
+1. Inspect the public Acx01000.pdb / runtime symbols on the hosted Server 2022 runner for ACX class bind function count, structure count, and minimum-version fields. Use the same runtime file hash D10924E8... and preserve the class module v1.0 observation.
+2. If the public PDB does not expose the data, build a minimal official AudioCodec-sample-based ACX 1.0 client (MEDIA class, KMDF 1.31) and test it on the same hosted runner with Acx01000 explicitly started. This separates WDK stub/runtime compatibility from the Bluetooth driver.
+3. Do not change physical host. No certificate import, driver installation, BCD change, device restart, rollback, reboot or OS update.
