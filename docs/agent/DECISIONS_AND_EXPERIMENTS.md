@@ -75,3 +75,16 @@ Choose CI #133 / Universal / ACX 1.0 for the first runtime test because it isola
 - **CI #7:** run `45054866734`, commit `d30bc2cdccc5bcea16059505ef444393701dac0a`, preconfigured `_NT_SYMBOL_PATH`; in progress at snapshot.
 - **Interpretation:** file-version difference is confirmed; ACX class-module version on the hosted runner remains UNKNOWN. Do not use file version as a proxy.
 - **Physical-server impact:** none. No driver installation, certificate import, BCD change, device restart, or OS update.
+
+## EXP-002 — ACX 1.0 hosted driver load (negative)
+
+- Date: 2026-11-22.
+- Question: does matching the hosted Server 2022 ACX CLASS_MODULE v1.0 by building against ACX 1.0 allow the LDAC driver to bind?
+- Environment: disposable hosted Windows Server 2022 runner only; synthetic SWD device with BTHENUM A2DP compatible IDs.
+- Build: CI run #248 / 45060225420; branch `experiment/acx10-hosted-load`; commit `3d1d5d7e179da3379013b10f9863066200c459b6`; DriverVer 0.2.326.1922; ACX 1.0 / Universal.
+- Preconditions: `Acx01000` was explicitly started and confirmed RUNNING before PnP installation; testsigning was already Yes on disposable runner; temporary certificate/device removed after test (DevGen removal failed, pnputil fallback succeeded).
+- Result: package imported and selected as oem13.inf; SetupAPI attempted device start; Code 37 / CM_PROB_FAILED_DRIVER_ENTRY; ProblemStatus 0xC000000D; Kernel-PnP Event 219. No DriverEntry log; post-failure mirror did not contain Acx01000/LdacA2dp modules and debugger found no WDF clients.
+- Status: CONFIRMED negative runtime result (VM_TEST). It disproves the claim that ACX 1.0 version selection alone is sufficient. It does not identify the internal validation returning STATUS_INVALID_PARAMETER.
+- Related static check: CI #255 parsed the actual ACX 1.0 stub descriptor and CI #246 SYS descriptor (1.0 / 210 functions / 62 structures); accidental 1.1 descriptor selection is ruled out for that candidate.
+- Decision: do not attempt physical CI #133 installation as the next experiment. First test a minimal official AudioCodec-derived ACX 1.0 client on the same hosted Server 2022 runtime.
+- Report: artifact 14769048266, SHA-256 e2e3f177c85420886b6139ba4ef130d5a6df8beaaeb261c3a9685c7645b2a5bb. Stub report: artifact 14769755224, SHA-256 8d23900221ae823eeb4044f9d7ca8169c7b5491cd512a323e65ed418a27ba5ce.
