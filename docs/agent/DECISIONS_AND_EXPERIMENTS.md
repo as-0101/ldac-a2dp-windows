@@ -41,3 +41,16 @@
 ## Update protocol
 
 Append a dated record after each meaningful experiment. Record question, exact changed variable, commit, CI run, artifact IDs/digests, observations, interpretation, status and next step. Do not erase previous records; update the current snapshot separately.
+
+## EXP-002 — DriverTargetPlatform A/B against official AudioCodec sample
+
+- Question: does using the official AudioCodec sample's DriverTargetPlatform=Windows Driver instead of Universal change the ACX 1.0 build/package behavior?
+- Base: experiment/acx10-server2022-bind at commit 593e8f407ec18e72a332edbec323a4ddbbd27774.
+- Single changed variable: DriverTargetPlatform Universal -> Windows Driver.
+- Branch: experiment/acx10-windowsdriver-platform.
+- Commit: 6656e2d1fcda8d731f6795bd2e7a2950d5ba8309.
+- Draft PR: https://github.com/as-0101/ldac-a2dp-windows/pull/3; do not merge.
+- CI run #143: https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45050062916; core and utility jobs passed, KMDF driver job still running at snapshot.
+- This experiment is build/package-only. It cannot prove physical ACX class binding.
+- Microsoft Target Platforms documentation explicitly lists Server 2022 for Universal drivers, so Universal is valid; the sample difference remains a low-priority A/B check.
+- Result: PENDING CI completion.
