@@ -132,3 +132,11 @@ Microsoft's INF documentation defines KmdfLibraryVersion as the KMDF framework v
 In this project, ACX class version is selected in the .vcxproj by ACX_VERSION_MAJOR / ACX_VERSION_MINOR, which form both the ACX include directory and the acxstub.lib dependency path. Thus changing the INF KmdfLibraryVersion cannot turn an ACX 1.1 class bind into ACX 1.0. The current KMDF 1.31 setting matches the official AudioCodec sample and should remain fixed while testing ACX.
 
 Microsoft reference: https://learn.microsoft.com/en-us/windows-hardware/drivers/wdf/specifying-wdf-directives-in-inf-files (KmdfLibraryVersion, lines 248–253).
+
+### 7. Official !wdfldr example separates KMDF runtime from ACX class version
+
+Microsoft's own !acxkd documentation shows a valid example with CLIENT_MODULE WDF Version v1.31, Wdf01000.sys runtime v1.33, and CLASS_MODULE WDF Version v1.31 with ACX Version v1.1. This is the same WDF client/runtime pairing observed on the target server. Therefore WDF 1.31 client over WDF runtime 1.33 is not, by itself, evidence of a defect. The material difference in the target's captured output is CLASS_MODULE Version v1.0 rather than v1.1.
+
+Microsoft also notes that the !acxkd extension has only partial functionality under ACX 1.0. If the ACX 1.0 test passes class binding, continue to rely on kernel debug output, breakpoints and Kernel-PnP events; do not treat missing !acxkd details as a driver failure.
+
+Reference: https://learn.microsoft.com/en-us/windows-hardware/drivers/debuggercmds/-acxkd (the sample !wdfldr output and ACX 1.0 debugger limitation).
