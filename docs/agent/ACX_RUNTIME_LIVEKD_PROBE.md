@@ -68,7 +68,7 @@ The official [Microsoft !acxkd documentation](https://learn.microsoft.com/en-us/
 
 Its example output contains both CLIENT_MODULE and CLASS_MODULE, including the ACX Version field. The prior !wdfkd.wdfldr Acx01000.sys invocation is not equivalent and returned “Unable to find the specified WDF driver”.
 
-A follow-up workflow commit [218b457e9df2bf7ccf58e4d4ad18e40c2bb8d383](https://github.com/as-0101/ldac-a2dp-windows/commit/218b457e9df2bf7ccf58e4d4ad18e40c2bb8d383) adds !wdfldr acx01000 to the command file. No CI run had yet been observed for this commit at the time of writing; do not claim a hosted class version until that run completes.
+A follow-up workflow commit [218b457e9df2bf7ccf58e4d4ad18e40c2bb8d383](https://github.com/as-0101/ldac-a2dp-windows/commit/218b457e9df2bf7ccf58e4d4ad18e40c2bb8d383) adds !wdfldr acx01000 to the command file. Verified by [run #10 / 45057090987](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45057090987): the exact query returned CLASS_MODULE Version v1.0.
 
 Run #9 report artifact 14768155168, SHA-256 bb29ddd8613eb94d350c6ad08818369d8c169ebd962ec6796f28939955687d8c, Files Library ID libfile_574b6bc225f08191acf43df2c939095c, path /Bluetooth LDAC Research/Artifacts/ACX-runtime-LiveKD-run9-report.zip.
 
@@ -78,3 +78,19 @@ Run #9 report artifact 14768155168, SHA-256 bb29ddd8613eb94d350c6ad08818369d8c16
 - If the hosted runner reports CLASS_MODULE Version v1.1, record the host/runner difference but do not attribute it to a particular cumulative update without a controlled image comparison.
 - If it reports v1.0, the host and runner are aligned; continue investigating other binding inputs.
 - Keep physical Server 2022 unchanged. CI #133 / Universal / ACX 1.0 remains a separate gated test.
+
+
+## Run #10 class-version result — 2026-11-22 20:48 Kyiv
+
+[Run #10](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45057090987), commit 218b457e9df2bf7ccf58e4d4ad18e40c2bb8d383, succeeded. The documented !wdfldr acx01000 query returned:
+- CLIENT_MODULE Acx01000.sys, WDF Version v1.31, bound to Wdf01000.sys runtime v1.33.
+- CLASS_MODULE Acx01000.sys, WDF Version v1.31, Version v1.0.
+- Service path HKLM\SYSTEM\ControlSet001\Services\Acx01000; class module client list empty because no ACX client driver was loaded on the hosted runner.
+
+This is the same ACX CLASS_MODULE v1.0 / WDF 1.31 / runtime 1.33 combination previously observed on the physical host. The ACX 1.1 client versus ACX 1.0 class mismatch is now STRONGLY SUPPORTED as the leading explanation for the pre-DriverEntry STATUS_INVALID_PARAMETER, though other binding metadata mismatches are not excluded.
+
+Run #10 artifact 14768205866, SHA-256 aed85ff189ca817191383edb38945f69c27e50a86832ea8819c2e3b42674ade7, Files Library ID libfile_4ab21e3426e0819190b2fa201822980c, path /Bluetooth LDAC Research/Artifacts/ACX-runtime-LiveKD-run10-report.zip. Full analysis: [2026-11-22-LIVEKD-RUN10-ACX-VERSION.md](2026-11-22-LIVEKD-RUN10-ACX-VERSION.md).
+
+## Next action
+
+The hosted class-version uncertainty is resolved: Server 2022 runner reports ACX class v1.0, matching the physical host. Next step is the read-only pre-check for the CI #133 / Universal / ACX 1.0 package. No driver installation, prepare, certificate import, upgrade, device restart, rollback, BCD change or OS update without separate explicit authorization.
