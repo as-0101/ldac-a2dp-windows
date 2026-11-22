@@ -63,3 +63,11 @@ Read [PHYSICAL_TEST_RUNBOOK.md](PHYSICAL_TEST_RUNBOOK.md) before any user-side a
 - Read [2026-11-22 run #129 / PnP / LiveKD update](2026-11-22-RUN129-PNP-LIVEKD-UPDATE.md) for exact artifact hashes, run IDs and confidence status.
 - Root-cause status: ACX class-version mismatch remains SUPPORTED, not proven. INF/service selection, Bluetooth class, Universal target and WDF 1.31/runtime 1.33 are not leading suspects.
 - Next blocker: read-only status pre-check for CI #133 / Universal / ACX 1.0. Do not execute preparation, certificate import, upgrade, device restart, rollback, BCD change or OS update.
+
+
+## LiveKD follow-up — 2026-11-22 20:44 Kyiv
+
+1. Inspect the workflow run triggered by research commit 218b457e9df2bf7ccf58e4d4ad18e40c2bb8d383.
+2. Confirm whether !wdfldr acx01000 returns CLASS_MODULE Version v1.0 or v1.1 on the hosted Server 2022 image. Record the complete CLIENT_MODULE and CLASS_MODULE blocks, not only the version line.
+3. If the runner reports v1.1, record a host/runner difference; do not attribute it to a specific cumulative update without a controlled updated-image comparison. If it reports v1.0, the runner and physical host are aligned; continue investigating other binding inputs.
+4. The physical host remains unchanged. The CI #133 / Universal / ACX 1.0 package remains the first runtime candidate, gated by the read-only package pre-check and separate explicit authorization.
