@@ -43,6 +43,33 @@ jobs:
       # The runner image has no WDK; take it (with ACX) from NuGet, see driver/Directory.Build.props.
       - name: Restore the WDK from NuGet
         run: nuget restore driver\packages.config -PackagesDirectory driver\packages
+
+      - name: Capture ACX stub libraries from restored WDK
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $pkgRoot = Join-Path $env:GITHUB_WORKSPACE 'driver\packages'
+          $libs = @(Get-ChildItem -LiteralPath $pkgRoot -Filter 'acxstub.lib' -File -Recurse)
+          if ($libs.Count -lt 2) { throw "Expected ACX 1.0 and 1.1 acxstub.lib files under $pkgRoot; found $($libs.Count)." }
+          $out = Join-Path $env:GITHUB_WORKSPACE 'build\acxstub-inspection'
+          New-Item -ItemType Directory -Path $out -Force | Out-Null
+          $manifest = foreach ($lib in $libs) {
+            $version = if ($lib.FullName -match '\\acx\\km\\1\.0\\acxstub\.lib$') { '1.0' } elseif ($lib.FullName -match '\\acx\\km\\1\.1\\acxstub\.lib$') { '1.1' } else { 'other' }
+            $copy = Join-Path $out "acxstub-$version.lib"
+            Copy-Item -LiteralPath $lib.FullName -Destination $copy -Force
+            [pscustomobject]@{
+              Version = $version
+              SourcePath = $lib.FullName
+              CopyPath = $copy
+              Length = $lib.Length
+              SHA256 = (Get-FileHash -LiteralPath $lib.FullName -Algorithm SHA256).Hash
+            }
+          }
+          if (-not ($manifest | Where-Object Version -eq '1.0') -or -not ($manifest | Where-Object Version -eq '1.1')) {
+            throw 'Restored WDK did not expose both ACX 1.0 and 1.1 stub libraries at expected paths.'
+          }
+          $manifest | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $out 'manifest.json') -Encoding utf8
+          $manifest | Format-Table -AutoSize | Out-String | Write-Host
       - name: Build (build_driver.cmd Release)
         shell: cmd
         run: build_driver.cmd Release
