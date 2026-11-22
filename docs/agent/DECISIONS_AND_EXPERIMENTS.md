@@ -50,7 +50,7 @@ Append a dated record after each meaningful experiment. Record question, exact c
 - Branch: experiment/acx10-windowsdriver-platform.
 - Commit: 6656e2d1fcda8d731f6795bd2e7a2950d5ba8309.
 - Draft PR: https://github.com/as-0101/ldac-a2dp-windows/pull/3; do not merge.
-- CI run #143: https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45050062916; core and utility jobs passed, KMDF driver job still running at snapshot.
+- CI run #143: https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45050062916; all 3 jobs passed, including KMDF driver; INF DriverVer 0.2.326.1734; 0 warnings/errors; test and unsigned driver artifacts persisted in Files Library.
 - This experiment is build/package-only. It cannot prove physical ACX class binding.
 - Microsoft Target Platforms documentation explicitly lists Server 2022 for Universal drivers, so Universal is valid; the sample difference remains a low-priority A/B check.
-- Result: PENDING CI completion.
+- Result: PASS for compile/package only. Physical class binding remains UNTESTED.
