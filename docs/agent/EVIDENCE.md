@@ -94,3 +94,12 @@ The exact ACX function count in the Server 2022 10.0.20348.3451 class module has
 | E-043 | LiveKD runs #6 and #7 were cancelled; logs show KD command-line usage rather than a valid WDF/ACX class query. Run #8 failed because LiveKD could not find kd.exe and created no dump. | CONFIRMED | Runs 45054673989, 45054866734, 45056354003; report artifacts 14767527142, 14767775337, 14767208063 | None of these runs provides an ACX class-module version for the hosted runner. |
 | E-044 | Workflow-only fix commit 02dcde601f08e1e52ac9cf073dbf99b6e0e0a8a3 adds KD to PATH and uses a command file for inspection. | CONFIRMED commit; UNTESTED CI | research/acx-runtime-livekd branch | No CI run has yet been observed for this commit; do not claim the harness fix works. |
 | E-045 | Current Bluetooth INF/service selection and Universal target are not leading causes. | SUPPORTED | Physical PnP properties; Microsoft Bluetooth device installation guidance; Microsoft Target Platforms | PnP selects LdacA2dp/oem75.inf, Bluetooth class matches BTHENUM, and Universal is supported on Server 2022. Physical class binding still fails. |
+
+
+## Evidence additions — 2026-11-22 20:44 Kyiv
+
+| ID | Claim | Status | Source | Interpretation |
+|---|---|---|---|---|
+| E-046 | Hosted Server 2022 LiveKD run #9 captured a native dump, KD opened it, and Acx01000 symbols loaded. Wdf01000 runtime is v1.33; an unnamed WDF client v1.31 has the exact Acx01000 image base and size. | CONFIRMED | [Run #9](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45056585788), artifact 14768155168 | Confirms the WDF client/runtime pairing on the hosted runner; does not reveal ACX CLASS_MODULE version. |
+| E-047 | Microsoft documents !wdfldr acx01000 as the query that displays both CLIENT_MODULE and CLASS_MODULE, including the ACX Version field. | CONFIRMED | [Microsoft !acxkd documentation](https://learn.microsoft.com/en-us/windows-hardware/drivers/debuggercmds/-acxkd), example at lines 167–190 | The run #9 command !wdfkd.wdfldr Acx01000.sys is not equivalent and returned “Unable to find the specified WDF driver”. |
+| E-048 | Research workflow commit 218b457e9df2bf7ccf58e4d4ad18e40c2bb8d383 adds the exact !wdfldr acx01000 command to the KD command file. | CONFIRMED commit; UNTESTED CI | [Commit 218b457](https://github.com/as-0101/ldac-a2dp-windows/commit/218b457e9df2bf7ccf58e4d4ad18e40c2bb8d383) | Await the corresponding workflow run before treating the hosted ACX class version as known. |
