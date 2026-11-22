@@ -66,7 +66,7 @@ Edges:
 - FACT-009: Official AudioCodec sample and LdacA2dp share the essential DriverEntry sequence and WDF service-registration pattern.
 - FACT-010: Microsoft documents Universal driver support on Server 2022; the AudioCodec sample's Windows Driver setting is a valid difference but not a platform incompatibility.
 - FACT-011: ACX 1.0 is described by Microsoft as pre-release/not recommended for new driver development; its presence on this exact host is observed, but Server 2022 is not listed in the ACX version table.
-- EXP-002: one-variable DriverTargetPlatform A/B build, commit 6656e2d1fcda8d731f6795bd2e7a2950d5ba8309, PR #3, CI run #143 (in progress at snapshot).
+- EXP-002: one-variable DriverTargetPlatform A/B build, commit 6656e2d1fcda8d731f6795bd2e7a2950d5ba8309, PR #3, CI run #143 completed successfully (all 3 jobs); build/package-only, no physical bind test.
 
 ### Updated edges
 
