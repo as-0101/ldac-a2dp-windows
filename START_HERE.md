@@ -59,3 +59,10 @@ No physical-server driver installation, device restart, BCD change, test-signing
 - Update BUILD_REGISTRY after build changes; TEST_MATRIX and DECISIONS_AND_EXPERIMENTS after tests; ARTIFACT_INDEX after every new artifact; PROJECT_STATE, NEXT_ACTIONS and START_HERE after material changes.
 - Do not overwrite originals, erase historical records, commit credentials/private keys or large binaries.
 - `CODEX_TASK.md` was not found in the audited GitHub tree or searched Project Sources/Library; treat as unavailable until located, do not reconstruct it from guesswork.
+
+
+## Active experiment — ACX 1.0 sample-derived bind probe (2026-11-23)
+
+Current experiment: [ACX10_SAMPLE_BIND_PROBE](research/ACX10_SAMPLE_BIND_PROBE.md). Separate code branch: experiment/acx10-sample-bind-probe-v2, head 35e700a3ecb74548b858f0479a1e15e31a2d110f. CI #10/#11 builds pass with WDK 10.0.26100.6584, KMDF 1.31 and ACX 1.0. Their runtime attempts stopped in harness preflight, not in the driver. CI #13 build is green; hosted runtime job 137381843080 is in progress. Do not infer a bind result until its PnP attempt and post-install evidence are inspected.
+
+Durable build/runtime artifacts for CI #10 and #11 are preserved under /LDAC Project/Incoming/ and indexed in research/ARTIFACT_INDEX.md. Physical server remains untouched.
