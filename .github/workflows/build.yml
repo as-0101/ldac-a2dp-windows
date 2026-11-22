@@ -59,6 +59,39 @@ jobs:
       - name: Assemble test-signed physical Server 2022 package
         shell: pwsh
         run: tools\stand\package-oppo-test.ps1
+      - name: Generate SHA256 build manifest
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $files = @()
+          $paths = @('build\LdacA2dp\Release', 'build\ldac-a2dp-oppo-server2022-test.zip')
+          foreach ($path in $paths) {
+            if (Test-Path -LiteralPath $path -PathType Leaf) {
+              $items = @(Get-Item -LiteralPath $path)
+            } elseif (Test-Path -LiteralPath $path -PathType Container) {
+              $items = @(Get-ChildItem -LiteralPath $path -File -Recurse)
+            } else {
+              throw "Manifest input missing: $path"
+            }
+            foreach ($item in $items) {
+              $files += [pscustomobject]@{
+                Path = $item.FullName.Substring($env:GITHUB_WORKSPACE.Length + 1)
+                Size = $item.Length
+                SHA256 = (Get-FileHash -LiteralPath $item.FullName -Algorithm SHA256).Hash
+              }
+            }
+          }
+          $out = 'build\ldac-build-manifest'
+          New-Item -ItemType Directory -Path $out -Force | Out-Null
+          $files | ConvertTo-Json -Depth 4 | Set-Content (Join-Path $out 'manifest.json') -Encoding utf8
+          $files | Format-Table -AutoSize | Out-String | Write-Host
+      - name: Upload SHA256 build manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: ldac-build-sha256-manifest
+          path: build/ldac-build-manifest/manifest.json
+          if-no-files-found: error
+          retention-days: 30
       - name: Upload OPPO Server 2022 test package
         uses: actions/upload-artifact@v4
         with:
