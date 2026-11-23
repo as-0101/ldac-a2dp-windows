@@ -482,3 +482,31 @@ Physical Server2022 remains untouched. No driver install, certificate change, BC
 ### Safety status
 
 Physical Server 2022 remains untouched: no driver install, certificate change, BCD/security change, device restart, rollback, reboot or OS update. Root cause remains UNRESOLVED.
+
+
+## Investigation update — 2026-11-23 evening (CI #17 closed; headset capability audit)
+
+### CI #17 — EWDK 20348.1 control
+- Run [45158705058](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45158705058), commit `79460f03492a54444473589dd142da864a703a73`, build job `137638217372`.
+- The official EWDK 20348.1 ISO downloaded and mounted; SHA-256 `B962E5FB1D81E4BC419FB59F37D695172DD9B323DE772614C50F2B136B5B9AC1`.
+- The build script reported `EWDK_ACX10_STUB_FOUND=false`. It uploaded a 2,156-byte provenance artifact (ID `14814207710`, ZIP SHA-256 `2c8f73e08ce5ba7e24ac6d61198a4b03932f482e9527614eed84b4ecb4c9a3f6`) and correctly skipped the runtime job.
+- Workflow/job conclusion SUCCESS means the inspection script completed as designed; it does **not** mean an ACX 1.0 driver was built or loaded.
+- Result: this Server-2022-era EWDK bundle does not provide the required ACX 1.0 stub at the inspected paths. Stop this particular toolchain branch unless a separately verified ACX 1.0 stub source is found.
+
+### Headset codec capability — critical project constraint
+- OPPO's official specifications for Enco Buds2 model ETE41 list Bluetooth codecs AAC/SBC only: https://www.oppo.com/ua/accessories/oppo-enco-buds2/specs/ and https://www.oppo.com/en/accessories/oppo-enco-buds2/specs/.
+- If the physical receiver is ETE41, it cannot negotiate LDAC. No Windows driver, ACX implementation, USB adapter, or user-mode A2DP stack can add a codec that the headset does not implement.
+- Treat exact model identity as pending until the headset/box label is confirmed. If ETE41 is confirmed, revise the target from LDAC to stable AAC/SBC, or use an LDAC-capable receiver for LDAC milestones.
+
+### Alternative architecture — BlueCaster (formerly A2DP Windows Bridge)
+- The project is now named BlueCaster (3.0.0); it uses a dedicated USB Bluetooth adapter assigned to WinUSB and runs the Bluetooth/A2DP path in user mode, bypassing the Windows inbox A2DP/ACX driver path.
+- Published platform matrix: Windows 10 22H2 / Windows 11; Windows Server 2022 is not listed. Treat Server 2022 compatibility as UNTESTED, not supported.
+- Separate USB adapter is recommended so Windows retains its existing Bluetooth radio for HID. While BlueCaster owns an adapter, Windows Bluetooth cannot use that adapter.
+- Verified hardware includes LDAC with selected Sony/other headsets, but not OPPO Enco Buds2. This is a possible alternate path for an LDAC-capable receiver, not a solution to the ETE41 codec limitation.
+- Sources: https://seiyafunaokajp.github.io/BlueCaster/ ; https://seiyafunaokajp.github.io/BlueCaster/setup.html ; https://seiyafunaokajp.github.io/BlueCaster/hardware.html.
+
+### Current interpretation and next actions
+1. First resolve the hardware premise: confirm whether the connected headset is OPPO Enco Buds2 ETE41. If yes, stop LDAC-specific driver work for this receiver.
+2. For the existing ETE41, investigate stable AAC/SBC playback. BlueCaster may be tested only as an isolated Server 2022 compatibility experiment with a spare USB adapter; do not install or rebind anything on the physical host.
+3. If LDAC remains a hard requirement, test with a receiver whose official specifications explicitly include LDAC, then evaluate BlueCaster's user-mode USB-radio architecture versus the current ACX kernel-driver route.
+4. Keep physical Server 2022 unchanged. No driver, certificate, BCD, security, Bluetooth-device, or OS changes have been made.
