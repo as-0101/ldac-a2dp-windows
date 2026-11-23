@@ -392,3 +392,19 @@ Next: targeted Win10 capture must resolve every INF Include/Needs dependency, es
 - **Observation:** BlueCaster 3.0.4 uses WASAPI capture, codec encoders including LDAC, BTstack A2DP/AVDTP/L2CAP and WinUSB. It takes over a USB Bluetooth adapter; published requirements are Windows 10 22H2 / Windows 11, not Server 2022.
 - **Impact:** keep as a fallback for a disposable VM with a dedicated USB adapter; do not confuse it with a Windows 10 LDAC DLL or the Microsoft A2DP stack.
 - **Source:** [BlueCaster repository](https://github.com/SeiyaFunaokaJP/BlueCaster), [architecture](https://seiyafunaokajp.github.io/BlueCaster/architecture).
+
+
+## New evidence — 2026-11-23 23:49 Kyiv (complete Win10 A2DP package capture)
+
+| ID | Claim / observation | Status | Source |
+|---|---|---|---|
+| E-049 | Targeted package capture completed on AS-KRM-WIN10, Windows 10 Enterprise build 19045; manifest reports 16 INF path records and 56 Include/Needs directive records. | CONFIRMED | Uploaded `Win10-A2DP-Package-20261123-234936.zip`, MANIFEST.json. |
+| E-050 | The common A2DP INF `microsoft_bluetooth_a2dp.inf` is the actual installer definition: Class=MEDIA, DriverVer=04/12/2024 10.0.19041.4355; copies `BthA2dp.sys`, installs kernel service `BthA2dp` (demand start), and registers KSCATEGORY_AUDIO interfaces for A2DP source and sink. | CONFIRMED | Captured DriverStore INF. |
+| E-051 | The common INF explicitly includes `ks.inf`, `wdmaudio.inf`, `BtaMpm.inf`; Needs `KS.Registration`, `WDMAUDIO.Registration`, `BtaMPM.CopyFilesOnly`, `mssysfx.CopyFilesAndRegister`. | CONFIRMED | Captured DriverStore INF. |
+| E-052 | Source INF `microsoft_bluetooth_a2dp_src.inf` matches `BTHENUM\\{0000110b-0000-1000-8000-00805f9b34fb}` and delegates installation, services and interfaces to the common INF. Sink INF matches remote A2DP source UUID 0x110A. | CONFIRMED | Captured DriverStore INFs. |
+| E-053 | Captured A2DP binary `BthA2dp.sys` is 282,624 bytes, version 10.0.19041.4355, SHA-256 `5FBA5EE606AAC39D9CBDA51C0A14DBABBB3A9B47BBD8AC5485ED137B4F354EC3`; Authenticode reports Valid, Microsoft Windows signer, catalog signature. | CONFIRMED | Metadata/File-Inventory.csv and BthA2dp-Signature.txt. |
+| E-054 | Captured `BtaMPM.sys` is version 10.0.19041.5848, SHA-256 `DA5CBBDCE6AC511EF8400E121DF6B6EACA7D05C0F40A01F7353CE9F220EB3DCD`; Microsoft signature Valid. | CONFIRMED | Metadata/File-Inventory.csv. |
+| E-055 | The archive contains A2DP source/common/sink INFs, HFP INFs and binaries, AVRCP transport INF/binary, and BtaMPM INF/binary. It does not contain catalog (.cat) files; the captured SYS and INF files nevertheless have Valid catalog-based Authenticode status on the reference machine. | CONFIRMED | ZIP inventory and Metadata/File-Inventory.csv. |
+| E-056 | The collection manifest is complete, but Logs/Collection.log is zero bytes; therefore no precise console warning/error from the collector can be reconstructed from this archive. | CONFIRMED | ZIP inventory. |
+
+Interpretation: Windows 10's classic A2DP path is concretely a MEDIA-class WDM/Kernel Streaming audio function with explicit KS/WDMAUDIO/MSSysFx/BtaMPM dependencies, not an ACX client implementation. This package is now sufficient to analyze the reference install model. It does not prove the Win10 package is supported on Server 2022. Do not manually copy SYS files or import registry exports. Next, compare INF applicability and package identity with Server 2022 and obtain catalog-complete export only if required for a controlled VM test.
