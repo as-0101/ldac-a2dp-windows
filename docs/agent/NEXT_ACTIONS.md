@@ -1,3 +1,16 @@
+# Current continuation — 2026-11-24 (Bluetooth audio component ownership)
+
+1. **Do not repeat recursive WinSxS file searches.** Server 2022 returned no `btampm.inf`, `mssysfx.inf`, `BtaMPM.sys`, or `BthA2dp.sys` in both PowerShell recursive search and `where /r`.
+2. The Windows 10 A2DP INF explicitly includes `BtaMpm.inf` and requests `BtaMPM.CopyFilesOnly` plus `mssysfx.CopyFilesAndRegister`. `BtaMpm.inf` is a SYSTEM-class copy-only dependency, not the A2DP function driver.
+3. A Windows 11 22H2 component manifest maps BtaMPM to `Product-onecore__dual_btampm.inf`; its Client Desktop Required package MUM maps A2DP and BtaMPM to separate dual-mode driver components. This is a client-image component integration lead, not yet a proven Server 2022 exclusion reason.
+4. **Next research task:** compare package/MUM/component manifests for Windows 10 19045 and Server 2022 20348 for `Product-onecore__dual_btampm.inf`, `Product-onecore__dual_microsoft_bluetooth_a2dp.inf`, and the HFP counterpart. Look for exact parent package ownership and applicability. Do not assume the Windows 11 parent package identity is identical on Server.
+5. Resolve the remaining audio dependency: Microsoft Windows 11 APO documentation explicitly attributes `mssysfx.CopyFilesAndRegisterCapX` to `wdmaudio.inf`; obtain the exact Windows 10 19045 `wdmaudio.inf` and `ks.inf` from the reference machine to confirm the legacy `mssysfx.CopyFilesAndRegister` section and all transitive Include/Needs directives. This is a single read-only collection on the Win10 reference, not a Server modification.
+6. Only after component ownership and dependency closure are understood, decide whether a catalog-complete disposable VM test is justified. Never transplant individual SYS files or install the Win10 package on the physical Server.
+
+Evidence: E-096–E-103 in [EVIDENCE.md](EVIDENCE.md). Latest investigation has not established Server 2022 compatibility or the exact CBS package reason for omission.
+
+---
+
 # Current continuation — 2026-11-24 (A2DP dependency resolution)
 
 ## What is now established
