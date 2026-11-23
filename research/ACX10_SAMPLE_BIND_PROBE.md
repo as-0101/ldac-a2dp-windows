@@ -1,6 +1,6 @@
 # ACX 1.0 sample-derived bind probe
 
-**Status as of 2026-11-23:** CI #16 completed a successful build and hosted runtime harness, but the sample-derived ACX 1.0 client still fails PnP Code 37 / `0xC000000D` before DriverEntry. The WDF public-PDB bind-info layout matches the 120-byte ACX stub descriptor; semantic compatibility and the exact failing argument remain unknown. CI #17 is testing the Server 2022-era WDK/EWDK 20348.1 + VS2019 toolchain bundle.
+**Status as of 2026-11-23:** CI #16 completed a successful build and hosted runtime harness, but the sample-derived ACX 1.0 client still fails PnP Code 37 / `0xC000000D` before DriverEntry. The actual Server 2022 WDF runtime PDB reports `WDF_CLASS_BIND_INFO` base size 0x50 and `WDF_CLASS_BIND_INFO2` size 0x78, matching the 120-byte ACX stub descriptor. The simple size-mismatch hypothesis is rejected; semantic compatibility and the exact failing argument remain unknown. CI #17 is testing the Server 2022-era WDK/EWDK 20348.1 + VS2019 toolchain bundle.
 
 ## Objective
 Determine whether a minimal ACX 1.0 client derived from Microsoft's AudioCodec sample can bind on the same hosted Windows Server 2022 runtime as the LDAC candidate. This separates a common WDK ACX 1.0 stub/runtime incompatibility from LDAC-specific WDF/ACX metadata or initialization differences.
@@ -62,7 +62,7 @@ CI #10 used SignTool verify /kp, which rejected the self-signed test certificate
 - Microsoft documents ACX 1.0 as pre-release for Windows 10 1903 / KMDF 1.29, not Server 2022. WDK 26100.6584 is the recommended WDK when staying on VS2022 and supports building for Server 2016 and later; this does not establish ACX 1.0 runtime support on Server 2022 ([ACX version information](https://learn.microsoft.com/en-us/windows-hardware/drivers/audio/acx-version-overview), [WDK download](https://learn.microsoft.com/en-us/windows-hardware/drivers/download-the-wdk)).
 
 ## Current next action
-1. Monitor [CI #17 / run 45158705058](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45158705058), branch `experiment/acx10-wdk20348-control`, commit `79460f03492a54444473589dd142da864a703a73`. Its parser/XML gate passed; the build job is acquiring and inspecting the official EWDK 20348.1. No build/runtime result is claimed yet.
+1. Monitor [CI #17 / run 45158705058](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45158705058), branch `experiment/acx10-wdk20348-control`, commit `79460f03492a54444473589dd142da864a703a73`. Its parser/XML gates passed; build job 137638217372 remains in step 4 (EWDK ISO download, ACX 1.0 stub inspection and build). No artifact or build/runtime result is claimed yet.
 2. If the EWDK contains ACX 1.0 headers/stub and KMDF 1.31 libraries, build the same source/INF with the EWDK's matching SDK/WDK and VS2019, then test on a fresh hosted Server 2022 runner. Record this as a toolchain-bundle comparison because WDK and compiler generation both change.
 3. If the old stub differs, compare descriptor size/version, function/structure counts, WDF minimum version, relocation targets and SYS/PDB hashes. If it binds, compare DriverEntry/WDF/ACX call order against LDAC. If it fails similarly, focus on ACX runtime class-bind validation, not INF topology.
 4. The WDK 20348.1 EWDK is unsupported and research-only; do not use its MSI installer and do not ship it as the production toolchain. Do not repeat the post-boot DbgPrintOn write.
@@ -81,7 +81,7 @@ CI #10 used SignTool verify /kp, which rejected the self-signed test certificate
 ## WDF class-bind layout comparison — CI #16 + CI #255
 
 - CI #255 run [45060819535](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45060819535), commit `085705abb4bf8e52dd5bcb5bccb532352fbb132e`, artifact 14769755224, SHA-256 `8d23900221ae823eeb4044f9d7ca8169c7b5491cd512a323e65ed418a27ba5ce`. The WDK 26100 ACX 1.0 stub is 1,362,352 bytes, SHA-256 `9846617F4DFB2B5C60A33FC531D53825562C6C8CE15B04013079CE74E6DFCF74`; descriptor is 1.0 / 210 functions / 62 structures / 0x78 bytes.
-- CI #16's Server2022 Wdf01000 public PDB resolves `WDF_CLASS_BIND_INFO2` as 0x78 bytes. Field offsets 0x00–0x70 match the ACX stub descriptor's size, class name, version, function table/count, ClassBindInfo, bind/unbind callbacks, ClassModule, minimum version, client-version flag, function-count pointer, structure-count pointer and structure table. The shorter `WDF_CLASS_BIND_INFO` is 0x68 bytes.
+- CI #16's Server2022 Wdf01000 public PDB resolves `WDF_CLASS_BIND_INFO2` as 0x78 bytes. Field offsets 0x00–0x70 match the ACX stub descriptor's size, class name, version, function table/count, ClassBindInfo, bind/unbind callbacks, ClassModule, minimum version, client-version flag, function-count pointer, structure-count pointer and structure table. The base `WDF_CLASS_BIND_INFO` is 0x50 bytes; `WDF_CLASS_BIND_INFO2` extends it to 0x78 bytes.
 - Microsoft WDF source commit `b6191d9543441329154da32f7ab9bdd97228dd3c`, blob `e7630f7bfbc1050b84835351386942d11b4554e7`, shows `FxGetNextClassBindInfo` accepts only records sized exactly as WDF_CLASS_BIND_INFO or (when stub version >=25) WDF_CLASS_BIND_INFO2. The physical trace's later `WdfVersionBindClass` call returning 0xC000000D makes a simple pre-call size rejection less likely, if that trace/stack attribution is correct.
 - This is a layout match, not proof of semantic compatibility: pointer targets, ACX-specific ClassBindInfo, runtime function/structure counts and version semantics remain unknown. A durable analysis report is saved at `/LDAC Project/Incoming/CI-16-255-Descriptor-Compatibility-Analysis.md`, SHA-256 `8523e7f5063c829541adae3fcacad0fe97e6f7eee4c39a914d16d7dce86bac5a`.
 
@@ -89,7 +89,7 @@ CI #10 used SignTool verify /kp, which rejected the self-signed test certificate
 
 - Pinned Microsoft sample commit: `d49bb7d72f3651952b2b6e4ad28d14fe2247eb69`. Its solution uses VS2019 `16.0.31409.214`; project defaults to ACX 1.1 / KMDF 1.31, WindowsKernelModeDriver10.0, Windows Driver target, WPP/WPP Recorder and SamplesCommon. The INF uses MEDIA class, root hardware ID `ROOT\\AudioCodec`, and a 19041+ OS decoration; Server2022 build 20348 satisfies that INF target.
 - The probe is deliberately reduced: ACX 1.0 to match the observed Server2022 class module, KMDF 1.31, x64, MEDIA/root-enumerated, no codec topology. The full sample's ACX 1.1 default would not match the observed runtime class-module version 1.0.
-- Microsoft ACX documentation labels ACX 1.0 pre-release (Windows 10 1903 / KMDF 1.29) and ACX 1.1 the supported public version (Windows 10 2004 / KMDF 1.31); Server2022 is not explicitly listed in the ACX version table. Separately, Microsoft WDF version history says KMDF 1.31 drivers run on Windows 10 2004 and later, including Server2022. Thus the generic KMDF 1.31 client/runtime pairing is supported; ACX 1.0 support on Server2022 remains a separate undocumented/legacy boundary.
+- Microsoft ACX documentation labels ACX 1.0 pre-release (Windows 10 1903 / KMDF 1.29) and ACX 1.1 the supported public version (Windows 10 2004 / KMDF 1.31); Server2022 is not explicitly listed in the ACX version table. Microsoft KMDF version history lists KMDF 1.31 drivers as running on Windows 10 2004 and later, but its 1.31 row does not explicitly name Server2022. The Server2022 WDF 1.31-client / 1.33-runtime pairing is directly observed in CI #10 and #16; it is not inferred from that documentation row. ACX 1.0 support on Server2022 remains undocumented/legacy.
 
 ## CI #17 — Server2022-era WDK control (pending)
 
@@ -99,3 +99,26 @@ CI #10 used SignTool verify /kp, which rejected the self-signed test certificate
 
 ## Safety boundary
 All tests run on disposable GitHub-hosted Windows Server 2022 runners. No driver install, certificate change, BCD/security change, device restart, rollback or OS update has been performed on the physical server. No user action is required.
+
+
+## Continuation audit — 2026-11-23 12:53 Kyiv
+
+### CI #16 runtime PDB: exact class-bind structure sizes
+
+- Raw `preinstall-kd-output.txt` from GitHub artifact 14779107472 was re-read. `WDF_CLASS_BIND_INFO` fields end at offset 0x48, so its x64 size is 0x50. `WDF_CLASS_BIND_INFO2` embeds V1 at 0x00 and adds `MinimumVersionRequired` at 0x50, `ClientVersionHigherThanFramework` at 0x58, `FuncCountPtr` at 0x60, `StructCountPtr` at 0x68, and `StructTable` at 0x70; total size is 0x78.
+- The WDK 26100.6584 ACX 1.0 descriptor is 0x78 bytes. The size matches runtime V2 exactly. Do not claim the base V1 structure is 0x68 bytes; that earlier value was wrong.
+- The same preinstall `!wdfkd.wdfldr Acx01000.sys` output shows ACX `CLASS_MODULE` v1.0, WDF class/client v1.31, Wdf01000 runtime v1.33. The class module is present before the probe. CI #16 still fails Code 37 / `0xC000000D` before DriverEntry; exact internal validation remains unknown.
+- CI #16 artifact integrity recheck: build ZIP 14779061024 / 126,939 bytes / SHA-256 `d332fc338cbd8c4aa41f56338bb68104059b2956558067362d69b495a0ba8e72`; runtime ZIP 14779107472 / 162,186 bytes / SHA-256 `7d53835ecaababca7451c19e0ce79bab7186f9e59568fcc3a3b047efa3e95214`. Both original GitHub ZIPs matched the durable Library copies. The earlier build ZIP digest in PROJECT_STATE was a transcription error.
+
+### Full Microsoft AudioCodec sample requirements
+
+- `Driver/AudioCodec.sln` at pinned commit `d49bb7d72f3651952b2b6e4ad28d14fe2247eb69` declares VS2019 `16.0.31409.214`.
+- `AudioCodec.vcxproj`: ACX 1.1 / KMDF 1.31 defaults; `WindowsKernelModeDriver10.0`; `DriverTargetPlatform=Windows Driver`; WPP and WPP Recorder; links `wpprecorder.lib`, ACX stub and `SamplesCommon.lib`.
+- `AudioCodec.inf`: `Class=MEDIA`, root ID `ROOT\\AudioCodec`, `NTamd64.10.0...19041` OS decoration, and KMDF version substitution. The INF target covers Server2022 build 20348, but the ACX version support table does not list Server2022.
+- The official DriverEntry creates the WDF driver first, then calls `AcxDriverInitialize`. The full device-add path initializes ACX device-init, creates the WDF device, initializes the ACX device, then creates circuits. The probe intentionally stops at DriverEntry / an EvtDeviceAdd marker to isolate the bind stage.
+
+### EWDK 20348.1 audit requirements
+
+- Microsoft lists 20348.1 as an unsupported legacy WDK paired with VS2019. Its SDK/WDK installers are marked affected by CVE-2024-29187; the EWDK distribution is marked not affected. This is diagnostic-only and must not become the production build toolchain.
+- Official EWDK instructions: mount ISO → run `LaunchBuildEnv.cmd` → run `SetupVSEnv`. The current CI #17 script chooses `SetupBuildEnv.cmd` when found, otherwise `LaunchBuildEnv.cmd`, then calls `SetupVSEnv.cmd` if present. Inspect the selected script contents and captured environment in the artifact before interpreting the build.
+- CI #17 / run 45158705058, commit `79460f03492a54444473589dd142da864a703a73`, build job 137638217372: parser/XML gates passed; EWDK download/stub inspection/build step remained in progress at 12:53 Kyiv. No artifact/result is claimed.
