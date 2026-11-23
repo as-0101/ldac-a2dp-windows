@@ -1,3 +1,15 @@
+
+
+## Investigation update — 2026-11-24 (A2DP INF dependency audit)
+
+- The new `Win10-A2DP-DriverStore.zip` was opened and inventoried. It contains the common A2DP INF + `BthA2dp.sys`, source INF, and sink INF. The larger targeted archive additionally contains `btampm.inf` + `BtaMPM.sys`, HFP and AVRCP components.
+- The common INF is MEDIA / x64, DriverVer 10.0.19041.4355, installs demand-start `BthA2dp`, and registers source/sink audio interfaces. Its explicit dependency chain is `ks.inf`, `wdmaudio.inf`, `BtaMpm.inf`, and `mssysfx.CopyFilesAndRegister`.
+- On the physical Server 2022, the user's read-only search found `ks.inf` and `wdmaudio.inf`, but not `btampm.inf`, `mssysfx.inf`, `BthA2dp.sys`, or `BtaMPM.sys` in INF/System32 drivers/DriverStore. A WinSxS directory-name search was inconclusive for individual files.
+- Microsoft's official APO documentation reproduces the same Bluetooth A2DP/HFP dependency chain and says the sample supports stereo and hands-free endpoints.
+- The A2DP package is no longer missing from our research inputs; the next technical question is whether the dependency components are present in Server WinSxS/component store and whether the Windows 10 INF's package can be staged on a disposable Server 2022 VM. Matching `NTamd64` decoration is not proof of Server support.
+- The physical Server remains unchanged. Realtek artifacts are explicitly excluded as unrelated residue from the user's lost USB dongle experiment.
+- Evidence details: E-090 through E-095 in `docs/agent/EVIDENCE.md`.
+
 # Current state — 2026-11-23 23:40 Europe/Kyiv
 
 **Priority reset:** the project is now on the Windows 10 A2DP package-adaptation path. No new Bluetooth/ACX driver work is authorized as the next step.
