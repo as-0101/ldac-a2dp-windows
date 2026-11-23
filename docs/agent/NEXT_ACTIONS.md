@@ -1,3 +1,17 @@
+# Current continuation — 2026-11-23 (physical Server inventory reviewed)
+
+**Decisive finding:** the physical Server pairs/enumerates OPPO and sees A2DP UUID 0x110B, but binds it to generic `bth.inf` / `BthGenericService.NT` ("Audio Sink Service"). This is a null-service placeholder that only sets `GenericDriverInstalled=1`. Unlike Win10, the Server DriverStore snapshot has no `microsoft_bluetooth_a2dp_src.inf` or `BthA2dp.sys`; no OPPO AudioEndpoint is created. The Server's radio/BTHPORT/BthEnum/BTHUSB are running, so the fault is now localized to A2DP profile-to-audio binding.
+
+Server archive: `Bluetooth-A2DP-Compare-AS-KRM-WS-20261123-204114.zip`; build 20348; PnP 16; AudioEndpoints 4; SignedDrivers 16. The MMDevices registry contains A2DP references for other IDs/MACs, but these are not live OPPO endpoints. `BthAudioHF` is a stopped third-party Realtek RtkHfp.sys service, not Microsoft BthHFAud. SetupAPI shows prior custom LdacA2dp binding; Kernel-PnP event 219 reports its load failure. A later event 7040 changed its startup from Manual to Disabled; causality is not established.
+
+**Next action:** collect the corrected Win10 DriverStore package (the previous Win10 archive did not include it). Need `microsoft_bluetooth_a2dp_src.inf`, its CAT/package folder, `BthA2dp.sys`, INF OS decorations, dependencies and signatures. Compare first; do not install/copy/import anything yet. Keep the physical Server unchanged.
+
+Collector note: the Server archive is usable. Its final SHA256SUMS.csv self-hash attempt failed due to a sharing violation while writing that same CSV; this does not invalidate the collection. Fix by excluding SHA256SUMS.csv from its own hash enumeration.
+
+See EVIDENCE.md entries E-044–E-053 and PROJECT_STATE latest section.
+
+---
+
 # Current continuation — 2026-11-23 (classic A2DP architecture correction)
 
 **Stop treating ACX as the foundation for the Windows 10-style A2DP profile.** The reference Windows 10 machine proves the working path uses:
