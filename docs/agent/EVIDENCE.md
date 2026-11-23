@@ -518,3 +518,14 @@ Some prior notes incorrectly said the common A2DP INF/package folder was missing
 
 ### Updated interpretation
 The INF package is now sufficiently captured for static analysis. The key unresolved question is no longer whether the Windows 10 files exist, but how Windows 10 image servicing owns and stages these files, and whether the INF/package is applicable to Server 2022. The next discriminating evidence is the original image component/package metadata (CBS manifests/MUMs and DriverStore package catalog), not another search of the installed Server file system. The absence of a Server target decoration in the INF is not proof of incompatibility; NTamd64 alone is also not proof of Server compatibility.
+
+
+## Evidence update — 2026-11-24 (static PE header/import audit)
+
+| ID | Claim / observation | Status | Source |
+|---|---|---|---|
+| E-119 | Captured `BthA2dp.sys` is PE32+ x64, native kernel subsystem, no delay-import directory; its direct imports are from `ntoskrnl.exe`. The import list includes feature-configuration routines such as `RtlRegisterFeatureConfigurationChangeNotification` / `RtlQueryFeatureConfiguration`, alongside standard kernel and I/O routines. | CONFIRMED — STATIC PE INSPECTION | GNU objdump `-p` against captured archive binary; SHA-256 in E-114. |
+| E-120 | Captured `BtaMPM.sys` is PE32+ x64, native kernel subsystem, no delay-import directory; imports from `ntoskrnl.exe`, `cng.sys`, and `WppRecorder.sys`. Its imports include WNF/feature-configuration routines and timer APIs. | CONFIRMED — STATIC PE INSPECTION | GNU objdump `-p` against captured archive binary; SHA-256 in E-114. |
+
+### Interpretation limits
+PE headers and import names establish architecture and static dependencies only. They do not prove that every imported routine is exported by the exact Server 2022 kernel build, nor that runtime contracts/feature state are compatible. Next discriminating comparison is against the Server 2022 20348 kernel exports and the component manifests/package applicability from original images. Do not infer compatibility from x64/native PE alone.
