@@ -225,3 +225,13 @@ The exact ACX function count in the Server 2022 10.0.20348.3451 class module has
 | E-026 | BlueCaster's published verified-hardware list does not currently confirm OPPO Enco Buds2; it does confirm LDAC with other headset models/adapters. | CONFIRMED as documentation observation; Enco Buds2 compatibility UNTESTED | https://seiyafunaokajp.github.io/BlueCaster/hardware.html. |
 
 Interpretation: if the physical headset is indeed OPPO Enco Buds2 ETE41, LDAC negotiation and LDAC-stream milestones are impossible with that receiver regardless of Windows driver implementation. The project objective must first be corrected to AAC/SBC playback, or the receiver must be changed to an LDAC-capable model. Do not interpret a BlueCaster/A2DPWB workaround as adding LDAC capability to ETE41.
+
+
+## User hardware identification — 2026-11-23
+
+| ID | Claim / observation | Status | Source |
+|---|---|---|---|
+| E-027 | The user's supplied photos show the physical OPPO earbuds/case and the connected-device page in the phone settings explicitly names the product "OPPO Enco Buds2". The screenshots do not show a printed ETE41/ETE42 model code. | CONFIRMED product name; printed SKU not directly observed | User-uploaded photos in conversation, 2026-11-23. |
+| E-028 | OPPO's official Enco Buds2 specification maps the earbuds to model ETE41 and charging case to ETE42, and lists Bluetooth codecs AAC/SBC only. | CONFIRMED official specification; applying ETE41 to user's set is strongly supported by the app product identity, but the printed code was not photographed | OPPO Ukraine: https://www.oppo.com/ua/accessories/oppo-enco-buds2/specs/ ; OPPO Global: https://www.oppo.com/en/accessories/oppo-enco-buds2/specs/. |
+
+Interpretation: user has identified the connected product in the official phone UI as OPPO Enco Buds2. The official spec for that product lists AAC/SBC and no LDAC. Do not keep asking the user to find a model code on the earbuds; no such code is visible in the supplied photos. For engineering scope, treat this headset as AAC/SBC-only unless contrary model-specific evidence appears.
