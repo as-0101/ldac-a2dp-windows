@@ -490,3 +490,14 @@ Next: inspect the full reference `wdmaudio.inf` and relevant INF section-resolut
 
 ### Updated interpretation
 The prior search for a file named `mssysfx.inf` was not a valid test of this dependency. The dependency is a named section imported from `wdmaudio.inf`. The remaining Server-side check is narrowly scoped: inspect that section in the actual Server `C:\\Windows\\INF\\wdmaudio.inf` and check the two DLL payloads. If all three are present, MSSysFx is not a missing prerequisite; attention returns to the explicit BtaMPM and BthA2dp package gap. No host changes are needed for this check.
+
+
+## Evidence update — 2026-11-24 (Server 2022 MSSysFx confirmed)
+
+| ID | Claim / observation | Status | Source |
+|---|---|---|---|
+| E-112 | On the physical Server 2022 host, `C:\\Windows\\INF\\wdmaudio.inf` contains `[mssysfx.CopyFilesAndRegister]`, `[FX.CopyList]`, and `[FX.RegisterDlls]`; the copy list names `WMALFXGFXDSP.dll` and `SysFxUI.dll`. | CONFIRMED — USER-PROVIDED HOST OUTPUT | PowerShell Select-String output, 2026-11-24. |
+| E-113 | Both referenced DLLs exist in `C:\\Windows\\System32`: `WMALFXGFXDSP.dll` (1,870,712 bytes) and `SysFxUI.dll` (401,408 bytes), both file version `10.0.20348.5756`. | CONFIRMED — USER-PROVIDED HOST OUTPUT | PowerShell Get-Item/VersionInfo output, 2026-11-24. |
+
+### Updated interpretation
+The Server 2022 image contains the legacy MSSysFx INF section and both payload DLLs. MSSysFx is therefore not a missing prerequisite in the current A2DP dependency investigation. This does not prove the full A2DP package is compatible or installable on Server 2022. The remaining explicit missing dependency/package lead is BtaMPM (`BtaMpm.inf` / `BtaMPM.sys`), followed by the Microsoft classic A2DP profile package (`microsoft_bluetooth_a2dp*.inf` / `BthA2dp.sys`). No system changes were made.
