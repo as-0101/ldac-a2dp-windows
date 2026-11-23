@@ -117,3 +117,24 @@ Read [PHYSICAL_TEST_RUNBOOK.md](PHYSICAL_TEST_RUNBOOK.md) before any user-side a
 3. Inspect build run #230 / 45058265287 on experiment/acx10-hosted-load. The job creates a temporary SWD device, installs the ACX 1.0 candidate, and queries the ACX class client list. Record whether LdacA2dp reaches the class client list and its PnP ProblemStatus.
 4. If hosted load succeeds, the only physical blocker is the read-only package status pre-check. Then request separate explicit authorization before any physical install.
 5. If hosted load fails, inspect the exact PnP status and Kernel-PnP events before changing the driver or asking for a physical test.
+# Current continuation — 2026-11-23 (Windows 10 A2DP reference archive reviewed)
+
+**Strongest finding:** Windows 10's working OPPO path uses the classic Microsoft Bluetooth A2DP profile driver `BthA2dp.sys` (service `BthA2dp`) installed by `microsoft_bluetooth_a2dp_src.inf`. Its BTHENUM service GUID is 0x110B. The Stereo and Hands-Free audio endpoints are healthy.
+
+- Reference: Windows 10 Enterprise x64 build 19045.
+- `BthA2dp.sys` 10.0.19041.4355, service RUNNING.
+- HFP: `BthHfEnum`/`BthHFAud`; AVRCP: `Microsoft.Bluetooth.AvrcpTransport.sys`.
+- BTAGService, BthAvctpSvc, bthserv, Audiosrv and AudioEndpointBuilder RUNNING.
+- Microsoft documents classic A2DP as a separate WDM profile driver communicating with BthPort; ACX is documented for Bluetooth LE Audio VSAP. Microsoft also states Windows Server SKUs lack in-box Bluetooth support.
+- Initial Win10 collector's optional PnpDevice call failed localization and left one CSV empty; the signed-driver inventory and endpoint dump are valid. A2DP INF/DriverStore package still needs capture.
+
+**Next:** run the corrected read-only `Collect-Bluetooth-A2DP-Compare.ps1` on both Win10 and Server 2022. Compare package files, INF target decorations, services, PnP bindings and hashes. Do not copy individual SYS/DLL files or import registry exports. No changes to the physical Server.
+
+Microsoft references:
+- https://learn.microsoft.com/windows-hardware/drivers/bluetooth/bluetooth-classic-audio
+- https://learn.microsoft.com/windows-hardware/drivers/bluetooth/bluetooth-driver-stack
+- https://learn.microsoft.com/windows-hardware/drivers/bluetooth/using-the-bluetooth-driver-stack
+- https://learn.microsoft.com/windows-hardware/drivers/bluetooth/bluetooth-low-energy-audio
+- https://learn.microsoft.com/windows-hardware/drivers/bluetooth/bluetooth-support-in-previous-windows-versions
+
+---
