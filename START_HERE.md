@@ -38,7 +38,7 @@ The new reference archive confirms the Win10 A2DP profile devnode is bound to `m
 
 The Win10 collector's Kernel-Drivers.csv reports demand-start kernel drivers as Stopped/Manual at snapshot time. This does not negate the signed PnP A2DP devnode record; do not claim BthA2dp was Running from that CSV.
 
-**Next:** run the targeted read-only [Export-Win10-A2DP-Package.ps1](../../../../?) to capture `microsoft_bluetooth_a2dp.inf`, all Include/Needs dependencies, CAT files, and BthA2dp.sys with hashes/signature metadata. Then verify package OS decorations and Server applicability. Physical Server remains unchanged.
+**Next:** run the targeted read-only `Export-Win10-A2DP-Package.ps1` (attached to the current ChatGPT conversation) to capture `microsoft_bluetooth_a2dp.inf`, all Include/Needs dependencies, CAT files, and BthA2dp.sys with hashes/signature metadata. Then verify package OS decorations and Server applicability. Physical Server remains unchanged.
 
 ## Read in this order — do not read the whole history
 
