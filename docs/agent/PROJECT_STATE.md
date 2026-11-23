@@ -561,3 +561,26 @@ Microsoft's classic Bluetooth documentation describes A2DP as a Bluetooth profil
 3. Inspect the exact Microsoft A2DP INF decorations, catalog signature, package dependencies and supported OS targets. No copying binaries or importing registry files.
 4. Design a classic A2DP WDM profile-driver installation/enablement experiment only after the missing package and OS compatibility are understood. Prefer disposable VM/clone first.
 5. Keep the physical Server 2022 unchanged. No driver install, certificate changes, PnP rebinding, service changes, BCD/security changes, or reboot.
+
+
+## Physical Server 2022 comparison — 2026-11-23
+
+Read-only archive `Bluetooth-A2DP-Compare-AS-KRM-WS-20261123-204114.zip` reviewed. Manifest: Server 2022 Datacenter build 20348, 16 PnP devices, 4 audio endpoints, 16 signed-driver entries.
+
+### Decisive difference from Windows 10
+- The OPPO is paired and enumerates on Server; A2DP service UUID 0x110B exists and PnP status is OK.
+- Server binds 0x110B to generic `bth.inf` / `BthGenericService.NT` ("Audio Sink Service"). The INF's service install is null and only marks `GenericDriverInstalled=1`.
+- The Server DriverStore snapshot contains `bth.inf`, `bthleenum.inf`, `tdibth.inf`, `audioendpoint.inf`, `c_swdevice.inf`; it does not contain `microsoft_bluetooth_a2dp_src.inf` or `BthA2dp.sys`.
+- No OPPO AudioEndpoint exists. Four enumerated endpoints are NVIDIA HDMI, GS wavetable synth, HD Audio speakers and S/PDIF.
+- BthEnum, BthLEEnum, BTHPORT, BTHUSB and RFCOMM run. `BthAudioHF` is third-party Realtek `RtkHfp.sys`, stopped; it is not Microsoft's `BthHFAud.sys`.
+- SetupAPI confirms the 0x110B generic binding and prior custom LdacA2dp update. Kernel-PnP event 219 records failure to load `LdacA2dp`. A later event 7040 records its service start type changed Manual -> Disabled; this is not established as the original cause.
+- MMDevices registry export contains A2DP source references for other Bluetooth IDs/MACs, but these do not correspond to a live OPPO endpoint and are not evidence of a running A2DP source on this Server.
+
+### Conclusion
+The radio and classic Bluetooth stack work sufficiently to pair and enumerate the headset. The missing layer is the A2DP-to-audio profile binding: Windows 10 uses `microsoft_bluetooth_a2dp_src.inf` / `BthA2dp.sys`; this Server uses the generic null-service `bth.inf` entry. This is now the primary investigation target, not a generic missing Bluetooth DLL.
+
+### Next
+1. Run the corrected collector on Windows 10 only; the previous Win10 archive did not capture the A2DP DriverStore package. Need `microsoft_bluetooth_a2dp_src.inf`, its CAT and package folder, plus BthA2dp.sys and dependency metadata.
+2. Compare INF OS decorations, catalog trust, package dependencies, target-build compatibility and class registration. Do not install/copy anything yet.
+3. Keep physical Server untouched. Treat the custom LdacA2dp load failure separately from the in-box package absence.
+4. The collector's SHA256SUMS.csv finalization has a benign self-read/write sharing bug; it does not invalidate collected files or archive. Exclude SHA256SUMS.csv from its own hash enumeration in the next script revision.
