@@ -673,3 +673,35 @@ Confirmed install model:
 - CAT files are not in the archive; the captured INF/SYS files are nevertheless signature-valid on the reference machine. Collection.log is empty, so the exact console warning user mentioned cannot be diagnosed from this archive; the manifest confirms successful capture.
 
 This establishes the Windows 10 classic A2DP package structure but does not establish Server 2022 compatibility. Continue with INF OS applicability, package servicing/build provenance, and Server-side dependency comparison. No driver transplant or physical Server changes.
+
+
+## Current state — 2026-11-24 01:42 Kyiv — Win10 A2DP component audit
+
+The Windows 10 package capture is complete enough for static INF/PE work. This corrects the earlier 20:49/23:40 notes that said the common INF was still missing.
+
+### Confirmed package graph
+- Win10 19045 archive Win10-A2DP-Package-20261123-234936.zip contains source/common/sink A2DP INFs, btampm.inf, BthA2dp.sys and BtaMPM.sys.
+- The common INF (Class=MEDIA, 10.0.19041.4355) includes ks.inf, wdmaudio.inf and BtaMpm.inf; Needs KS.Registration, WDMAUDIO.Registration, BtaMPM.CopyFilesOnly and mssysfx.CopyFilesAndRegister. It registers BthA2dp as a demand-start kernel service and registers KSCATEGORY_AUDIO interfaces.
+- btampm.inf (Class=SYSTEM, 10.0.19041.5848) is a CopyFilesOnly dependency for BtaMPM.sys.
+- The source INF matches remote A2DP Sink UUID 0x110B. The sink INF is the reverse direction and is not required for playback to earbuds.
+- The .cat absence is not proof of an unsigned package: the system-supplied INFs have no CatalogFile directive and Windows validates them against system catalogs. The source catalog identity and CBS component ownership are still required for cross-SKU staging.
+
+### PE provenance and limits
+- DriverStore BthA2dp.sys: 10.0.19041.4355, 282,624 bytes, SHA-256 5FBA5EE606AAC39D9CBDA51C0A14DBABBB3A9B47BBD8AC5485ED137B4F354EC3; E-119 reports PE32+ x64, native kernel, no delay-import directory, direct imports from ntoskrnl.exe only.
+- A separate System32 BthA2dp.sys report is 279,040 bytes, SHA-256 0442A18BBED4E323265C66561C8F8C171D8E934E9089C12B94D1DFDBB057B737, with 8 import descriptors / 144 imported functions. Its file version is not recorded. Do not merge this with the DriverStore report.
+- BtaMPM.sys: 10.0.19041.5848, 43,008 bytes, SHA-256 DA5CBBDCE6AC511EF8400E121DF6B6EACA7D05C0F40A01F7353CE9F220EB3DCD; PE32+ x64, imports ntoskrnl.exe, cng.sys and WppRecorder.sys.
+- Export tables and complete Server-side import/export compatibility are not yet proven.
+
+### Codec and product boundary
+- Microsoft Windows 10 Classic Audio documents SBC and aptX Classic, not LDAC or AAC.
+- OPPO Enco Buds2 ETE41 documents AAC/SBC only. It can validate SBC, not LDAC.
+- Alternative A2DP Driver advertises LDAC but is proprietary, hardware-licensed and restricted by its EULA; the published OS matrix excludes Server 2022. Do not transplant or reverse-engineer it.
+- The as-0101 repository is a fork of yariktop133/ldac-a2dp-windows. That upstream is a separate replacement-driver project, not a Windows 10 DLL package. No code changes were made.
+
+### Server 2022 and next gate
+- Archived Server 20348.5761 evidence has ks.inf, wdmaudio.inf, WMALFXGFXDSP.dll and SysFxUI.dll, but not the Microsoft A2DP profile package. This is consistent with Microsoft's documented lack of in-box Bluetooth support for Server SKUs, but technical binary compatibility is not yet established.
+- The current Library inventory contains no ISO/WIM/ESD/CAB/MSU media. The next discriminating input is the original Windows 10 22H2 and Server 2022 image/component metadata (CBS MUMs/manifests, system catalogs, package identity and applicability).
+- No fresh live physical-host check, build, CI run, runtime test, driver install or host mutation occurred in this pass. The last recorded oem75.inf / 0.2.325.1600 / Code 37 state remains historical.
+- Next runtime work, if WIM and PE compatibility pass, belongs in a disposable Server 2022 VM and must keep service start, enumeration, driver load, endpoint, SBC negotiation and actual audio as separate gates. LDAC requires a different sink.
+
+Detailed file-level map: [WIN10_COMPONENT_AUDIT.md](WIN10_COMPONENT_AUDIT.md).
