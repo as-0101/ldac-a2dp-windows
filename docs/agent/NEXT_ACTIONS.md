@@ -1,3 +1,31 @@
+# Current continuation — 2026-11-23 (classic A2DP architecture correction)
+
+**Stop treating ACX as the foundation for the Windows 10-style A2DP profile.** The reference Windows 10 machine proves the working path uses:
+- `BthA2dp.sys` service `BthA2dp` (RUNNING), INF `microsoft_bluetooth_a2dp_src.inf`;
+- BTHENUM A2DP service GUID `0000110B-0000-1000-8000-00805F9B34FB`;
+- MEDIA class, section `BthA2dpSrc`, `KS=1`;
+- `ks.inf`, `wdmaudio.inf`, `BtaMpm.inf` included in the class registration;
+- separate HFP components `BthHFEnum`/`BthHFAud`, AVRCP transport, BTAGService, BthAvctpSvc, bthserv, Audiosrv and AudioEndpointBuilder.
+
+Microsoft documents classic A2DP as a WDM profile driver communicating with BthPort; ACX is not the documented classic A2DP profile-driver model. ACX is used in a separate LE Audio architecture. The repeated ACX class-bind failures therefore do not answer how to enable Windows 10-style classic A2DP on Server.
+
+**Latest uploaded ZIP is a duplicate** of the earlier Win10 archive (SHA-256 `3bebbee156019cfa6e1c031e8158c8d1e230fd6f64dd57f3a3bc5aae991254cd`); it is not the output of `Collect-Bluetooth-A2DP-Compare.ps1`. It contains no Server inventory and did not capture the A2DP INF/DriverStore package. The old PnP CSV is empty, but signed-driver/registry/endpoint evidence is valid.
+
+## Immediate actions
+1. Run the corrected `Collect-Bluetooth-A2DP-Compare.ps1` on Windows 10 and Server 2022; it captures signed INF packages and driver-store folders for a like-for-like comparison.
+2. Compare BthA2dp, BthPort, BthEnum, BthUSB, HFP, AVRCP, BTAGService, BthAvctpSvc, AudioEndpointBuilder, KS/WDMAudio and the A2DP INF/registry binding.
+3. Inspect INF OS decorations, package catalog/signature and dependencies before considering any reuse. Never copy SYS/DLL files or import Win10 registry exports directly.
+4. Keep the physical Server unchanged. No driver install, service/device changes, certificate/BCD/security changes, or reboot.
+
+Microsoft sources:
+- https://learn.microsoft.com/en-us/windows-hardware/drivers/bluetooth/bluetooth-driver-stack
+- https://learn.microsoft.com/en-us/windows-hardware/drivers/bluetooth/using-the-bluetooth-driver-stack
+- https://learn.microsoft.com/en-us/windows-hardware/drivers/audio/bluetooth-bypass-guidelines
+- https://learn.microsoft.com/en-us/windows-hardware/drivers/audio/implementing-audio-processing-objects
+- https://learn.microsoft.com/en-us/windows-hardware/drivers/bluetooth/bluetooth-support-in-previous-windows-versions
+
+---
+
 # Current continuation — 2026-11-23 evening (hardware codec audit)
 
 **Critical finding now confirmed at product level:** the user's phone settings identify the connected headset as OPPO Enco Buds2. OPPO's official specification maps Enco Buds2 to earbud model ETE41 / case ETE42 and lists AAC/SBC only, not LDAC. The photos do not show a printed ETE code, but the app identity plus official product spec are sufficient to scope this headset as AAC/SBC-only.
