@@ -1,6 +1,6 @@
 # Current continuation — 2026-11-23 evening (hardware codec audit)
 
-**New critical finding:** OPPO's official specifications for Enco Buds2 model ETE41 list AAC/SBC only, not LDAC. Confirm the physical model before spending more effort on LDAC. If it is ETE41, LDAC cannot work with this receiver regardless of driver implementation.
+**Critical finding now confirmed at product level:** the user's phone settings identify the connected headset as OPPO Enco Buds2. OPPO's official specification maps Enco Buds2 to earbud model ETE41 / case ETE42 and lists AAC/SBC only, not LDAC. The photos do not show a printed ETE code, but the app identity plus official product spec are sufficient to scope this headset as AAC/SBC-only.
 
 1. Verify the exact headset model from its label/box. ETE41 is the Enco Buds2 earbud model; ETE42 is the charging-case model.
 2. If ETE41 is confirmed, stop LDAC-specific tests for this headset. Re-scope the first goal to stable AAC/SBC A2DP playback, or use a receiver whose official specs explicitly include LDAC.
