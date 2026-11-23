@@ -26,6 +26,12 @@
 
 - **New Windows 10 reference evidence (2026-11-23):** the working OPPO Enco Buds2 path uses Microsoft classic A2DP profile driver `BthA2dp.sys` / service `BthA2dp`, installed via `microsoft_bluetooth_a2dp_src.inf`; Stereo and Hands-Free endpoints are healthy. Microsoft documents classic A2DP as a WDM profile driver communicating with BthPort; ACX is used in the documented LE Audio VSAP architecture. Server SKUs lack in-box Bluetooth support. See latest entries in [EVIDENCE](docs/agent/EVIDENCE.md), [PROJECT_STATE](docs/agent/PROJECT_STATE.md), and [NEXT_ACTIONS](docs/agent/NEXT_ACTIONS.md). Do not copy individual DLL/SYS files or import Win10 registry exports.
 
+## Critical architecture correction — 2026-11-23
+
+The working Windows 10 reference uses the classic Microsoft A2DP WDM profile driver: `BthA2dp.sys` / service `BthA2dp`, INF `microsoft_bluetooth_a2dp_src.inf`, BTHENUM service GUID 0x110B, MEDIA class, KS/WDMAudio registration (`ks.inf`, `wdmaudio.inf`, `BtaMpm.inf`). Microsoft documents classic A2DP profile drivers communicating with BthPort through WDM/IRPs; ACX is not the documented classic A2DP foundation. Stop assuming the ACX-only branch is the path to Windows 10-style A2DP. See latest [EVIDENCE](docs/agent/EVIDENCE.md) entries E-037–E-043 and [NEXT_ACTIONS](docs/agent/NEXT_ACTIONS.md).
+
+The latest re-uploaded Win10 ZIP is byte-identical to the earlier archive (SHA-256 `3bebbee156019cfa6e1c031e8158c8d1e230fd6f64dd57f3a3bc5aae991254cd`); it is not a new corrected-collector run and contains no Server inventory or copied A2DP INF/DriverStore package.
+
 ## Read in this order — do not read the whole history
 
 1. This page.
@@ -79,6 +85,6 @@ No physical-server driver installation, device restart, BCD change, test-signing
 
 Current findings and full sample requirements: [ACX10_SAMPLE_BIND_PROBE](research/ACX10_SAMPLE_BIND_PROBE.md). CI #16 completed with the same pre-DriverEntry Code 37 / `0xC000000D` result. The WDF public-PDB layout comparison shows the 0x78-byte ACX stub descriptor matches `WDF_CLASS_BIND_INFO2` size and field offsets; exact semantic validation remains unknown.
 
-Current isolated code branch: `experiment/acx10-wdk20348-control`, head `79460f03492a54444473589dd142da864a703a73`. CI #17 / [run 45158705058](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45158705058), build job `137638217372`, remains in step 4 (EWDK 20348.1 download/stub inspection/build) as of 12:53 Kyiv. Parser/XML gates passed; no artifact or build/runtime outcome is yet available.
+Current isolated code branch: `experiment/acx10-wdk20348-control`, head `79460f03492a54444473589dd142da864a703a73`. CI #17 / [run 45158705058](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45158705058) completed the EWDK 20348.1 inspection; the ACX 1.0 stub was not found and runtime was skipped. This branch is stopped.
 
 CI #16 build/runtime artifacts and the descriptor analysis report are preserved and indexed. Physical server remains untouched.
