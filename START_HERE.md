@@ -1,7 +1,7 @@
 # LDAC project — START HERE
 
-**Last reconciled:** 2026-11-23 12:53 Kyiv.
-**Latest technical experiment commit:** `79460f03492a54444473589dd142da864a703a73` (CI #17 WDK 20348.1 / VS2019 control; build in progress). **Documentation branch:** `docs/project-source-reorg` (follow the branch head for the current source map).  
+**Last reconciled:** 2026-11-23 evening (Kyiv).
+**Latest technical experiment commit:** `79460f03492a54444473589dd142da864a703a73` (CI #17 WDK 20348.1 control; completed, ACX 1.0 stub not found, runtime skipped). **Documentation branch:** `docs/project-source-reorg` (follow the branch head for the current source map).  
 **Mission:** achieve stable Bluetooth A2DP stereo playback on physical Windows Server 2022 Datacenter with OPPO Enco Buds2. First milestone: SBC stereo; only then LDAC negotiation and verified LDAC audio. HFP/microphone is out of scope.
 
 ## Current result — do not misread it
@@ -19,6 +19,10 @@
 - The pinned Microsoft AudioCodec sample defaults to ACX 1.1 / KMDF 1.31 and VS2019 16.0.31409.214; its INF targets 19041+, which includes Server 2022 build 20348. The probe deliberately forces ACX 1.0 to match the observed Server 2022 class module. Official ACX docs label 1.0 pre-release (Windows 10 1903 / KMDF 1.29) and 1.1 the public version initially released for Windows 10 2004 / KMDF 1.31; Server 2022 is not explicitly listed in the ACX table. Microsoft's KMDF 1.31 row lists Windows 10 2004 and later; it does not explicitly name Server 2022. CI #10 and #16 directly observed a KMDF 1.31 client bound to the 1.33 runtime on Server 2022.
 - **CI #16 / [run 45084678951](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45084678951), commit `9da48c3ecd5921f8cab47888325b156dc9a536f3`:** completed successfully as a test harness, but the sample-derived ACX 1.0 driver still failed PnP Code 37 / `0xC000000D` before DriverEntry. The candidate INF was selected. The full LiveKD mirror captured 17,174,368,256 bytes with zero missing pages; WDF IFR showed no precise bind failure. Build/runtime artifact hashes and the WDF PDB layout comparison are in [ACX10_SAMPLE_BIND_PROBE](research/ACX10_SAMPLE_BIND_PROBE.md).
 - Root cause remains **UNRESOLVED**. Do not repeat the already disproven claim that changing only ACX 1.1 to 1.0 fixes the failure. All runtime experiments remain on disposable hosted runners.
+
+- **Critical headset capability check:** OPPO's official Enco Buds2 specifications (model ETE41) list AAC/SBC only, not LDAC. If the physical receiver is ETE41, LDAC negotiation/stream milestones are impossible with this headset. Verify the exact model before further LDAC driver work. Evidence E-024 in [EVIDENCE](docs/agent/EVIDENCE.md).
+- **CI #17 complete:** [run 45158705058](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45158705058) inspected the official EWDK 20348.1 ISO and found no ACX 1.0 stub; no probe build or runtime test occurred. The green job is an inspection success, not a driver-bind success.
+- **Alternative architecture:** BlueCaster 3.0.0 (formerly A2DP Windows Bridge) uses a dedicated WinUSB Bluetooth adapter and user-mode A2DP stack, bypassing ACX. Its published support is Windows 10 22H2/Windows 11, not Server 2022; Server 2022 is untested. It does not add LDAC support to a headset that lacks LDAC.
 
 ## Read in this order — do not read the whole history
 
@@ -44,7 +48,7 @@
 
 ## Next technical action
 
-Monitor [CI #17 / run 45158705058](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45158705058) on branch `experiment/acx10-wdk20348-control`, commit `79460f03492a54444473589dd142da864a703a73`, build job `137638217372`. At 12:53 Kyiv the PowerShell/XML gates had passed and step 4 (EWDK 20348.1 download, ACX 1.0 stub inspection and build) was still running; no artifact or result was available. If ACX 1.0 headers/stub and KMDF 1.31 libraries are present, build the same probe with the Server 2022-era EWDK/VS2019 and test on a fresh hosted Server 2022 runner. This is a toolchain-bundle comparison, not a pure WDK-only test. Before accepting a build result, inspect the selected EWDK setup entrypoint: Microsoft documents `LaunchBuildEnv.cmd` followed by `SetupVSEnv`, while the current script prefers `SetupBuildEnv.cmd` if present. If the probe binds, compare WDF/ACX bind metadata and DriverEntry order with LDAC; if it fails similarly, focus on ACX runtime class-bind validation. Do not rewrite the INF topology or change the physical server.
+Confirm the exact headset model. If it is OPPO Enco Buds2 ETE41, close LDAC milestones for this receiver and focus on stable AAC/SBC playback. If LDAC is still required, use an LDAC-capable headset and evaluate BlueCaster's dedicated-USB-adapter user-mode architecture in an isolated Server 2022 test; its published OS support does not include Server 2022. Do not modify the physical host. CI #17's WDK 20348.1 route is stopped because the EWDK image did not contain the ACX 1.0 stub.
 
 ## Evidence discipline
 
