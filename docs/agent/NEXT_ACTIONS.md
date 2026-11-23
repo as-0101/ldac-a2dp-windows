@@ -1,16 +1,17 @@
-# Current continuation — 2026-11-23 (CI #15 complete; CI #16 full-mirror follow-up)
+# Current continuation — 2026-11-23 (CI #16 complete; CI #17 WDK 20348.1 control)
 
-**Current status:** CI #15 / run `45082965356` completed its build and hosted runtime harness. The minimal AudioCodec-derived ACX 1.0 client still fails PnP Code 37 / `0xC000000D` before DriverEntry. The test is a confirmed negative bind result, not a successful driver load.
+**Current status:** CI #16 / [run 45084678951](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45084678951), commit `9da48c3ecd5921f8cab47888325b156dc9a536f3`, completed its build and hosted runtime harness. The minimal Microsoft AudioCodec-derived ACX 1.0 client still fails PnP Code 37 / `0xC000000D` before DriverEntry. The candidate INF was selected as `oem13.inf`. The test harness succeeded; driver bind did not.
 
-1. Inspect [CI #16 / run 45084678951](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45084678951), commit `9da48c3ecd5921f8cab47888325b156dc9a536f3`. Verify the full LiveKD `-m0x3FFF` preinstall mirror, dump hash/size/page count, WDF class-bind type queries, WDK header scan, and cleanup.
-2. Compare runtime PDB/type information and `!wdfldr` output with the pinned WDK ACX 1.0 stub: descriptor size 0x78 (120 bytes), version 1.0, 210 functions / 62 structures. The Server 2022 ACX class's actual function/structure counts remain unknown.
-3. Preserve the distinction between physical debug evidence and hosted CI: the physical trace identifies `WdfVersionBindClass` returning `0xC000000D`; CI #15 reproduced the same PnP failure but its native dump did not expose the class-module record. Do not claim CI #15 directly captured the failing call.
-4. The CI #15 raw preinstall dump contains WDF IFR entries for `Acx01000`; the probe itself has no WDF IFR because it never loaded. CI #16 now extracts preinstall and postinstall IFR separately. Do not interpret an empty probe IFR as evidence of no failure.
-5. If CI #16 still cannot expose runtime class-bind fields, the next discriminator is a hosted-only local-kernel-debugging experiment with boot-time WDF loader diagnostics, or a controlled older-WDK ACX 1.0 comparison. Do not repeat CI #14's post-boot `DbgPrintOn` registry write; Wdf01000 reads it during startup.
-6. Keep the physical server unchanged: no driver installation, certificate changes, BCD/security changes, device restart, rollback or OS update. No user action is currently required.
+1. Monitor [CI #17 / run 45158705058](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45158705058), branch `experiment/acx10-wdk20348-control`, commit `79460f03492a54444473589dd142da864a703a73`. The PowerShell parser and project XML gates passed; the build job is acquiring the official EWDK 20348.1 and checking for ACX 1.0 / KMDF 1.31 inputs. No build or runtime result is claimed yet.
+2. If EWDK 20348.1 contains ACX 1.0 headers/stub and KMDF 1.31 libraries, build the same source/INF with its matching SDK/WDK and VS2019, then test on a fresh hosted Server 2022 runner. Treat this as a toolchain-bundle comparison because both WDK and compiler generation change.
+3. Compare the old and current ACX 1.0 stub hashes, descriptor size/version, function/structure counts, WDF minimum version, relocation targets, and resulting SYS/PDB. If the sample binds, compare WDF/ACX bind descriptor and DriverEntry sequence with LDAC. If it fails similarly, focus on ACX runtime class-bind validation, not INF topology.
+4. CI #16's WDF public-PDB type comparison shows the ACX stub's 0x78-byte descriptor matches `WDF_CLASS_BIND_INFO2` size and field offsets. This weakens a simple descriptor-size mismatch hypothesis but does not prove pointer or ACX-specific semantic compatibility. The exact failing argument remains unknown.
+5. Keep the physical server unchanged: no driver installation, certificate changes, BCD/security changes, device restart, rollback or OS update. No user action is currently required.
 
-CI #15 artifacts are durably preserved in `/LDAC Project/Incoming/` and indexed in `research/ARTIFACT_INDEX.md`. Microsoft documents ACX 1.0 as pre-release for Windows 10 1903 / KMDF 1.29; Server 2022 is not listed.
+CI #16 build/runtime artifacts and the descriptor compatibility report are durably preserved and indexed in `research/ARTIFACT_INDEX.md`. The CI #16 runtime artifact remains in `/Bluetooth LDAC Research/Artifacts/`; the build artifact and descriptor report are in `/LDAC Project/Incoming/`.
+
 ---
+
 
 ## Current continuation — 2026-11-22 20:28 Kyiv
 
