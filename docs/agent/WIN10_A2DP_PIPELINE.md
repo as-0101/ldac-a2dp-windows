@@ -9,7 +9,7 @@
 
 ## Executive conclusion
 
-The minimal first-milestone route is to recover and test the **complete signed Windows 10 Microsoft A2DP source package** on a disposable Windows Server 2022 VM. The 23:49 Windows 10 capture contains the profile binding INF, common INF, btampm.inf, BthA2dp.sys and BtaMPM.sys. Do not stage until source system-catalog identity and CBS/component ownership are established.
+The minimal first-milestone route is to validate the existing Windows 10 Microsoft A2DP source package and its system-catalog/CBS ownership, then test it in a disposable Windows Server 2022 VM. The 23:49 capture contains the profile binding INF, common INF, btampm.inf, BthA2dp.sys and BtaMPM.sys. Do not stage until source system-catalog identity and CBS/component ownership are established.
 
 There is **no Microsoft inbox LDAC codec in Windows 10**. Microsoft's documented Windows 10 A2DP codec set is SBC and classic aptX; AAC is listed for Windows 11, not Windows 10, and LDAC is not listed. OPPO Enco Buds2 (ETE41) advertises AAC/SBC only. Therefore the only common codec for the first milestone is **SBC**. Enco Buds2 cannot validate LDAC negotiation or LDAC audio; that later milestone needs a separate LDAC-capable receiver.
 
@@ -26,7 +26,7 @@ Reference machine: `AS-KRM-WIN10`, Windows 10 x64, build 19045.
 | `BthA2dp.sys` version | `10.0.19041.4355` | Recorded |
 | `BthA2dp.sys` size | `282,624` bytes | Recorded |
 | `BthA2dp.sys` SHA-256 | `5FBA5EE606AAC39D9CBDA51C0A14DBABBB3A9B47BBD8AC5485ED137B4F354EC3` | Recorded |
-| Common INF | `microsoft_bluetooth_a2dp.inf` | **Missing from current capture** |
+| Common INF | `microsoft_bluetooth_a2dp.inf` | Present; Class=MEDIA, DriverVer 10.0.19041.4355 |
 | Package-local catalog (.cat) | Not exported; system-supplied INFs have no CatalogFile directive | Source system catalog identity still pending |
 | Include/Needs chain | Common INF and btampm.inf captured; exact graph in component audit | Static closure confirmed; CBS owner pending |
 
@@ -45,12 +45,12 @@ Microsoft documents a PnP-loaded Bluetooth profile-driver model. Profile drivers
 | A2DP profile enumeration | BTHENUM Audio Sink UUID `0x110B` | Creates the remote A2DP service devnode | Server currently binds this through a generic placeholder |
 | A2DP source profile | BthA2dp.sys, service registration from source/common INF | Microsoft A2DP profile / transport | Package and System32 copies differ; package import report exists, exports/runtime codec implementation remain open |
 | Common A2DP/audio registration | microsoft_bluetooth_a2dp.inf; includes ks.inf, wdmaudio.inf, BtaMpm.inf | Shared install sections, BthA2dp service and KS audio interfaces | Captured; exact graph in WIN10_COMPONENT_AUDIT.md |
-| Kernel audio / KS | `ks.sys`, `portcls.sys`, `wdmaud.drv`, observed `BtaMpm.sys` candidate | Kernel Streaming / audio miniport path | Exact A2DP package membership and dependency edges |
+| Kernel audio / KS | `ks.sys`, `portcls.sys`, `wdmaud.drv`, BtaMPM.sys and MSSysFx sections from wdmaudio.inf | Kernel Streaming, multiprofile management and system audio effects | Package closure captured; component ownership and runtime load trace pending |
 | Windows audio endpoint | `AudioEndpointBuilder`, `AudioSrv`, `audioeng.dll`, `MMDevAPI.dll` | Exposes render endpoint and routes PCM | Server endpoint creation not tested |
 | AVRCP control | `BthAvctpSvc`, `Microsoft.Bluetooth.AvrcpTransport.sys`, related AVCTP components | Play/pause/metadata/remote control | Not required for basic A2DP stereo |
 | HFP / microphone | `BthHfEnum.sys`, `BthHfAud.sys`, gateway services | Hands-free profile and microphone | Explicitly out of scope |
 
-The existing collectors target the core Bluetooth/audio binaries above, including `BthPort.sys`, `BthEnum.sys`, `BTHUSB.sys`, `BthA2dp.sys`, `BtaMpm.sys`, `ks.sys`, `portcls.sys`, `wdmaud.drv`, `AudioEndpointBuilder.dll`, `AudioSrv.dll`, `audioeng.dll`, and `MMDevAPI.dll`. This is an inventory target list, not a final dependency graph. The common INF, CAT, PE imports, and runtime load trace are required to establish exact edges.
+The existing collectors target the core Bluetooth/audio binaries above, including BthPort.sys, BthEnum.sys, BTHUSB.sys, BthA2dp.sys, BtaMPM.sys, ks.sys, portcls.sys, wdmaud.drv, AudioEndpointBuilder.dll, AudioSrv.dll, audioeng.dll and MMDevAPI.dll. This is an inventory target list, not a final dependency graph. The common INF is now captured; the exact system catalog, PE import/export map and runtime load trace are still required to establish all edges.
 
 ### Load sequence
 
@@ -101,7 +101,7 @@ Do not claim this is the current live state; the physical server was not queried
 ## 5. Minimal adaptation path
 
 1. **Use the existing 23:49 package capture.** The source/common/sink INFs and BthA2dp/BtaMPM binaries are already present. Do not rerun the exporter. The next evidence is WIM/CBS package ownership and the exact system catalog.
-2. **Audit before staging.** Verify source/common INF versions, `DriverVer`, `NTamd64` decorations, `Include` / `Needs`, service/interface registrations, package folder contents, CAT signature, and catalog membership of each SYS. Parse each PE for machine type, version resource, imports, delay imports, exports, API-set references, and OS assumptions. Compare each dependency with the Server 2022 counterpart.
+2. **Audit before staging.** Verify source/common INF versions, DriverVer, NTamd64 decorations, Include/Needs, service/interface registrations, package folder contents, and membership of each SYS in the source system catalog. Parse each PE for machine type, version resource, imports, delay imports, exports, API-set references and OS assumptions. Compare each dependency with the Server 2022 counterpart.
 3. **Do not edit the Microsoft package yet.** Editing an INF changes catalog-covered content and invalidates the original package signature. First test the original signed package in a disposable Server 2022 VM. Do not copy only `BthA2dp.sys` or invent registry registrations.
 4. **Test in order:** service start → BTHENUM enumeration → profile driver load / PnP problem code 0 → A2DP render endpoint → SBC AVDTP negotiation → actual RTP media stream and audible stereo.
 5. **Only after SBC passes**, test LDAC using an LDAC-capable sink. Enco Buds2 cannot be used for that stage. Require observed LDAC vendor-specific AVDTP configuration and real LDAC media frames; endpoint presence alone is not proof.
