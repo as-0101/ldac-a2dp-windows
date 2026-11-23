@@ -645,3 +645,19 @@ Run targeted read-only `Export-Win10-A2DP-Package.ps1` to recursively locate/cop
 - Official Alternative A2DP 1.8.3 supports Windows 10 22H2 and Windows 11 21H2–25H2; its FAQ requires the Windows 10/11 inbox Bluetooth stack and per-device driver installation. It is a third-party driver, not a DLL, and does not list Server 2022.
 - BlueCaster 3.0.4 is an existing open-source alternative using WASAPI capture, codec encoders, BTstack A2DP/AVDTP/L2CAP and WinUSB. It requires a USB adapter and takes ownership of it; its published support is Windows 10 22H2 / Windows 11, not Server 2022.
 - No new build, CI run, driver install, physical-host query, or host mutation occurred in this pass. The package-export dependency remains open.
+
+
+## Win10 A2DP package capture — 2026-11-23 23:49 Kyiv
+
+The targeted package collector completed on reference machine AS-KRM-WIN10 (Windows 10 Enterprise build 19045). Archive: `Win10-A2DP-Package-20261123-234936.zip`.
+
+Confirmed install model:
+- Source INF `microsoft_bluetooth_a2dp_src.inf` matches BTHENUM UUID 0x110B and delegates to `microsoft_bluetooth_a2dp.inf`.
+- Common INF class MEDIA, DriverVer 10.0.19041.4355 (2024-04-12), copies `BthA2dp.sys`, installs kernel service BthA2dp with demand start, and registers KSCATEGORY_AUDIO source/sink interfaces.
+- Common INF includes `ks.inf`, `wdmaudio.inf`, `BtaMpm.inf`; needs KS.Registration, WDMAUDIO.Registration, BtaMPM.CopyFilesOnly and mssysfx.CopyFilesAndRegister.
+- `BthA2dp.sys`: version 10.0.19041.4355, SHA-256 `5FBA5EE606AAC39D9CBDA51C0A14DBABBB3A9B47BBD8AC5485ED137B4F354EC3`, Authenticode Valid / Microsoft Windows / catalog signature.
+- `BtaMPM.sys`: version 10.0.19041.5848, SHA-256 `DA5CBBDCE6AC511EF8400E121DF6B6EACA7D05C0F40A01F7353CE9F220EB3DCD`, signature Valid.
+- HFP and AVRCP package definitions and binaries were also captured.
+- CAT files are not in the archive; the captured INF/SYS files are nevertheless signature-valid on the reference machine. Collection.log is empty, so the exact console warning user mentioned cannot be diagnosed from this archive; the manifest confirms successful capture.
+
+This establishes the Windows 10 classic A2DP package structure but does not establish Server 2022 compatibility. Continue with INF OS applicability, package servicing/build provenance, and Server-side dependency comparison. No driver transplant or physical Server changes.
