@@ -9,7 +9,7 @@
 
 ## Executive conclusion
 
-The minimal first-milestone route is to recover and test the **complete signed Windows 10 Microsoft A2DP source package** on a disposable Windows Server 2022 VM. The current Windows 10 capture contains the profile binding INF and `BthA2dp.sys`, but not the common INF and catalog. Do not stage or copy the partial package.
+The minimal first-milestone route is to recover and test the **complete signed Windows 10 Microsoft A2DP source package** on a disposable Windows Server 2022 VM. The 23:49 Windows 10 capture contains the profile binding INF, common INF, btampm.inf, BthA2dp.sys and BtaMPM.sys. Do not stage until source system-catalog identity and CBS/component ownership are established.
 
 There is **no Microsoft inbox LDAC codec in Windows 10**. Microsoft's documented Windows 10 A2DP codec set is SBC and classic aptX; AAC is listed for Windows 11, not Windows 10, and LDAC is not listed. OPPO Enco Buds2 (ETE41) advertises AAC/SBC only. Therefore the only common codec for the first milestone is **SBC**. Enco Buds2 cannot validate LDAC negotiation or LDAC audio; that later milestone needs a separate LDAC-capable receiver.
 
@@ -30,7 +30,7 @@ Reference machine: `AS-KRM-WIN10`, Windows 10 x64, build 19045.
 | Package-local catalog (.cat) | Not exported; system-supplied INFs have no CatalogFile directive | Source system catalog identity still pending |
 | Include/Needs chain | Common INF and btampm.inf captured; exact graph in component audit | Static closure confirmed; CBS owner pending |
 
-The source INF is not a self-contained package. Its `Include` / `Needs` relationship delegates installation to `microsoft_bluetooth_a2dp.inf`. The missing common INF and catalog are a hard stop for package installation. Exact common INF sections, service registrations, catalog membership, and package file list must be recovered first.
+The source INF is not self-contained: it delegates to microsoft_bluetooth_a2dp.inf, which is now captured. The common INF includes ks.inf, wdmaudio.inf and BtaMpm.inf and requests the KS, WDMAudio, BtaMPM and MSSysFx sections. The captured system-supplied INFs have no CatalogFile directive; Microsoft validates such INFs through system catalogs. Identify the exact source catalog and CBS/component owner before cross-SKU staging.
 
 The Win10 collector's Kernel-Drivers inventory reports demand-start kernel drivers as Stopped/Manual at snapshot time. This does not negate the signed PnP A2DP devnode record; do not claim `BthA2dp` was Running from that CSV.
 
@@ -43,8 +43,8 @@ Microsoft documents a PnP-loaded Bluetooth profile-driver model. Profile drivers
 | Radio / transport | Vendor radio miniport; `BthUSB.sys` or vendor USB transport; `BthMini.sys` | Hardware-specific HCI transport | Exact Win10-to-Server binary compatibility |
 | Core Bluetooth stack | `BthPort.sys`, `BthEnum.sys`, `BthLEEnum.sys`, `BthServ` service | HCI/L2CAP core and enumeration | Exact package dependencies for this A2DP source |
 | A2DP profile enumeration | BTHENUM Audio Sink UUID `0x110B` | Creates the remote A2DP service devnode | Server currently binds this through a generic placeholder |
-| A2DP source profile | `BthA2dp.sys`, service registration from `microsoft_bluetooth_a2dp_src.inf` | Microsoft A2DP profile / transport | Exact internal codec implementation and PE imports |
-| Common A2DP/audio registration | `microsoft_bluetooth_a2dp.inf`; captured references include `ks.inf`, `wdmaudio.inf`, `BtaMpm.inf` | Shared installation sections and audio-class registration | Common INF missing; exact sections/service order unverified |
+| A2DP source profile | BthA2dp.sys, service registration from source/common INF | Microsoft A2DP profile / transport | Package and System32 copies differ; package import report exists, exports/runtime codec implementation remain open |
+| Common A2DP/audio registration | microsoft_bluetooth_a2dp.inf; includes ks.inf, wdmaudio.inf, BtaMpm.inf | Shared install sections, BthA2dp service and KS audio interfaces | Captured; exact graph in WIN10_COMPONENT_AUDIT.md |
 | Kernel audio / KS | `ks.sys`, `portcls.sys`, `wdmaud.drv`, observed `BtaMpm.sys` candidate | Kernel Streaming / audio miniport path | Exact A2DP package membership and dependency edges |
 | Windows audio endpoint | `AudioEndpointBuilder`, `AudioSrv`, `audioeng.dll`, `MMDevAPI.dll` | Exposes render endpoint and routes PCM | Server endpoint creation not tested |
 | AVRCP control | `BthAvctpSvc`, `Microsoft.Bluetooth.AvrcpTransport.sys`, related AVCTP components | Play/pause/metadata/remote control | Not required for basic A2DP stereo |
@@ -79,7 +79,7 @@ OPPO's official specification for model ETE41 lists Bluetooth codecs `AAC/SBC`. 
 |---|---|---|---|
 | Repository `third_party/libldac` | AOSP source library, built as static code | Encoder API called by `service/encoder.cpp` / `ldacsvc` | Reusable encoder source, but not a Windows 10 DLL or a plug-in for `BthA2dp.sys` |
 | Repository `LdacA2dp.sys` | Custom KMDF / ACX 1.1 profile driver plus user-mode service | Own AVDTP/L2CAP path | Parked; separate driver architecture, not minimal DLL adaptation |
-| Alternative A2DP Driver 1.8.3.1 (Luculent) | Third-party kernel driver: `AltA2DP.sys`, INF `oem96.inf`, MEDIA class | Known from a separate Windows 11 laptop/JBL reference; negotiated LDAC | Commercial/closed-source driver, not a DLL, not present in AS-KRM-WIN10 capture; Server support unproven |
+| Alternative A2DP Driver 1.8.3.1 (BluetoothGoodies project record) | Third-party A2DP driver: AltA2DP.sys, INF oem96.inf, MEDIA class | Known from a separate Windows 11 laptop/JBL reference; negotiated LDAC | Proprietary; public support matrix is Windows 10 22H2 / Windows 11 21H2–25H2, not Server 2022; EULA restricts reverse engineering/modification/transfer. No transplant. |
 | BlueCaster | User-mode WASAPI encoder + BTstack A2DP/AVDTP/L2CAP + WinUSB adapter | Supports LDAC and SBC without Windows' built-in A2DP profile | Best ready fallback if Microsoft package path fails; published OS matrix is Windows 10 22H2 / Windows 11, not Server 2022; takes ownership of selected adapter |
 | OpenA2DP | Pre-alpha custom A2DP driver project | Experimental driver-based stack | Not a ready binary; do not switch to it now |
 
@@ -100,7 +100,7 @@ Do not claim this is the current live state; the physical server was not queried
 
 ## 5. Minimal adaptation path
 
-1. **Recover the complete Windows 10 package.** Use the existing read-only `Export-Win10-A2DP-Package.ps1` from Library. It searches DriverStore and Windows INF locations for source/common A2DP INFs and copies package directories, catalogs, `BthA2dp.sys`, hashes, signatures, and Include/Needs metadata.
+1. **Use the existing 23:49 package capture.** The source/common/sink INFs and BthA2dp/BtaMPM binaries are already present. Do not rerun the exporter. The next evidence is WIM/CBS package ownership and the exact system catalog.
 2. **Audit before staging.** Verify source/common INF versions, `DriverVer`, `NTamd64` decorations, `Include` / `Needs`, service/interface registrations, package folder contents, CAT signature, and catalog membership of each SYS. Parse each PE for machine type, version resource, imports, delay imports, exports, API-set references, and OS assumptions. Compare each dependency with the Server 2022 counterpart.
 3. **Do not edit the Microsoft package yet.** Editing an INF changes catalog-covered content and invalidates the original package signature. First test the original signed package in a disposable Server 2022 VM. Do not copy only `BthA2dp.sys` or invent registry registrations.
 4. **Test in order:** service start → BTHENUM enumeration → profile driver load / PnP problem code 0 → A2DP render endpoint → SBC AVDTP negotiation → actual RTP media stream and audible stereo.
@@ -122,7 +122,7 @@ Do not claim this is the current live state; the physical server was not queried
 Microsoft's documented flow is: Bluetooth stack discovers paired devices, PnP selects a profile driver using device IDs and INF registration, and the profile driver sends IRPs/BRBs down to `Bthport.sys`. Microsoft documents Windows 10 A2DP codecs as SBC and aptX Classic; it does not list LDAC or a separate inbox LDAC codec DLL. Therefore:
 
 - `BthA2dp.sys` is the Microsoft A2DP profile/transport driver, not an LDAC codec DLL.
-- The source/common INF package and its catalog are required for a valid profile binding; do not copy only the SYS.
+- The source/common INF package and its system-catalog membership are required for a valid profile binding; do not copy only the SYS.
 - A standalone LDAC encoder DLL would not automatically be loaded by the Microsoft profile driver. No public user-mode codec-provider DLL hook is documented in the Microsoft driver-stack model.
 - Any private codec interface would need to be proven from the actual binary/import/export/registry evidence; it must not be assumed.
 
@@ -132,10 +132,10 @@ Sources: [Bluetooth Classic audio](https://learn.microsoft.com/en-us/windows-har
 
 | Implementation | What it actually is | Published platform / constraints | Project disposition |
 |---|---|---|---|
-| Alternative A2DP Driver 1.8.3 | Third-party signed A2DP kernel driver, not a codec DLL; uses the Windows 10/11 inbox Bluetooth stack and is installed per A2DP device | Official matrix: Windows 10 22H2 and Windows 11 21H2–25H2; no Server 2022 entry. Requires administrator privileges for package/device-driver changes. | Keep as a licensed reference/fallback if its package is available; do not assume Server compatibility. |
+| Alternative A2DP Driver 1.8.3 | Third-party signed A2DP kernel driver, not a codec DLL; uses the Windows inbox Bluetooth stack | Official matrix: Windows 10 22H2 and Windows 11 21H2–25H2; no Server 2022 entry. EULA restricts reverse engineering, modification and transfer. | Do not transplant or reverse-engineer; use only as-is on supported, licensed hardware or with explicit vendor authorization for Server evaluation. |
 | BlueCaster 3.0.4 | Open-source user-mode stack: WASAPI capture → codec encoders (including LDAC) → BTstack A2DP/AVDTP/L2CAP → WinUSB → USB Bluetooth adapter | Windows 10 22H2 / Windows 11; requires a USB adapter and takes it over from Windows while active. Server 2022 is not listed. | Fallback only, preferably disposable VM + dedicated USB adapter; not a Microsoft-stack plug-in. |
 
-Official sources: [Alternative A2DP version history](https://www.bluetoothgoodies.com/a2dp/version-history/), [Alternative A2DP FAQ](https://www.bluetoothgoodies.com/a2dp/faq/), [BlueCaster source](https://github.com/SeiyaFunaokaJP/BlueCaster), [BlueCaster architecture](https://seiyafunaokajp.github.io/BlueCaster/architecture).
+Official sources: [Alternative A2DP version history](https://www.bluetoothgoodies.com/a2dp/version-history/), [Alternative A2DP FAQ](https://www.bluetoothgoodies.com/a2dp/faq/), [Alternative A2DP EULA](https://www.bluetoothgoodies.com/a2dp/eula/), [BlueCaster source](https://github.com/SeiyaFunaokaJP/BlueCaster), [BlueCaster architecture](https://seiyafunaokajp.github.io/BlueCaster/architecture).
 
 ### 7.3 Project-owned LDAC code is static source, not a Windows 10 DLL
 
@@ -147,7 +147,7 @@ Source: [CMakeLists.txt](https://github.com/as-0101/ldac-a2dp-windows/blob/docs/
 
 The existing `Export-Win10-A2DP-Package.ps1` is 5,108 bytes / 95 lines and read-only. It scans `DriverStore\\FileRepository` and `%windir%\\INF` for a fixed list of A2DP/AVRCP/HFP INFs, copies matching DriverStore package directories and `BthA2dp.sys`, and writes direct Include/Needs, file version, SHA-256 and Authenticode status.
 
-It does not search WinSxS, recursively resolve all included INF files, inventory the complete DLL/COM provider set, parse PE imports/exports/delay imports, or verify catalog membership. It is sufficient to recover the missing common INF/package if present in those locations, but not sufficient for the full component audit. The common INF is present. Use WinSxS/CBS only to establish component ownership and locate the system catalog; do not treat the absence of a package-local .cat as evidence that the inbox INF is unsigned.
+It does not search WinSxS, recursively resolve all included INF files, inventory the complete DLL/COM provider set, parse PE imports/exports/delay imports, or verify catalog membership. The 23:49 archive already recovered the common INF and package files. The exporter is no longer the next action. Use WinSxS/CBS only to establish component ownership and locate the system catalog; full PE exports/delay imports and runtime dependency checks remain separate.
 
 The broader Win10 collector with `-IncludeDriverPackages` and the Win10/Server comparison collector are already in Library. Use them before creating another collection tool.
 
