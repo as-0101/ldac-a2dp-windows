@@ -6,6 +6,12 @@ $packageRoot = Join-Path $runRoot 'package'
 $reportRoot = Join-Path $runRoot 'report'
 $privateRoot = Join-Path $env:RUNNER_TEMP 'acx10-sample-bind-probe-private'
 $statePath = Join-Path $reportRoot 'cleanup-state.json'
+$script:WdfLdrDbgPrintOnOriginalValue = $null
+$script:WdfLdrDbgPrintOnChanged = $false
+$script:WdfLdrDbgPrintOnEnableStatus = 'NOT_ATTEMPTED'
+$script:WdfLdrDbgPrintOnVerifiedValue = $null
+$script:WdfLdrDbgPrintOnWriteError = $null
+$script:WdfLdrDbgPrintOnRestoreStatus = 'NOT_NEEDED'
 New-Item -ItemType Directory -Path $packageRoot,$reportRoot,$privateRoot -Force | Out-Null
 
 function Save-State([object]$Value) {
@@ -182,6 +188,183 @@ function Invoke-LiveKdDump([string]$Phase,[string[]]$Commands,[switch]$FullMirro
     return $content
 }
 
+function Get-WdfLdrDbgPrintOnValue([string]$Text) {
+    if ([string]::IsNullOrWhiteSpace($Text)) { return $null }
+    $match = [regex]::Match($Text, '(?im)Wdf01000!WdfLdrDbgPrintOn\s*=\s*(?<value>0x[0-9A-Fa-f]+|\d+)')
+    if (-not $match.Success) { return $null }
+    $raw = $match.Groups['value'].Value
+    if ($raw.StartsWith('0x',[StringComparison]::OrdinalIgnoreCase)) {
+        return [Convert]::ToInt32($raw.Substring(2),16)
+    }
+    return [int]$raw
+}
+
+function Invoke-LiveKdCommandSession([string]$Phase,[string[]]$Commands) {
+    $kdPath = $env:KD_PATH
+    $liveKdPath = $env:LIVEKD_PATH
+    if (-not $kdPath -or -not (Test-Path -LiteralPath $kdPath)) { throw 'KD_PATH missing or kd.exe absent.' }
+    if (-not $liveKdPath -or -not (Test-Path -LiteralPath $liveKdPath)) { throw 'LIVEKD_PATH missing or livekd.exe absent.' }
+    if (-not $env:_NT_SYMBOL_PATH) { throw '_NT_SYMBOL_PATH is not set.' }
+
+    $commandFile = Join-Path $privateRoot "$Phase-live-kd-commands.txt"
+    $kdLog = Join-Path $reportRoot "$Phase-live-kd-output.txt"
+    $sessionLog = Join-Path $reportRoot "$Phase-livekd-session.txt"
+    $Commands | Set-Content -LiteralPath $commandFile -Encoding ascii
+    Remove-Item -LiteralPath $kdLog -Force -ErrorAction SilentlyContinue
+
+    # Unlike the -o/-m/-ml snapshot path, this asks LiveKD to launch KD against
+    # its live target. The caller verifies any write with a separate native dump.
+    $liveOutput = & $liveKdPath -k $kdPath -y $env:_NT_SYMBOL_PATH -logo $kdLog -cf $commandFile 2>&1
+    $liveExit = $LASTEXITCODE
+    if ($liveOutput) { $liveOutput | Out-File -LiteralPath $sessionLog -Encoding utf8 }
+    @(
+        'LiveKD_MODE=direct-live-kernel-session'
+        "LIVEKD_EXIT_CODE=$liveExit"
+        "KD_LOG_EXISTS=$(Test-Path -LiteralPath $kdLog)"
+        "KD_LOG_PATH=$kdLog"
+    ) | Set-Content -LiteralPath $sessionLog -Encoding utf8
+    if ($liveOutput) { $liveOutput | Out-File -LiteralPath $sessionLog -Append -Encoding utf8 }
+    if ($liveExit -ne 0) { throw "LiveKD direct session $Phase failed with exit code $liveExit." }
+    if (-not (Test-Path -LiteralPath $kdLog)) { throw "LiveKD direct session $Phase produced no KD log." }
+    return (Get-Content -LiteralPath $kdLog -Raw)
+}
+
+function Enable-WdfLdrDbgPrintOn([string]$PreinstallLog) {
+    $original = Get-WdfLdrDbgPrintOnValue $PreinstallLog
+    $script:WdfLdrDbgPrintOnOriginalValue = $original
+    $script:WdfLdrDbgPrintOnVerifiedValue = $original
+    $stateFile = Join-Path $reportRoot 'wdfldr-dbgprint-enable.json'
+
+    if ($null -eq $original) {
+        $script:WdfLdrDbgPrintOnEnableStatus = 'ORIGINAL_VALUE_NOT_FOUND'
+    } elseif ($original -eq 1) {
+        $script:WdfLdrDbgPrintOnEnableStatus = 'ALREADY_ENABLED'
+    } elseif ($original -ne 0) {
+        $script:WdfLdrDbgPrintOnEnableStatus = 'UNEXPECTED_ORIGINAL_VALUE'
+    } else {
+        # Write the recovery intent before attempting the memory write. If the
+        # main step is interrupted, the separate CleanupOnly step can retry.
+        $script:WdfLdrDbgPrintOnChanged = $true
+        $script:WdfLdrDbgPrintOnEnableStatus = 'WRITE_PENDING'
+        [ordered]@{
+            OriginalValue = $original
+            Changed = $true
+            EnableStatus = $script:WdfLdrDbgPrintOnEnableStatus
+            TimestampUtc = [DateTime]::UtcNow.ToString('o')
+        } | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $stateFile -Encoding utf8
+
+        try {
+            $writeLog = Invoke-LiveKdCommandSession -Phase 'wdfldr-enable' -Commands @(
+                '.symfix C:\Symbols',
+                '.reload /f Wdf01000.sys',
+                'x Wdf01000!*WdfLdrDbgPrintOn*',
+                'ed Wdf01000!WdfLdrDbgPrintOn 1',
+                'dd Wdf01000!WdfLdrDbgPrintOn L1',
+                'q'
+            )
+            $verifyLog = Invoke-LiveKdDump -Phase 'wdfldr-enable-verify' -Commands @(
+                '.symfix C:\Symbols',
+                '.reload /f Wdf01000.sys',
+                'x Wdf01000!*WdfLdrDbgPrintOn*',
+                'dd Wdf01000!WdfLdrDbgPrintOn L1',
+                'q'
+            )
+            $verified = Get-WdfLdrDbgPrintOnValue $verifyLog
+            $script:WdfLdrDbgPrintOnVerifiedValue = $verified
+            if ($verified -eq 1) {
+                $script:WdfLdrDbgPrintOnEnableStatus = 'PERSISTED_1'
+            } else {
+                $script:WdfLdrDbgPrintOnChanged = $false
+                $script:WdfLdrDbgPrintOnEnableStatus = 'WRITE_NOT_PERSISTENT'
+            }
+        } catch {
+            $script:WdfLdrDbgPrintOnWriteError = $_.Exception.Message
+            $script:WdfLdrDbgPrintOnChanged = $false
+            $script:WdfLdrDbgPrintOnEnableStatus = 'WRITE_SESSION_FAILED'
+        }
+    }
+
+    $report = [ordered]@{
+        OriginalValue = $script:WdfLdrDbgPrintOnOriginalValue
+        VerifiedValue = $script:WdfLdrDbgPrintOnVerifiedValue
+        Changed = $script:WdfLdrDbgPrintOnChanged
+        EnableStatus = $script:WdfLdrDbgPrintOnEnableStatus
+        WriteError = $script:WdfLdrDbgPrintOnWriteError
+        TimestampUtc = [DateTime]::UtcNow.ToString('o')
+    }
+    $report | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $stateFile -Encoding utf8
+    return $report
+}
+
+function Restore-WdfLdrDbgPrintOn {
+    $stateFile = Join-Path $reportRoot 'wdfldr-dbgprint-enable.json'
+    if (-not $script:WdfLdrDbgPrintOnChanged -and (Test-Path -LiteralPath $stateFile)) {
+        try {
+            $saved = Get-Content -LiteralPath $stateFile -Raw | ConvertFrom-Json
+            if ($saved.Changed -and $null -ne $saved.OriginalValue) {
+                $script:WdfLdrDbgPrintOnOriginalValue = [int]$saved.OriginalValue
+                $script:WdfLdrDbgPrintOnChanged = $true
+            }
+        } catch { }
+    }
+
+    $verified = $script:WdfLdrDbgPrintOnVerifiedValue
+    if (-not $script:WdfLdrDbgPrintOnChanged -or $null -eq $script:WdfLdrDbgPrintOnOriginalValue) {
+        if ($script:WdfLdrDbgPrintOnEnableStatus -eq 'ALREADY_ENABLED') {
+            $script:WdfLdrDbgPrintOnRestoreStatus = 'PREEXISTING_VALUE_PRESERVED'
+        } else {
+            $script:WdfLdrDbgPrintOnRestoreStatus = 'NOT_REQUIRED'
+        }
+    } else {
+        try {
+            $original = [int]$script:WdfLdrDbgPrintOnOriginalValue
+            $restoreLog = Invoke-LiveKdCommandSession -Phase 'wdfldr-restore' -Commands @(
+                '.symfix C:\Symbols',
+                '.reload /f Wdf01000.sys',
+                "ed Wdf01000!WdfLdrDbgPrintOn $original",
+                'dd Wdf01000!WdfLdrDbgPrintOn L1',
+                'q'
+            )
+            $verifyLog = Invoke-LiveKdDump -Phase 'wdfldr-restore-verify' -Commands @(
+                '.symfix C:\Symbols',
+                '.reload /f Wdf01000.sys',
+                'x Wdf01000!*WdfLdrDbgPrintOn*',
+                'dd Wdf01000!WdfLdrDbgPrintOn L1',
+                'q'
+            )
+            $verified = Get-WdfLdrDbgPrintOnValue $verifyLog
+            if ($verified -eq $original) {
+                $script:WdfLdrDbgPrintOnChanged = $false
+                $script:WdfLdrDbgPrintOnRestoreStatus = 'RESTORED'
+            } else {
+                $script:WdfLdrDbgPrintOnRestoreStatus = 'RESTORE_VERIFICATION_FAILED'
+            }
+        } catch {
+            $script:WdfLdrDbgPrintOnRestoreStatus = 'RESTORE_FAILED'
+            $script:WdfLdrDbgPrintOnWriteError = $_.Exception.Message
+        }
+    }
+
+    if (Test-Path -LiteralPath $stateFile) {
+        try {
+            $saved = Get-Content -LiteralPath $stateFile -Raw | ConvertFrom-Json
+            $saved.Changed = $script:WdfLdrDbgPrintOnChanged
+            $saved.RestoreStatus = $script:WdfLdrDbgPrintOnRestoreStatus
+            $saved.VerifiedAfterRestore = $verified
+            $saved | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $stateFile -Encoding utf8
+        } catch { }
+    }
+    [ordered]@{
+        OriginalValue = $script:WdfLdrDbgPrintOnOriginalValue
+        VerifiedValue = $verified
+        Changed = $script:WdfLdrDbgPrintOnChanged
+        EnableStatus = $script:WdfLdrDbgPrintOnEnableStatus
+        RestoreStatus = $script:WdfLdrDbgPrintOnRestoreStatus
+        Error = $script:WdfLdrDbgPrintOnWriteError
+        TimestampUtc = [DateTime]::UtcNow.ToString('o')
+    } | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $reportRoot 'wdfldr-dbgprint-restore.json') -Encoding utf8
+}
+
 function Invoke-Cleanup([switch]$Strict) {
     $errors = [System.Collections.Generic.List[string]]::new()
     $warnings = [System.Collections.Generic.List[string]]::new()
@@ -354,6 +537,7 @@ function Invoke-Cleanup([switch]$Strict) {
 }
 
 if ($CleanupOnly) {
+    Restore-WdfLdrDbgPrintOn
     Invoke-Cleanup -Strict:$StrictCleanup
     exit 0
 }
@@ -471,6 +655,7 @@ try {
         'q'
     )
     $preLog = Invoke-LiveKdDump -Phase 'preinstall' -Commands $preCommands -FullMirror
+    $wdfLdrDbgPrintOnEnable = Enable-WdfLdrDbgPrintOn -PreinstallLog $preLog
     $preCaptureText = Get-Content -LiteralPath (Join-Path $reportRoot 'preinstall-livekd-capture.txt') -Raw
     $preCaptureMode = [regex]::Match($preCaptureText, '(?im)^LiveKD_MODE=(?<value>.+)$').Groups['value'].Value.Trim()
     $preDumpHash = [regex]::Match($preCaptureText, '(?im)^DUMP_SHA256=(?<value>.+)$').Groups['value'].Value.Trim()
@@ -759,6 +944,10 @@ try {
         WdfBindFailureLine = $wdfBindFailureLine
         WdfIfrLines = $wdfIfrLines
         WdfIfrFailureLine = $wdfIfrFailureLine
+        WdfLdrDbgPrintOnOriginalValue = $script:WdfLdrDbgPrintOnOriginalValue
+        WdfLdrDbgPrintOnVerifiedValue = $script:WdfLdrDbgPrintOnVerifiedValue
+        WdfLdrDbgPrintOnEnableStatus = $script:WdfLdrDbgPrintOnEnableStatus
+        WdfLdrDbgPrintOnWriteError = $script:WdfLdrDbgPrintOnWriteError
         AcxWdfDiagnostics = $state.AcxWdfDiagnostics
         ProbeServiceExistedBefore = $state.ProbeServiceExistedBefore
         CertificateThumbprint = $cert.Thumbprint
@@ -791,6 +980,8 @@ try {
             "- Candidate INF selected: $candidateSelected ($driverInfPath)",
             "- PnP ProblemStatus: $problemStatusHex",
             "- ACX runtime SHA-256: $acxHash"
+            "- WdfLdrDbgPrintOn: $script:WdfLdrDbgPrintOnEnableStatus (original=$script:WdfLdrDbgPrintOnOriginalValue, verified=$script:WdfLdrDbgPrintOnVerifiedValue)"
+            "- WDF bind debug line: $wdfBindFailureLine"
         ) | Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY
     }
     Write-Host $classification
@@ -804,6 +995,9 @@ try {
     } | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $reportRoot 'runtime-error.json') -Encoding utf8
     throw
 } finally {
+    try { Restore-WdfLdrDbgPrintOn } catch {
+        $_ | Out-String | Set-Content -LiteralPath (Join-Path $reportRoot 'wdfldr-dbgprint-restore-exception.txt') -Encoding utf8
+    }
     try { Invoke-Cleanup } catch {
         $_ | Out-String | Set-Content -LiteralPath (Join-Path $reportRoot 'cleanup-exception.txt') -Encoding utf8
     }
