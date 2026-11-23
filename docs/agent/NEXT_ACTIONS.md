@@ -1,3 +1,21 @@
+# Current continuation — 2026-11-23 23:49 Kyiv (Win10 package captured)
+
+The targeted Win10 package archive is usable; no repeat run is needed. It contains:
+- `microsoft_bluetooth_a2dp_src.inf` (BTHENUM UUID 0x110B) and common `microsoft_bluetooth_a2dp.inf`;
+- `BthA2dp.sys` 10.0.19041.4355 and `BtaMPM.sys` 10.0.19041.5848;
+- `btampm.inf`, A2DP sink INF, HFP INFs/binaries and AVRCP transport;
+- common INF dependencies KS.Registration, WDMAUDIO.Registration, BtaMPM.CopyFilesOnly, mssysfx.CopyFilesAndRegister.
+The SYS/INF signatures verify as Microsoft on the Win10 host. CAT files were not included. Collection.log is empty, so the exact console warning is not recoverable, but the archive and manifest show successful data capture.
+
+## Next actions
+1. Analyze Windows 10 A2DP INF sections, decoration, version, source and common package dependencies against the Server 2022 build.
+2. Inspect Server 2022's in-box `ks.inf`, `wdmaudio.inf`, `mssysfx`, BtaMPM and Bluetooth package state. Distinguish absent profile INF from absent dependencies.
+3. Determine whether Microsoft package is applicable/supported on Server 2022 from INF decorations and official servicing/build evidence; do not infer support from matching NTamd64 alone.
+4. If a test is justified, prepare an isolated VM snapshot and use catalog-complete `pnputil /export-driver` package export; no manual SYS copying or registry import.
+5. No more Windows 10 reboot or modifications are required now. Keep physical Server unchanged.
+
+---
+
 # NEXT_ACTIONS — current priority
 
 **Updated:** 2026-11-23 23:40 Europe/Kyiv
