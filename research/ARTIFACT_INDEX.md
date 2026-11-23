@@ -128,10 +128,10 @@ All paths below are in Library folder `/Bluetooth на Windows Sever 2022/`. Fil
 
 | Artifact | File ID | Library ID | Size | Status / use |
 |---|---|---|---:|---|
-| `Bluetooth-A2DP-Compare-AS-KRM-WIN10-20261123-204910.zip` | `file_00000000d88c8210b1f196dcd824b5de` | `libfile_40e5b2f397548191adf91284ec279e0d` | 3,395,313 bytes | Targeted Win10 comparison archive; source INF present, common INF/catalog still missing |
+| `Bluetooth-A2DP-Compare-AS-KRM-WIN10-20261123-204910.zip` | `file_00000000d88c8210b1f196dcd824b5de` | `libfile_40e5b2f397548191adf91284ec279e0d` | 3,395,313 bytes | Historical 20:49 partial comparison; superseded by the 23:49 package capture below |
 | `Win10-Bluetooth-A2DP-20261123-201418.zip` | `file_000000006994821096915807feeeb159` | `libfile_ff5486df416081919f09274f08e8ea38` | 5,153,885 bytes | Win10 reference collector archive; package folders not included; prior project state records SHA-256 `3bebbee156019cfa6e1c031e8158c8d1e230fd6f64dd57f3a3bc5aae991254cd` |
 | `Bluetooth-A2DP-Compare-AS-KRM-WS-20261123-204114.zip` | `file_000000002fc08210b073a5416f7ca6d7` | `libfile_b9bb8bde48908191b78e2d741b8ffa5d` | 3,140,988 bytes | Latest recorded Server 2022 read-only comparison snapshot; not a live host check |
-| `Export-Win10-A2DP-Package.ps1` | `file_00000000ae6c82108239f67bdde421be` | `libfile_c5e086cd16e0819183aa8607e6c40e94` | 5,108 bytes | Read-only targeted package exporter; output not yet produced |
+| `Export-Win10-A2DP-Package.ps1` | `file_00000000ae6c82108239f67bdde421be` | `libfile_c5e086cd16e0819183aa8607e6c40e94` | 5,108 bytes | Read-only targeted package exporter; output produced as Win10-A2DP-Package-20261123-234936.zip; do not rerun |
 | `Collect-Win10-Bluetooth-A2DP.ps1` | `file_00000000f4b08210aad8e3d4dd2e07eb` | `libfile_92cbe93ca6088191af6e314201155e50` | 14,623 bytes | Existing read-only collector; optional `-IncludeDriverPackages` copies active DriverStore package folders |
 | `Collect-Bluetooth-A2DP-Compare.ps1` | `file_00000000187482108c2566e9f9e8147f` | `libfile_d1b948264d648191b4c9041736c4f387` | 7,815 bytes | Existing read-only Win10/Server comparison collector |
 
@@ -144,7 +144,7 @@ All paths below are in Library folder `/Bluetooth на Windows Sever 2022/`. Fil
 | `microsoft_bluetooth_a2dp.inf` | Unknown | Unknown | Not available | Missing from current capture |
 | Package catalog (.cat) | Unknown | N/A | Not available | Missing from current capture |
 
-Archive SHA-256 is recorded only where explicitly stated in prior project evidence. The targeted 20:49 Win10 archive and 20:41 Server archive have not been independently re-hashed in this run because the Project Source file provider did not expose raw bytes for local hashing.
+Archive SHA-256 is recorded only where explicitly stated in prior project evidence. The 20:49 Win10 comparison archive and 20:41 Server archive are historical snapshots; raw Project Source bytes were not available for local re-hashing in this run.
 
 ### Existing LDAC implementation references
 
@@ -160,4 +160,41 @@ Archive SHA-256 is recorded only where explicitly stated in prior project eviden
 | `Collect-Win10-Bluetooth-A2DP.ps1` | `file_00000000f4b08210aad8e3d4dd2e07eb` | `libfile_92cbe93ca6088191af6e314201155e50` | 14,623 bytes | Existing broad read-only collector; optional `-IncludeDriverPackages`; captures PnP/service/registry and selected system-driver context |
 | `Collect-Bluetooth-A2DP-Compare.ps1` | `file_00000000187482108c2566e9f9e8147f` | `libfile_d1b948264d648191b4c9041736c4f387` | 7,815 bytes | Existing Win10/Server comparison collector; does not replace PE/catalog audit |
 
-No new archive bytes were produced or re-hashed in this pass. The existing Win10 package capture remains incomplete until the common INF, CAT and full package folder are exported.
+The 23:49 Win10 package archive supersedes the 20:49 partial comparison: common/source/sink INFs, btampm.inf, BthA2dp.sys and BtaMPM.sys are present. No local .cat is included; the system-supplied INFs have no CatalogFile directive, so identify the OS system catalog through WIM/CBS metadata rather than treating this as an unsigned package.
+
+
+## Win10 A2DP package capture and PE audit — 2026-11-24 01:42
+
+The 23:49 archive is the current package source. It supersedes the earlier 20:49 comparison archive's “common INF missing” status.
+
+| Artifact | File ID | Size | Status / use |
+|---|---|---:|---|
+| Win10-A2DP-Package-20261123-234936.zip | file_00000000144c8210a8e309fe18b9e8c4 | 454,831 bytes | Current Win10 19045 package capture; common/source/sink A2DP INFs, btampm.inf, BthA2dp.sys and BtaMPM.sys |
+| Win10-A2DP-DriverStore-20261123-234936.zip | file_00000000b3888210bd459ae2490c25d9 | 135,772 bytes | DriverStore package directories |
+| a2dp_pe_imports_report(2).txt | file_0000000033e482109479f740ed5a8030 | 8,098 bytes | Static imports for separate System32 BthA2dp copy |
+| a2dp_pe_imports_report(3).txt | file_000000008d708210bada16b6cb44c429 | 8,098 bytes | Cross-check report for System32 copy |
+| a2dp_pe_imports_report.txt | file_00000000f33882109a6b1f79c3aaf72d | 1,315,472 bytes | Broader PE import report |
+| 00-33.txt | file_000000004d5882109961f477df8a1c48 | 29,125 bytes | Captured INF inspection output |
+| 00-34.txt | file_000000004c208210bec65c68b97e9b69 | 5,564 bytes | Captured INF section/dependency output |
+
+### Binary identities
+
+| File | Version | Size | SHA-256 | Notes |
+|---|---|---:|---|---|
+| DriverStore BthA2dp.sys | 10.0.19041.4355 | 282,624 | 5FBA5EE606AAC39D9CBDA51C0A14DBABBB3A9B47BBD8AC5485ED137B4F354EC3 | Package copy; PE32+ x64; E-119 reports direct imports from ntoskrnl.exe only; no delay-import directory |
+| System32 BthA2dp.sys | Not recorded | 279,040 | 0442A18BBED4E323265C66561C8F8C171D8E934E9089C12B94D1DFDBB057B737 | Different copy; 8 import descriptors / 144 functions; do not merge with package-copy report |
+| BtaMPM.sys | 10.0.19041.5848 | 43,008 | DA5CBBDCE6AC511EF8400E121DF6B6EACA7D05C0F40A01F7353CE9F220EB3DCD | Imports ntoskrnl.exe, cng.sys and WppRecorder.sys |
+| btampm.inf | 10.0.19041.5848 | — | c657a6b32ac8ccfdeef3c12630686b87c973dd114bee73aec288d86b989961ef | Class=SYSTEM, CopyFilesOnly for BtaMPM.sys |
+| microsoft_bluetooth_a2dp.inf | 10.0.19041.4355 | — | 4f3b988b658e1e7f8b97e645c1c92be0ba270d4db76832dab871516eedcbcf0c | Class=MEDIA; Include/Needs closure and BthA2dp service registration captured |
+| microsoft_bluetooth_a2dp_src.inf | 10.0.19041.1 | — | Not recorded | Matches remote A2DP Sink UUID 0x110B |
+| microsoft_bluetooth_a2dp_snk.inf | Captured | — | Not recorded | Reverse direction; not needed for playback to earbuds |
+
+### Corrections and limitations
+
+- The common INF and BtaMPM files are present in the 23:49 archive. Do not request another Win10 collection for those files.
+- The archive contains no package-local .cat, but the system-supplied INFs have no CatalogFile directive. Microsoft documents validation through system catalogs. The exact source catalog and CBS owner remain open.
+- The two BthA2dp.sys hashes belong to different copies. The import report for one must not be applied to the other.
+- Export tables, full delay-import/API-set data and exact Server 20348 import/export resolution remain incomplete.
+- No ISO/WIM/ESD/CAB/MSU media was found in the current Library inventory. Do not ask for the already captured ZIP; the remaining image input is Windows 10 22H2 and Server 2022 WIM/component metadata.
+- New detailed map: [WIN10_COMPONENT_AUDIT.md](../docs/agent/WIN10_COMPONENT_AUDIT.md).
+
