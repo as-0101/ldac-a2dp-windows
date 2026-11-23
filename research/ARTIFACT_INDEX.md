@@ -107,3 +107,16 @@ Inner build package hashes from `build-manifest.json`: SYS `F7BAE855C1B184ABCF0B
 ## CI #17 pending artifact state — 2026-11-23 12:53 Kyiv
 
 Workflow run 45158705058 / commit `79460f03492a54444473589dd142da864a703a73` is still in its build step. No build/runtime artifact exists yet. Add artifact IDs, original ZIP hashes, Library IDs and inner SYS/INF/PDB hashes only after the workflow produces and verifies them.
+
+
+## CI #17 — EWDK 20348.1 inspection report (2026-11-23)
+
+- Workflow run: [45158705058](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45158705058)
+- Branch / commit: `experiment/acx10-wdk20348-control` / `79460f03492a54444473589dd142da864a703a73`
+- Artifact ID: `14814207710`
+- Name: `acx10-wdk20348-control-build.zip`
+- Size: 2,156 bytes
+- ZIP SHA-256: `2c8f73e08ce5ba7e24ac6d61198a4b03932f482e9527614eed84b4ecb4c9a3f6`
+- Purpose: provenance/report from the official EWDK 20348.1 inspection.
+- Result: `EWDK_ACX10_STUB_FOUND=false`; no ACX 1.0 probe SYS was built and the hosted runtime job was skipped. The green workflow status reflects successful inspection/skip logic, not a driver test.
+- Retention: GitHub Actions artifact; preserve before expiry if later analysis requires it. No durable Library copy is claimed.
