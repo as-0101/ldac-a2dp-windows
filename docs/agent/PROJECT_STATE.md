@@ -536,3 +536,28 @@ Physical Server 2022 remains untouched: no driver install, certificate change, B
 3. Inspect catalog/signature and INF applicability before considering package reuse. Do not copy individual system binaries or import registry exports.
 4. Reassess the ACX-only custom driver direction against the classic A2DP WDM profile-driver architecture.
 5. Keep the physical Server unchanged; collection is read-only.
+
+
+## Architecture reassessment — 2026-11-23 (Windows 10 classic A2DP reference)
+
+The re-uploaded archive is byte-identical to the first reference archive (SHA-256 `3bebbee156019cfa6e1c031e8158c8d1e230fd6f64dd57f3a3bc5aae991254cd`); it is not the output of the corrected comparison collector. No new Server 2022 inventory is present.
+
+### Confirmed Windows 10 reference path
+- Windows 10 Enterprise x64 build 19045, machine AS-KRM-WIN10.
+- Device Manager screenshot shows OPPO Enco Buds2 and separate Stereo / Hands-Free endpoints.
+- A2DP service: `BthA2dp`, RUNNING, `BthA2dp.sys` 10.0.19041.4355, SHA-256 `5FBA5EE606AAC39D9CBDA51C0A14DBABBB3A9B47BBD8AC5485ED137B4F354EC3`.
+- Profile INF: `microsoft_bluetooth_a2dp_src.inf`; BTHENUM service GUID `0000110B-0000-1000-8000-00805F9B34FB`; class MEDIA, section `BthA2dpSrc`.
+- MEDIA class registration lists `KS=1` and IncludedInfs `ks.inf`, `wdmaudio.inf`, `BtaMpm.inf`.
+- A2DP service registry key has Start=3 and Owners=`microsoft_bluetooth_a2dp_src.inf`; its Enum child contains the OPPO A2DP profile devnode.
+- HFP components BthHFEnum/BthHFAud and AVRCP transport are also running; BTAGService, BthAvctpSvc, bthserv, Audiosrv and AudioEndpointBuilder are running.
+- The PnP inventory CSV is empty because the initial collector's PnpDevice module call failed; signed-driver CSV and registry/endpoint exports are still useful. The A2DP INF/DriverStore package itself was not captured.
+
+### Critical architecture correction
+Microsoft's classic Bluetooth documentation describes A2DP as a Bluetooth profile driver communicating with BthPort via the WDM/IRP model. The Windows 10 reference confirms a Kernel Streaming / WDMAudio registration pattern for the A2DP MEDIA device. The Microsoft A2DP INF/WDMAudio example includes `ks.inf`, `wdmaudio.inf`, and `BtaMpm.inf`. ACX is not the documented classic A2DP profile-driver foundation; Microsoft's Bluetooth LE Audio VSAP architecture is a separate path. Therefore the current ACX-only driver branch is not the right foundation for replicating Windows 10 classic A2DP. Do not continue ACX bind experiments as the presumed solution to classic A2DP.
+
+### Next actions
+1. Run `Collect-Bluetooth-A2DP-Compare.ps1` on Windows 10 to capture the missing signed INF/DriverStore package; run the same read-only collector on Server 2022 for a like-for-like inventory.
+2. Compare presence and versions of BthA2dp, BthPort, BthEnum, BthUSB, BthHFEnum/BthHFAud, AVRCP, BTAGService, BthAvctpSvc, AudioEndpointBuilder, KS/WDMAudio components and the profile INF registrations.
+3. Inspect the exact Microsoft A2DP INF decorations, catalog signature, package dependencies and supported OS targets. No copying binaries or importing registry files.
+4. Design a classic A2DP WDM profile-driver installation/enablement experiment only after the missing package and OS compatibility are understood. Prefer disposable VM/clone first.
+5. Keep the physical Server 2022 unchanged. No driver install, certificate changes, PnP rebinding, service changes, BCD/security changes, or reboot.
