@@ -408,3 +408,22 @@ Next: targeted Win10 capture must resolve every INF Include/Needs dependency, es
 | E-056 | The collection manifest is complete, but Logs/Collection.log is zero bytes; therefore no precise console warning/error from the collector can be reconstructed from this archive. | CONFIRMED | ZIP inventory. |
 
 Interpretation: Windows 10's classic A2DP path is concretely a MEDIA-class WDM/Kernel Streaming audio function with explicit KS/WDMAUDIO/MSSysFx/BtaMPM dependencies, not an ACX client implementation. This package is now sufficient to analyze the reference install model. It does not prove the Win10 package is supported on Server 2022. Do not manually copy SYS files or import registry exports. Next, compare INF applicability and package identity with Server 2022 and obtain catalog-complete export only if required for a controlled VM test.
+
+
+## Evidence update — 2026-11-24 (Server dependency inventory and full INF audit)
+
+| ID | Claim / observation | Status | Source |
+|---|---|---|---|
+| E-090 | The newly uploaded `Win10-A2DP-DriverStore.zip` contains the three A2DP package directories: common INF + `BthA2dp.sys`, source INF, and sink INF. It does not contain CAT files. | CONFIRMED | Uploaded archive `Win10-A2DP-DriverStore.zip`, full ZIP inventory. |
+| E-091 | The common Windows 10 INF is UTF-16LE, Class=MEDIA, DriverVer 10.0.19041.4355. It has an undecorated `[Microsoft.NTamd64]` manufacturer model section (no explicit Windows 10-only build decoration was found in the inspected INF). It installs service `BthA2dp` as a demand-start kernel driver and registers A2DP source/sink KSCATEGORY_AUDIO interfaces. | CONFIRMED — STATIC INF AUDIT | Uploaded `Win10-A2DP-Package-20261123-234936.zip`, `microsoft_bluetooth_a2dp.inf`. |
+| E-092 | The common A2DP INF has direct dependencies `ks.inf`, `wdmaudio.inf`, `BtaMpm.inf`; Needs sections are `KS.Registration`, `WDMAUDIO.Registration`, `BtaMPM.CopyFilesOnly`, `mssysfx.CopyFilesAndRegister`. The package archive contains `btampm.inf` and `BtaMPM.sys`, but does not contain `mssysfx.inf`. | CONFIRMED | Uploaded package archive; exact INF text and ZIP inventory. |
+| E-093 | The Server 2022 read-only inventory finds `ks.inf` and `wdmaudio.inf` in the active INF/DriverStore roots, but does not find `btampm.inf`, `mssysfx.inf`, `BthA2dp.sys`, or `BtaMPM.sys` in those roots. | CONFIRMED — ROOTS TESTED ONLY | User-provided PowerShell output, 2026-11-24. WinSxS file-level search is still pending. |
+| E-094 | A separate Server WinSxS directory-name search for tokens `bta|a2dp|sysfx|bluetooth.*audio` found only unrelated `wwf-cwevbtargets` directories; the same command found no Microsoft BthA2dp/BtaMPM system-driver service. | CONFIRMED — LIMITED SEARCH | User-provided PowerShell output, 2026-11-24. This was a directory-name search, not a recursive file-name search. |
+| E-095 | Microsoft's audio-driver documentation independently shows the same Bluetooth A2DP/HFP dependency chain: `ks.inf`, `wdmaudio.inf`, `BtaMpm.inf`, plus `mssysfx.CopyFilesAndRegister`; it describes the sample as supporting Bluetooth hands-free and stereo devices. | CONFIRMED — OFFICIAL DOCUMENTATION | https://learn.microsoft.com/en-us/windows-hardware/drivers/audio/implementing-audio-processing-objects (lines 319–350, 381–400). |
+
+### Interpretation and limits
+- The Windows 10 package's core A2DP profile binding is now understood at INF level; the earlier claim that the common INF was still missing is obsolete.
+- Server 2022 is missing the A2DP profile driver and at least the BtaMPM dependency from the searched active roots. The absence of `mssysfx.inf` is not yet proven across WinSxS.
+- The INF's `NTamd64` model decoration alone does **not** prove Server 2022 support. Microsoft explicitly says Windows Server SKUs do not have in-box Bluetooth support. This remains an unsupported compatibility experiment.
+- No catalog file was included in either archive. Do not treat this alone as evidence that the package is unsigned: the Win10-side inventory records valid Microsoft catalog-based Authenticode verification. Recover the original catalog only if required for an isolated package test.
+- No physical Server files, services, devices, registry, BCD, or security settings have been changed.
