@@ -55,3 +55,14 @@ CI #16 Library copies were independently re-materialized and matched against the
 - No source code or driver package was changed.
 - The pass was limited to read-only source inspection and official documentation review.
 - CI #248 and #255 remain closed historical ACX evidence; no ACX bind-probe is scheduled next.
+
+
+## 2026-11-24 01:42 — Win10 A2DP component audit (research only)
+
+- Code branch: no changes to server-2022-oppo or experiment branches.
+- Documentation branch: docs/project-source-reorg.
+- Build/CI: no build performed; no CI run ID created.
+- Artifacts: no new binary or package artifact created. Existing Win10 package archive and PE/INF text reports were indexed in ARTIFACT_INDEX.md.
+- Runtime: no service/device/driver/endpoint/audio test performed.
+- Physical host: no live query or mutation performed. No driver install, device restart, BCD/security/test-signing, certificate or OS changes.
+- Decision: next gate is Win10/Server WIM component ownership and exact PE import/export compatibility. CI #248 and #255 remain closed; no ACX bind-probe.
