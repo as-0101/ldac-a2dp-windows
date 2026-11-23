@@ -1,9 +1,9 @@
-name: ACX 1.0 Microsoft AudioCodec sample bind probe
+name: ACX 1.0 AudioCodec probe with DbgView kernel capture
 
 on:
   push:
     branches:
-      - experiment/acx10-sample-bind-probe-v2
+      - experiment/acx10-dbgview-kernel-capture
   workflow_dispatch:
 
 permissions:
@@ -24,7 +24,8 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $scripts = @(
             'driver/AcxAudioCodecProbe/Build-AcxAudioCodecProbe.ps1',
-            'driver/AcxAudioCodecProbe/Invoke-AcxAudioCodecProbe.ps1'
+            'driver/AcxAudioCodecProbe/Invoke-AcxAudioCodecProbe.ps1',
+            'driver/AcxAudioCodecProbe/Run-AcxAudioCodecProbe-WithDbgView.ps1'
           )
           foreach ($scriptPath in $scripts) {
             $tokens = $null
@@ -69,7 +70,7 @@ jobs:
     needs: build
     if: needs.build.result == 'success'
     runs-on: windows-2022
-    timeout-minutes: 35
+    timeout-minutes: 45
     permissions:
       actions: read
       contents: read
@@ -107,24 +108,40 @@ jobs:
           $kdDir = Split-Path -Parent $kdPath
           $liveKdPath = Join-Path $kdDir 'livekd.exe'
           Copy-Item -LiteralPath $live.FullName -Destination $liveKdPath -Force
+
+          # Keep DbgViewCLI outside the original probe's privateRoot: the probe cleanup deletes that directory.
+          $dbgViewRoot = Join-Path $env:RUNNER_TEMP 'acx10-dbgview-private'
+          New-Item -ItemType Directory -Path $dbgViewRoot -Force | Out-Null
+          $dbgViewCliPath = Join-Path $dbgViewRoot 'dbgviewcli64.exe'
+          Invoke-WebRequest 'https://live.sysinternals.com/dbgviewcli64.exe' -OutFile $dbgViewCliPath
+          $dbgViewSignature = Get-AuthenticodeSignature -FilePath $dbgViewCliPath
+          if ($dbgViewSignature.Status -ne 'Valid') { throw "DbgViewCLI Authenticode signature is not valid: $($dbgViewSignature.Status)" }
+          $dbgViewCliHash = (Get-FileHash -LiteralPath $dbgViewCliPath -Algorithm SHA256).Hash
+          $dbgViewCliVersion = (Get-Item -LiteralPath $dbgViewCliPath).VersionInfo.FileVersion
           New-Item -Path 'HKCU:\Software\Sysinternals\LiveKd' -Force | Out-Null
           New-ItemProperty -Path 'HKCU:\Software\Sysinternals\LiveKd' -Name EulaAccepted -PropertyType DWord -Value 1 -Force | Out-Null
           New-Item -ItemType Directory -Path 'C:\Symbols' -Force | Out-Null
           Add-Content -LiteralPath $env:GITHUB_ENV -Value "KD_PATH=$kdPath"
           Add-Content -LiteralPath $env:GITHUB_ENV -Value "LIVEKD_PATH=$liveKdPath"
+          Add-Content -LiteralPath $env:GITHUB_ENV -Value "DBGVIEWCLI_PATH=$dbgViewCliPath"
           Add-Content -LiteralPath $env:GITHUB_ENV -Value "_NT_SYMBOL_PATH=srv*C:\Symbols*https://msdl.microsoft.com/download/symbols"
           $toolInfo = [pscustomobject]@{
             KDPath = $kdPath
             KDVersion = (Get-Item -LiteralPath $kdPath).VersionInfo.FileVersion
             LiveKDPath = $liveKdPath
             LiveKDVersion = (Get-Item -LiteralPath $liveKdPath).VersionInfo.FileVersion
+            DbgViewCLIPath = $dbgViewCliPath
+            DbgViewCLIFileVersion = $dbgViewCliVersion
+            DbgViewCLISHA256 = $dbgViewCliHash
+            DbgViewCLISigner = $dbgViewSignature.SignerCertificate.Subject
+            DbgViewCLIKernelCapture = 'DbgV.sys is loaded temporarily by DbgViewCLI on this disposable hosted runner only.'
           }
           $toolInfo | ConvertTo-Json -Depth 4 | Set-Content (Join-Path $env:RUNNER_TEMP 'acx10-sample-bind-probe\report\debugger-tools.json') -Encoding utf8
 
-      - name: Run ACX 1.0 bind probe with full pre-install mirror and WDF type capture
+      - name: Run ACX 1.0 bind probe under DbgView kernel DbgPrint capture
         shell: pwsh
         run: |
-          & .\driver\AcxAudioCodecProbe\Invoke-AcxAudioCodecProbe.ps1
+          & .\driver\AcxAudioCodecProbe\Run-AcxAudioCodecProbe-WithDbgView.ps1
 
       - name: Final cleanup and private-key artifact guard
         if: always()
