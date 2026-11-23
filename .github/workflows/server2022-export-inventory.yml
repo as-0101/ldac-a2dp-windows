@@ -1,0 +1,57 @@
+name: Server 2022 export inventory
+on:
+  push:
+    branches: [research/server2022-export-inventory]
+  workflow_dispatch:
+jobs:
+  inventory:
+    runs-on: windows-2022
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - name: Collect Server 2022 module export tables (read-only)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $out = Join-Path $env:RUNNER_TEMP 'server2022-export-inventory'
+          New-Item -ItemType Directory -Path $out -Force | Out-Null
+          $os = Get-CimInstance Win32_OperatingSystem
+          @("Caption=$($os.Caption)","Version=$($os.Version)","BuildNumber=$($os.BuildNumber)","OSArchitecture=$($os.OSArchitecture)") | Set-Content (Join-Path $out 'os.txt')
+          $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
+          if (-not (Test-Path $vswhere)) { throw 'vswhere.exe not found on windows-2022 runner.' }
+          $vs = & $vswhere -latest -products '*' -requires Microsoft.Component.MSBuild -property installationPath
+          if (-not $vs) { throw 'Visual Studio installation not found.' }
+          $dumpbinRoot = Join-Path $vs 'VC\Tools\MSVC'
+          $dumpbinExe = Get-ChildItem $dumpbinRoot -Filter dumpbin.exe -Recurse | Where-Object FullName -Match '\\Hostx64\\x64\\dumpbin.exe$' | Select-Object -First 1
+          if (-not $dumpbinExe) { throw 'x64 dumpbin.exe not found.' }
+          "DUMPBIN=$($dumpbinExe.FullName)" | Add-Content (Join-Path $out 'os.txt')
+          $names = @('ntoskrnl.exe','hal.dll','ks.sys','WppRecorder.sys','SleepStudyHelper.sys','WDFLDR.SYS','ksecdd.sys','cng.sys','BthA2dp.sys','BtaMPM.sys')
+          $roots = @("$env:windir\System32","$env:windir\System32\drivers")
+          foreach ($name in $names) {
+            $file = $null
+            foreach ($root in $roots) {
+              $candidate = Join-Path $root $name
+              if (Test-Path $candidate) { $file = Get-Item $candidate; break }
+            }
+            if (-not $file) {
+              $block = "MODULE=$name" + [Environment]::NewLine + "STATUS=NOT_FOUND" + [Environment]::NewLine
+              Add-Content (Join-Path $out 'module-status.txt') $block
+              continue
+            }
+            $hash = (Get-FileHash $file.FullName -Algorithm SHA256).Hash
+            $version = (Get-Item $file.FullName).VersionInfo.FileVersion
+            $safe = $name -replace '[^A-Za-z0-9_.-]','_'
+            $dest = Join-Path $out "$safe.exports.txt"
+            & $dumpbinExe.FullName /nologo /exports $file.FullName 2>&1 | Set-Content $dest
+            $block = "MODULE=$name" + [Environment]::NewLine + "PATH=$($file.FullName)" + [Environment]::NewLine + "VERSION=$version" + [Environment]::NewLine + "SHA256=$hash" + [Environment]::NewLine + "EXPORT_REPORT=$dest" + [Environment]::NewLine
+            Add-Content (Join-Path $out 'module-status.txt') $block
+          }
+          Get-ChildItem $out -File | ForEach-Object { "{0} {1}" -f $_.Name,$_.Length }
+      - name: Upload inventory
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: server2022-export-inventory
+          path: ${{ runner.temp }}\server2022-export-inventory\**
+          if-no-files-found: warn
+          retention-days: 30
