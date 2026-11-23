@@ -24,6 +24,8 @@
 - **CI #17 complete:** [run 45158705058](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45158705058) inspected the official EWDK 20348.1 ISO and found no ACX 1.0 stub; no probe build or runtime test occurred. The green job is an inspection success, not a driver-bind success.
 - **Alternative architecture:** BlueCaster 3.0.0 (formerly A2DP Windows Bridge) uses a dedicated WinUSB Bluetooth adapter and user-mode A2DP stack, bypassing ACX. Its published support is Windows 10 22H2/Windows 11, not Server 2022; Server 2022 is untested. It does not add LDAC support to a headset that lacks LDAC.
 
+- **New Windows 10 reference evidence (2026-11-23):** the working OPPO Enco Buds2 path uses Microsoft classic A2DP profile driver `BthA2dp.sys` / service `BthA2dp`, installed via `microsoft_bluetooth_a2dp_src.inf`; Stereo and Hands-Free endpoints are healthy. Microsoft documents classic A2DP as a WDM profile driver communicating with BthPort; ACX is used in the documented LE Audio VSAP architecture. Server SKUs lack in-box Bluetooth support. See latest entries in [EVIDENCE](docs/agent/EVIDENCE.md), [PROJECT_STATE](docs/agent/PROJECT_STATE.md), and [NEXT_ACTIONS](docs/agent/NEXT_ACTIONS.md). Do not copy individual DLL/SYS files or import Win10 registry exports.
+
 ## Read in this order — do not read the whole history
 
 1. This page.
