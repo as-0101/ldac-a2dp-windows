@@ -214,7 +214,7 @@ The next evidence gate is the complete Windows 10 A2DP package and its dependenc
 The captured system-supplied A2DP INFs have no CatalogFile directive. Microsoft documents that system-supplied INFs are validated through system catalogs. Keep the source catalog identity/member proof as an open cross-SKU staging requirement, but do not repeat collection merely to find a package-local .cat.
 
 ### D-028 — Do not transplant or reverse-engineer Alternative A2DP Driver
-The vendor advertises LDAC, but the EULA restricts reverse engineering/decompilation/disassembly/modification/transfer and the license is hardware-bound. Published OS support is Windows 10 22H2 / Windows 11 21H2–25H2, not Server 2022. No binary transplant or reverse engineering. Any Server evaluation requires vendor authorization and a suitable license.
+The vendor advertises LDAC, but the EULA restricts reverse engineering/decompilation/disassembly/modification/transfer and the license is hardware-bound. Its OSS addendum lists AOSP components but does not identify the bundled files or grant rights to the proprietary driver; the project already has its own AOSP libldac source. Published OS support is Windows 10 22H2 / Windows 11 21H2–25H2, not Server 2022. No binary transplant or reverse engineering. Any Server evaluation requires vendor authorization and a suitable license.
 
 ### D-029 — Keep the two BthA2dp.sys copies separate
 The DriverStore package copy (282,624 bytes, SHA-256 5FBA...) and the separate System32 copy (279,040 bytes, SHA-256 0442...) have different import reports. Do not use the System32 import table as the dependency list for the DriverStore package binary. Reconcile exact paths, versions and catalog membership first.
