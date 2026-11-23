@@ -1,5 +1,9 @@
 # Windows 10 Bluetooth A2DP pipeline and Server 2022 adaptation
 
+> **Superseding update — 2026-11-24 01:42:** the 23:49 Win10 package archive already contains the common A2DP INF, source/sink INFs, btampm.inf, BthA2dp.sys and BtaMPM.sys. The earlier statement that the common INF was missing is superseded. The absence of a package-local .cat is not evidence of an unsigned inbox package: the system-supplied INFs have no CatalogFile directive and use system catalogs. The remaining package blocker is WIM/CBS component ownership and the exact source system catalog, not another Win10 export. See [WIN10_COMPONENT_AUDIT.md](WIN10_COMPONENT_AUDIT.md) for file-level identities, hashes, PE imports, licensing and unresolved items.
+
+
+
 **Snapshot:** 2026-11-23 22:36 Europe/Kyiv  
 **Scope:** A2DP stereo source only. HFP/microphone is out of scope.
 
@@ -23,8 +27,8 @@ Reference machine: `AS-KRM-WIN10`, Windows 10 x64, build 19045.
 | `BthA2dp.sys` size | `282,624` bytes | Recorded |
 | `BthA2dp.sys` SHA-256 | `5FBA5EE606AAC39D9CBDA51C0A14DBABBB3A9B47BBD8AC5485ED137B4F354EC3` | Recorded |
 | Common INF | `microsoft_bluetooth_a2dp.inf` | **Missing from current capture** |
-| Package catalog (.cat) | Matching catalog | **Missing from current capture** |
-| Complete Include/Needs chain | Source INF delegates to common INF; prior capture notes KS/WDMAudio/BtaMpm references | Incomplete |
+| Package-local catalog (.cat) | Not exported; system-supplied INFs have no CatalogFile directive | Source system catalog identity still pending |
+| Include/Needs chain | Common INF and btampm.inf captured; exact graph in component audit | Static closure confirmed; CBS owner pending |
 
 The source INF is not a self-contained package. Its `Include` / `Needs` relationship delegates installation to `microsoft_bluetooth_a2dp.inf`. The missing common INF and catalog are a hard stop for package installation. Exact common INF sections, service registrations, catalog membership, and package file list must be recovered first.
 
@@ -143,6 +147,22 @@ Source: [CMakeLists.txt](https://github.com/as-0101/ldac-a2dp-windows/blob/docs/
 
 The existing `Export-Win10-A2DP-Package.ps1` is 5,108 bytes / 95 lines and read-only. It scans `DriverStore\\FileRepository` and `%windir%\\INF` for a fixed list of A2DP/AVRCP/HFP INFs, copies matching DriverStore package directories and `BthA2dp.sys`, and writes direct Include/Needs, file version, SHA-256 and Authenticode status.
 
-It does not search WinSxS, recursively resolve all included INF files, inventory the complete DLL/COM provider set, parse PE imports/exports/delay imports, or verify catalog membership. It is sufficient to recover the missing common INF/package if present in those locations, but not sufficient for the full component audit. If the common INF/CAT is absent, extend the read-only search to WinSxS before staging.
+It does not search WinSxS, recursively resolve all included INF files, inventory the complete DLL/COM provider set, parse PE imports/exports/delay imports, or verify catalog membership. It is sufficient to recover the missing common INF/package if present in those locations, but not sufficient for the full component audit. The common INF is present. Use WinSxS/CBS only to establish component ownership and locate the system catalog; do not treat the absence of a package-local .cat as evidence that the inbox INF is unsigned.
 
 The broader Win10 collector with `-IncludeDriverPackages` and the Win10/Server comparison collector are already in Library. Use them before creating another collection tool.
+
+
+## 8. File-level audit result — 2026-11-24 01:42
+
+- Source INF matches remote A2DP Sink UUID 0x110B. The reverse-direction sink INF is not needed for playback to earbuds.
+- Common INF: Class=MEDIA, DriverVer 10.0.19041.4355; Include ks.inf, wdmaudio.inf, BtaMpm.inf; Needs KS.Registration, WDMAUDIO.Registration, BtaMPM.CopyFilesOnly and mssysfx.CopyFilesAndRegister; installs BthA2dp as a demand-start kernel service and registers KSCATEGORY_AUDIO interfaces.
+- btampm.inf: Class=SYSTEM, DriverVer 10.0.19041.5848; CopyFilesOnly dependency for BtaMPM.sys.
+- DriverStore BthA2dp.sys: 282,624 bytes, SHA-256 5FBA..., version 10.0.19041.4355; PE32+ x64, native kernel, no delay-import directory, direct imports from ntoskrnl.exe only in E-119.
+- A separate System32 BthA2dp.sys is 279,040 bytes, SHA-256 0442..., with 8 import descriptors / 144 imported functions. It is a different file and its imports must not be applied to the DriverStore package copy.
+- BtaMPM.sys: 43,008 bytes, SHA-256 DA5C..., version 10.0.19041.5848; imports ntoskrnl.exe, cng.sys and WppRecorder.sys. It is profile/multiprofile management, not an LDAC codec.
+- WMALFXGFXDSP.dll and SysFxUI.dll are system audio-effect/APO support from the MSSysFx path; they are not LDAC encoder DLLs.
+- Microsoft Windows 10 Classic Audio lists SBC and aptX Classic, not LDAC or AAC. OPPO Enco Buds2 lists AAC/SBC only. The common codec for this pair is SBC.
+- The published Alternative A2DP driver adds LDAC but is proprietary and license-restricted; no binary transplant or reverse engineering.
+
+Full file/PE map and source links: [WIN10_COMPONENT_AUDIT.md](WIN10_COMPONENT_AUDIT.md).
+
