@@ -1,3 +1,21 @@
+# Current continuation — 2026-11-23 evening (hardware codec audit)
+
+**New critical finding:** OPPO's official specifications for Enco Buds2 model ETE41 list AAC/SBC only, not LDAC. Confirm the physical model before spending more effort on LDAC. If it is ETE41, LDAC cannot work with this receiver regardless of driver implementation.
+
+1. Verify the exact headset model from its label/box. ETE41 is the Enco Buds2 earbud model; ETE42 is the charging-case model.
+2. If ETE41 is confirmed, stop LDAC-specific tests for this headset. Re-scope the first goal to stable AAC/SBC A2DP playback, or use a receiver whose official specs explicitly include LDAC.
+3. CI #17 / [run 45158705058](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45158705058) is complete. The official EWDK 20348.1 ISO contained no ACX 1.0 stub at the inspected paths (`EWDK_ACX10_STUB_FOUND=false`); no probe build or runtime test occurred. Do not describe the workflow's green status as a driver test. Stop the WDK 20348.1 branch unless a verified ACX 1.0 stub source is found.
+4. BlueCaster 3.0.0 (formerly A2DP Windows Bridge) is a credible alternate architecture: it takes a dedicated USB Bluetooth adapter through WinUSB and runs A2DP in user mode, bypassing ACX. Its published OS matrix is Windows 10 22H2 / Windows 11; Windows Server 2022 is not listed. Server 2022 compatibility is therefore UNTESTED. Do not install it on the physical host; first design an isolated test with a spare USB adapter.
+5. BlueCaster's verified-hardware list does not list OPPO Enco Buds2. It cannot add LDAC to ETE41; for LDAC tests use an LDAC-capable headset.
+6. Keep the physical server unchanged: no driver installation, certificate changes, BCD/security changes, Bluetooth rebind/restart, rollback, reboot, or OS update.
+
+Sources:
+- OPPO official Enco Buds2 specs: https://www.oppo.com/ua/accessories/oppo-enco-buds2/specs/
+- BlueCaster platform/setup/hardware: https://seiyafunaokajp.github.io/BlueCaster/ ; https://seiyafunaokajp.github.io/BlueCaster/setup.html ; https://seiyafunaokajp.github.io/BlueCaster/hardware.html
+- CI #17: https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45158705058
+
+---
+
 # Current continuation — 2026-11-23 (CI #16 complete; CI #17 WDK 20348.1 control)
 
 **Current status (2026-11-23 12:53 Kyiv):** CI #16 / [run 45084678951](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45084678951), commit `9da48c3ecd5921f8cab47888325b156dc9a536f3`, completed its build and hosted runtime harness. The minimal Microsoft AudioCodec-derived ACX 1.0 client still fails PnP Code 37 / `0xC000000D` before DriverEntry. The candidate INF was selected as `oem13.inf`. The CI #16 runtime PDB now confirms `WDF_CLASS_BIND_INFO` size 0x50 and `WDF_CLASS_BIND_INFO2` size 0x78, matching the ACX 1.0 descriptor size; the simple size-mismatch explanation is rejected. CI #17 / [run 45158705058](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45158705058), commit `79460f03492a54444473589dd142da864a703a73`, is still in build step 4 (official EWDK 20348.1 download/stub inspection/build); parser and project-XML gates passed, but no artifact or runtime result exists yet.
