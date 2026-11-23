@@ -516,3 +516,23 @@ Physical Server 2022 remains untouched: no driver install, certificate change, B
 - User supplied photos of the physical earbuds/case and the phone's connected-device settings. The phone UI identifies the connected product as **OPPO Enco Buds2**. The supplied photos show only OPPO branding on the hardware; they do not expose a printed ETE model code.
 - OPPO's official specification for Enco Buds2 identifies earbuds as ETE41 and case as ETE42, and explicitly lists Bluetooth codecs AAC/SBC only: https://www.oppo.com/ua/accessories/oppo-enco-buds2/specs/ and https://www.oppo.com/en/accessories/oppo-enco-buds2/specs/.
 - Therefore the user's headset is identified as Enco Buds2, whose official codec specification does not include LDAC. Treat it as AAC/SBC-only for this project. Do not ask the user to locate ETE41 printed on the earbuds; the photos do not show such a code and the official product page supplies the model mapping.
+
+
+
+## Investigation update — 2026-11-23 (Windows 10 reference archive reviewed)
+
+- Reference machine AS-KRM-WIN10: Windows 10 Enterprise x64 build 19045.
+- OPPO Enco Buds2 has a healthy Stereo endpoint and Hands-Free endpoints; all AudioEndpoint instances report `CM_PROB_NONE`.
+- The classic A2DP profile devnode is `BTHENUM\{0000110B-0000-1000-8000-00805F9B34FB}_LOCALMFG&0002\...`, bound to `microsoft_bluetooth_a2dp_src.inf` as Microsoft Bluetooth A2dp Source.
+- `BthA2dp.sys` is running, version 10.0.19041.4355, SHA-256 `5FBA5EE606AAC39D9CBDA51C0A14DBABBB3A9B47BBD8AC5485ED137B4F354EC3`.
+- HFP components `BthHFEnum`/`BthHFAud` and AVRCP transport are also running. BTAGService, BthAvctpSvc, bthserv, Audiosrv and AudioEndpointBuilder are running.
+- Microsoft documents classic A2DP as a Windows profile driver communicating with BthPort through WDM/IRPs. ACX is used in the documented Bluetooth LE Audio VSAP architecture, not as the classic A2DP profile-driver model.
+- Microsoft states Windows Server SKUs do not include in-box Bluetooth support. Therefore the leading investigation is missing classic Bluetooth/profile package support and INF/service binding on Server, not an isolated missing DLL.
+- Collector limitation: optional PnpDevice module localization errors produced an empty Relevant-PnP-Devices.csv; signed-driver inventory and endpoint dump remain valid. The actual A2DP INF and DriverStore package were not captured.
+
+### Next actions
+1. Run corrected read-only collector on Windows 10 and physical Server 2022 to capture like-for-like PnP, signed-driver, INF, DriverStore, service and binary inventories.
+2. Compare BthA2dp, BthPort, BthEnum, BthUSB, HFP, AVRCP and AudioEndpointBuilder presence, package metadata, OS target decorations, versions and hashes.
+3. Inspect catalog/signature and INF applicability before considering package reuse. Do not copy individual system binaries or import registry exports.
+4. Reassess the ACX-only custom driver direction against the classic A2DP WDM profile-driver architecture.
+5. Keep the physical Server unchanged; collection is read-only.
