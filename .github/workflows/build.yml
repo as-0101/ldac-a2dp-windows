@@ -7,6 +7,7 @@ on:
 
 jobs:
   core:
+    if: github.ref != 'refs/heads/experiment/acx10-wdfldr-dbgprint-livekd'
     name: Protocol core, codecs, service, tests
     runs-on: windows-2022
     steps:
@@ -16,6 +17,7 @@ jobs:
         run: build.cmd
 
   utility:
+    if: github.ref != 'refs/heads/experiment/acx10-wdfldr-dbgprint-livekd'
     name: Settings utility
     runs-on: windows-latest
     steps:
@@ -36,6 +38,7 @@ jobs:
           retention-days: 7
 
   driver:
+    if: github.ref != 'refs/heads/experiment/acx10-wdfldr-dbgprint-livekd'
     name: KMDF driver
     runs-on: windows-2022
     steps:
@@ -66,3 +69,8 @@ jobs:
           path: build/ldac-a2dp-oppo-server2022-test.zip
           if-no-files-found: error
           retention-days: 7
+
+  acx-wdfldr-dbgprint:
+    name: ACX 1.0 WDF loader DbgPrint LiveKD probe
+    if: github.ref == 'refs/heads/experiment/acx10-wdfldr-dbgprint-livekd'
+    uses: ./.github/workflows/acx10-wdfldr-dbgprint-livekd.yml

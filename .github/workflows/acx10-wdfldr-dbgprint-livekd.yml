@@ -1,9 +1,7 @@
 name: ACX 1.0 WDF loader DbgPrint capture via LiveKD
 
 on:
-  push:
-    branches:
-      - experiment/acx10-wdfldr-dbgprint-livekd
+  workflow_call:
   workflow_dispatch:
 
 permissions:
