@@ -87,7 +87,7 @@ CI #10 used SignTool verify /kp, which rejected the self-signed test certificate
 
 ## Official AudioCodec sample requirements and runtime boundary
 
-- Pinned Microsoft sample commit: `d49bb7d72f3651952b2b6e4ad28d14fe2247eb69`. Its solution uses VS2019 `16.0.31409.214`; project defaults to ACX 1.1 / KMDF 1.31, WindowsKernelModeDriver10.0, Windows Driver target, WPP/WPP Recorder and SamplesCommon. The INF uses MEDIA class, root hardware ID `ROOT\\AudioCodec`, and a 19041+ OS decoration; Server2022 build 20348 satisfies that INF target.
+- Pinned Microsoft sample commit: `d49bb7d72f3651952b2b6e4ad28d14fe2247eb69`. Its solution uses VS2019 `16.0.31409.214`; project defaults to ACX 1.1 / KMDF 1.31, WindowsKernelModeDriver10.0, Windows Driver target, WPP/WPP Recorder and SamplesCommon. The INF uses MEDIA class, root hardware ID `ROOT\AudioCodec`, and a 19041+ OS decoration; Server2022 build 20348 satisfies that INF target.
 - The probe is deliberately reduced: ACX 1.0 to match the observed Server2022 class module, KMDF 1.31, x64, MEDIA/root-enumerated, no codec topology. The full sample's ACX 1.1 default would not match the observed runtime class-module version 1.0.
 - Microsoft ACX documentation labels ACX 1.0 pre-release (Windows 10 1903 / KMDF 1.29) and ACX 1.1 the supported public version (Windows 10 2004 / KMDF 1.31); Server2022 is not explicitly listed in the ACX version table. Microsoft KMDF version history lists KMDF 1.31 drivers as running on Windows 10 2004 and later, but its 1.31 row does not explicitly name Server2022. The Server2022 WDF 1.31-client / 1.33-runtime pairing is directly observed in CI #10 and #16; it is not inferred from that documentation row. Microsoft also states that ACX binds to a specific KMDF version at runtime and that the driver fails to load if its required minimum/maximum ACX DDI is unavailable. ACX 1.0 support on Server2022 remains undocumented/legacy.
 
@@ -114,7 +114,7 @@ All tests run on disposable GitHub-hosted Windows Server 2022 runners. No driver
 
 - `Driver/AudioCodec.sln` at pinned commit `d49bb7d72f3651952b2b6e4ad28d14fe2247eb69` declares VS2019 `16.0.31409.214`.
 - `AudioCodec.vcxproj`: ACX 1.1 / KMDF 1.31 defaults; `WindowsKernelModeDriver10.0`; `DriverTargetPlatform=Windows Driver`; WPP and WPP Recorder; links `wpprecorder.lib`, ACX stub and `SamplesCommon.lib`.
-- `AudioCodec.inf`: `Class=MEDIA`, root ID `ROOT\\AudioCodec`, `NTamd64.10.0...19041` OS decoration, and KMDF version substitution. The INF target covers Server2022 build 20348, but the ACX version support table does not list Server2022.
+- `AudioCodec.inf`: `Class=MEDIA`, root ID `ROOT\AudioCodec`, `NTamd64.10.0...19041` OS decoration, and KMDF version substitution. The INF target covers Server2022 build 20348, but the ACX version support table does not list Server2022.
 - The official DriverEntry creates the WDF driver first, then calls `AcxDriverInitialize`. The full device-add path initializes ACX device-init, creates the WDF device, initializes the ACX device, then creates circuits. The probe intentionally stops at DriverEntry / an EvtDeviceAdd marker to isolate the bind stage.
 
 ### EWDK 20348.1 audit requirements
