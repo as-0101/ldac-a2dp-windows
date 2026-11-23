@@ -1,3 +1,28 @@
+# Current continuation — 2026-11-24 (A2DP dependency resolution)
+
+## What is now established
+- The Windows 10 reference package is captured. Do not ask the user to rerun the Windows 10 collector.
+- The common A2DP INF installs `BthA2dp.sys` and the `BthA2dp` kernel service, and registers A2DP source/sink audio interfaces.
+- Direct dependencies: `ks.inf`, `wdmaudio.inf`, `BtaMpm.inf`; Needs: `KS.Registration`, `WDMAUDIO.Registration`, `BtaMPM.CopyFilesOnly`, `mssysfx.CopyFilesAndRegister`.
+- Server 2022 has `ks.inf` and `wdmaudio.inf` in active roots, but the user's checks did not find `btampm.inf`, `mssysfx.inf`, `BthA2dp.sys`, or `BtaMPM.sys`. WinSxS file-level resolution is not yet complete.
+- Do not investigate or use Realtek RtkA2dp/RtkHfp; user confirmed these are residue from a lost USB dongle experiment and prior attempts did not produce audio.
+
+## Next actions — assistant-side
+1. Finish a static audit of all captured A2DP source/common/sink INF sections and compare architecture/OS decorations.
+2. Inspect Microsoft's official Bluetooth WDM profile-driver documentation and the documented audio dependency graph; distinguish core Bluetooth transport from profile/audio endpoint binding.
+3. Record findings and update project source-of-truth documents before asking for further user work.
+4. Do not assume Server compatibility from `NTamd64` alone. Do not manually copy SYS/DLL, import registry, or install on the physical host.
+
+## Next action — one read-only Server check
+If the Server WinSxS inventory is still needed, run a file-level search (not a directory-name search) for `btampm.inf`, `mssysfx.inf`, `BtaMPM.sys`, and `BthA2dp.sys`. This will close the only remaining local inventory gap. No Windows 10 action is required.
+
+## Safety
+- Physical Server remains unchanged.
+- No driver install, service/device restart, registry import, BCD/security/test-signing/certificate change, OS update/rollback, or reboot.
+- HFP/microphone remains outside the current SBC→LDAC milestone unless the user explicitly changes scope.
+
+---
+
 # Current continuation — 2026-11-23 23:49 Kyiv (Win10 package captured)
 
 The targeted Win10 package archive is usable; no repeat run is needed. It contains:
