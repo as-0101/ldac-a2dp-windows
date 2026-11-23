@@ -439,3 +439,15 @@ Interpretation: Windows 10's classic A2DP path is concretely a MEDIA-class WDM/K
 
 ### Updated interpretation
 The WinSxS file-level search closes the previously pending check from E-093/E-094: no matching A2DP/BtaMPM/MSSysFx files were found in the component store. The Server 2022 image therefore lacks the exact Windows 10 package payload/dependency files searched for. Next investigation should identify the Windows 10 component/package ownership and catalog/signing chain, then decide whether a catalog-complete, dependency-closed package can be evaluated in a disposable Server 2022 VM. This is not authorization to install on the physical Server, and it does not establish that cross-SKU installation is viable.
+
+
+## Evidence update — 2026-11-24 (INF package semantics and catalog model)
+
+| ID | Claim / observation | Status | Source |
+|---|---|---|---|
+| E-099 | The captured Windows 10 `btampm.inf` identifies Microsoft Bluetooth Multi-Profile Manager, Class=SYSTEM, DriverVer 10.0.19041.5848 (2025-04-28). Its only model install section is `BtaMPM.CopyFilesOnly`; comments explicitly state that this section exists so external INFs can indirectly reference its CopyFiles payload through Include/Needs. | CONFIRMED — DIRECT INF CONTENT | `Win10-A2DP-Package-20261123-234936.zip`, `WindowsINF\\btampm.inf`. |
+| E-100 | The captured `btampm.inf` and `microsoft_bluetooth_a2dp.inf` Version sections contain no `CatalogFile` directive. Microsoft documents that system-supplied INFs do not carry CatalogFile entries because Windows validates them against system-supplied catalogs. Therefore the missing .cat files in the collector archive are not evidence of an incomplete or unsigned inbox package. | CONFIRMED — INF + OFFICIAL DOC | Captured INF files; [INF Version Section](https://learn.microsoft.com/en-us/windows-hardware/drivers/install/inf-version-section). |
+| E-101 | `microsoft_bluetooth_a2dp.inf` also has no CatalogFile directive and directly requests `mssysfx.CopyFilesAndRegister` in addition to `KS.Registration`, `WDMAUDIO.Registration`, and `BtaMPM.CopyFilesOnly`. The current archive does not contain `wdmaudio.inf`, `ks.inf`, or a file named `mssysfx.inf`; the exact provider of the mssysfx section has therefore not yet been established from captured source files. | CONFIRMED — SCOPE QUALIFIED | Captured INF text and archive inventory. |
+
+### Interpretation
+The inbox package catalog model is now understood: the absence of a package-local CAT in the exported archive is expected for system-supplied INFs and must not be treated as a signing blocker. The dependency investigation remains open at the section-resolution level: identify which inbox INF/component exports `mssysfx.CopyFilesAndRegister`, and identify the servicing/package ownership of `BtaMPM.sys` on Windows 10. Do not generate a replacement catalog or modify INF files; either would change the signed package semantics. The exact Server 2022 file absence remains established only for the four searched filenames, not for equivalent sections/components under other names.
