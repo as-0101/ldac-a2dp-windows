@@ -1,3 +1,19 @@
+# Current next action — resolve common Microsoft A2DP INF dependency (2026-11-23)
+
+The newly received Win10 archive confirms the A2DP source INF is only a thin profile binding. It contains:
+- BTHENUM service GUID 0x110B match;
+- `Include=microsoft_bluetooth_a2dp.inf`;
+- `Needs=Common_BthA2dp_Install`, `.Services`, and `.Interfaces`.
+
+The current collector did **not** capture `microsoft_bluetooth_a2dp.inf`, its catalog, or its package directory. Do not attempt to install/copy only `microsoft_bluetooth_a2dp_src.inf` or BthA2dp.sys; that would omit the common install sections and signed package metadata.
+
+1. Run `Export-Win10-A2DP-Package.ps1` on the working Windows 10 machine as Administrator. It is read-only and exports any located A2DP/HFP/AVRCP INF package folders, catalogs, BthA2dp.sys, Include/Needs relationships, hashes and signature metadata.
+2. Inspect whether `microsoft_bluetooth_a2dp.inf` exists in DriverStore or Windows INF, and identify its referenced INF dependencies. Record catalog and OS decorations.
+3. Compare the complete package against Server 2022 component store/DriverStore. Verify Server applicability and signing before considering a disposable-VM installation test.
+4. Do not modify the physical Server 2022 host.
+
+Current Win10 source package facts and Server comparison are in E-044–E-048 of [EVIDENCE](docs/agent/EVIDENCE.md).
+
 # Current continuation — 2026-11-23 (physical Server inventory reviewed)
 
 **Decisive finding:** the physical Server pairs/enumerates OPPO and sees A2DP UUID 0x110B, but binds it to generic `bth.inf` / `BthGenericService.NT` ("Audio Sink Service"). This is a null-service placeholder that only sets `GenericDriverInstalled=1`. Unlike Win10, the Server DriverStore snapshot has no `microsoft_bluetooth_a2dp_src.inf` or `BthA2dp.sys`; no OPPO AudioEndpoint is created. The Server's radio/BTHPORT/BthEnum/BTHUSB are running, so the fault is now localized to A2DP profile-to-audio binding.
