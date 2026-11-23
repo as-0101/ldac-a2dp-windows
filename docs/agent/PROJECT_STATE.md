@@ -510,3 +510,9 @@ Physical Server 2022 remains untouched: no driver install, certificate change, B
 2. For the existing ETE41, investigate stable AAC/SBC playback. BlueCaster may be tested only as an isolated Server 2022 compatibility experiment with a spare USB adapter; do not install or rebind anything on the physical host.
 3. If LDAC remains a hard requirement, test with a receiver whose official specifications explicitly include LDAC, then evaluate BlueCaster's user-mode USB-radio architecture versus the current ACX kernel-driver route.
 4. Keep physical Server 2022 unchanged. No driver, certificate, BCD, security, Bluetooth-device, or OS changes have been made.
+
+
+### User confirmed headset identity — 2026-11-23
+- User supplied photos of the physical earbuds/case and the phone's connected-device settings. The phone UI identifies the connected product as **OPPO Enco Buds2**. The supplied photos show only OPPO branding on the hardware; they do not expose a printed ETE model code.
+- OPPO's official specification for Enco Buds2 identifies earbuds as ETE41 and case as ETE42, and explicitly lists Bluetooth codecs AAC/SBC only: https://www.oppo.com/ua/accessories/oppo-enco-buds2/specs/ and https://www.oppo.com/en/accessories/oppo-enco-buds2/specs/.
+- Therefore the user's headset is identified as Enco Buds2, whose official codec specification does not include LDAC. Treat it as AAC/SBC-only for this project. Do not ask the user to locate ETE41 printed on the earbuds; the photos do not show such a code and the official product page supplies the model mapping.
