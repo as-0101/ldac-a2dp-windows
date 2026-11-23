@@ -191,8 +191,8 @@ Only read-only evidence may be collected from the physical host. All staging/ins
 BlueCaster offers a ready user-mode LDAC/SBC stack over WinUSB, but its published platform support is Windows 10 22H2 / Windows 11, not Server 2022, and it takes ownership of the selected adapter. Evaluate only in a disposable VM with a suitable adapter if the Microsoft package path fails.
 
 ### Experiment — WIN10-A2DP-PACKAGE-AUDIT
-**Status:** BLOCKED pending read-only package export from `AS-KRM-WIN10`.  
-**Entry criteria:** source INF + common INF + catalog + complete package folders available.  
+**Status:** PARTIAL — source/common/sink INFs and BthA2dp/BtaMPM binaries are captured; exact source system catalog and CBS/component ownership remain pending.  
+**Entry criteria:** static INF/PE analysis can proceed from the existing 23:49 archive; WIM metadata and system-catalog identity are required before cross-SKU staging.  
 **Required outputs:** SHA-256; PE machine/version/imports/delay-imports/exports; API-set and OS assumptions; INF Include/Needs graph; catalog signature and member verification; Server 2022 counterpart comparison.  
 **No code or driver build is required for this audit.**
 
@@ -206,3 +206,25 @@ Alternative A2DP is a third-party kernel driver with official support for Window
 
 ### D-026 — No ACX/WDK bind-probe until the component/package path proves ACX is the blocker
 The next evidence gate is the complete Windows 10 A2DP package and its dependency closure. CI #248 and #255 remain closed historical evidence; no repeat bind-probe.
+
+
+## Decisions — 2026-11-24 01:42 (component audit)
+
+### D-027 — Do not treat the missing package-local .cat as an unsigned inbox package
+The captured system-supplied A2DP INFs have no CatalogFile directive. Microsoft documents that system-supplied INFs are validated through system catalogs. Keep the source catalog identity/member proof as an open cross-SKU staging requirement, but do not repeat collection merely to find a package-local .cat.
+
+### D-028 — Do not transplant or reverse-engineer Alternative A2DP Driver
+The vendor advertises LDAC, but the EULA restricts reverse engineering/decompilation/disassembly/modification/transfer and the license is hardware-bound. Published OS support is Windows 10 22H2 / Windows 11 21H2–25H2, not Server 2022. No binary transplant or reverse engineering. Any Server evaluation requires vendor authorization and a suitable license.
+
+### D-029 — Keep the two BthA2dp.sys copies separate
+The DriverStore package copy (282,624 bytes, SHA-256 5FBA...) and the separate System32 copy (279,040 bytes, SHA-256 0442...) have different import reports. Do not use the System32 import table as the dependency list for the DriverStore package binary. Reconcile exact paths, versions and catalog membership first.
+
+### D-030 — OPPO Enco Buds2 is not an LDAC-capable sink
+The official ETE41 specification lists AAC/SBC only. Keep it for the SBC milestone; use a different LDAC-capable receiver for any LDAC negotiation/audio test.
+
+### D-031 — WIM component ownership is the next evidence gate
+The Win10 package capture is already present. Do not rerun the exporter or repeat Server file searches. Obtain Windows 10 22H2 and Server 2022 WIM/component metadata, resolve CBS package identities/MUMs/manifests/system catalogs and compare applicability before staging anything.
+
+### D-032 — Keep APO/COM registrations separate from A2DP codec providers
+The mssysfx path registers Windows audio-effect APOs (user-mode COM DSP objects). WMALFXGFXDSP.dll and SysFxUI.dll are not LDAC encoder/decoder DLLs. No Microsoft LDAC codec-provider CLSID or user-mode codec DLL has been identified.
+
