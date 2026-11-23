@@ -1,3 +1,15 @@
+# Current continuation — 2026-11-24 (BtaMPM / MSSysFx dependency semantics)
+
+1. **Do not search for or assume a standalone `mssysfx.inf` package.** The captured common A2DP INF does not Include it; it asks for the section `mssysfx.CopyFilesAndRegister`. Find the actual provider of that section in the Win10 reference INF environment, beginning with full `wdmaudio.inf` and SetupAPI/INF section resolution.
+2. Treat `BtaMpm.inf` separately: it is explicitly Included by A2DP, Class=SYSTEM, and its `BtaMPM.CopyFilesOnly` section copies `BtaMPM.sys` to System32\\drivers. Server 2022 has no matching INF/SYS in the tested roots or WinSxS.
+3. On Win10 reference, collect the full text and hashes of `wdmaudio.inf`, `ks.inf`, `btampm.inf`, and relevant component package manifests/CAT metadata; determine the owner of `mssysfx.CopyFilesAndRegister` without assuming its filename.
+4. Compare the exact owning component/package and applicability with Server 2022 build 20348. Then decide whether a complete catalog-signed package can be tested in a disposable Server 2022 VM.
+5. No manual SYS/DLL copying, no registry import, no physical Server installation, no BCD/signature/security changes.
+
+Evidence: E-104–E-108 in [EVIDENCE.md](EVIDENCE.md). This corrects the earlier inference that absence of a file literally named `mssysfx.inf` proves the corresponding dependency is missing.
+
+---
+
 # Current continuation — 2026-11-24 (Bluetooth audio component ownership)
 
 1. **Do not repeat recursive WinSxS file searches.** Server 2022 returned no `btampm.inf`, `mssysfx.inf`, `BtaMPM.sys`, or `BthA2dp.sys` in both PowerShell recursive search and `where /r`.
