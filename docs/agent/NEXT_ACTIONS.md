@@ -1,3 +1,16 @@
+# Current continuation — 2026-11-24 (Server MSSysFx confirmed)
+
+1. MSSysFx dependency is closed: physical Server 2022 `wdmaudio.inf` contains `mssysfx.CopyFilesAndRegister`, `FX.CopyList`, and `FX.RegisterDlls`; both referenced DLLs exist in System32 at version 10.0.20348.5756. See E-112–E-113 in [EVIDENCE.md](EVIDENCE.md).
+2. Do not ask the user to repeat the MSSysFx check and do not search for a standalone `mssysfx.inf`.
+3. Continue with the package gap: establish the exact Windows 10 19045 and Server 2022 20348 component/package ownership and applicability of `BtaMpm.inf` / `BtaMPM.sys` and `microsoft_bluetooth_a2dp*.inf` / `BthA2dp.sys`. Distinguish CBS package omission from unsupported Server SKU.
+4. On the Win10 reference, use the already captured archives; no repeat collection unless a specific missing catalog/manifest is identified. Inspect component manifests/MUM/CAT ownership and compare against Server package manifests.
+5. Any install/load experiment remains limited to a disposable Server 2022 VM with complete catalog-signed package closure. No manual SYS/DLL copying, registry import, or installation on the physical Server.
+6. Physical Server remains unchanged. No driver install, service/device restart, BCD/security/signature changes, OS update, or reboot.
+
+Evidence: E-109–E-113 in [EVIDENCE.md](EVIDENCE.md).
+
+---
+
 # Current continuation — 2026-11-24 (MSSysFx provider identified)
 
 1. The `mssysfx.CopyFilesAndRegister` dependency is a section imported from `wdmaudio.inf`, not evidence of a separate `mssysfx.inf` file. Microsoft Learn's Bluetooth audio INF example explicitly pairs `Include=...wdmaudio.inf...` with `Needs=...mssysfx.CopyFilesAndRegister`.
