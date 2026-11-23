@@ -1,3 +1,16 @@
+# Current continuation — 2026-11-24 (Win10 package audit corrected)
+
+1. The Win10 19045 capture already contains the common A2DP INF, source/sink INFs, `btampm.inf`, `BthA2dp.sys`, and `BtaMPM.sys`. Do not rerun the targeted exporter just to obtain these files.
+2. The capture is not yet portable/catalog-complete: no CAT files were exported. Captured BthA2dp SYS has a valid Microsoft catalog signature on AS-KRM-WIN10, but the catalog file and complete CBS/component ownership metadata remain missing.
+3. Server 2022 MSSysFx dependency is confirmed present (E-112–E-113). The explicit package gap is BtaMPM/A2DP.
+4. Next research gate: obtain and inspect original Windows 10 22H2 and Server 2022 install image metadata (WIM indices, offline DriverStore INF/CAT presence, CBS package manifests/MUMs and component manifests) to establish whether the A2DP components are shipped only in Client images. Compare package identities and applicability; do not infer compatibility from `NTamd64`.
+5. In parallel, perform static analysis of the already captured Win10 INF/SYS package: INF decorations, Include/Needs closure, PE machine/imports/exports, file versions, and catalog membership once CAT is recovered. No need to ask for another Win10 collection unless a specific missing artifact is identified.
+6. If original WIM media is not available in the current environment, ask for the ISO/WIM only after finishing all analysis possible from the current archive. No physical Server changes; any staging/install test stays in a disposable Server 2022 VM.
+
+Evidence: E-109–E-118 in [EVIDENCE.md](EVIDENCE.md).
+
+---
+
 # Current continuation — 2026-11-24 (Server MSSysFx confirmed)
 
 1. MSSysFx dependency is closed: physical Server 2022 `wdmaudio.inf` contains `mssysfx.CopyFilesAndRegister`, `FX.CopyList`, and `FX.RegisterDlls`; both referenced DLLs exist in System32 at version 10.0.20348.5756. See E-112–E-113 in [EVIDENCE.md](EVIDENCE.md).
