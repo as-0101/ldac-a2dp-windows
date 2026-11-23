@@ -1,6 +1,6 @@
 # NEXT_ACTIONS — current priority
 
-**Updated:** 2026-11-23 22:36 Europe/Kyiv
+**Updated:** 2026-11-23 23:40 Europe/Kyiv
 
 ## Only current external dependency
 
@@ -14,6 +14,14 @@ Command (elevated PowerShell, from the script directory):
 Expected output: source and common A2DP INFs, complete containing DriverStore package directories, catalogs, `BthA2dp.sys`, INF Include/Needs report, file/version/signature inventory, SHA-256 manifest, and ZIP. The script is read-only. Do not run it on the physical Server 2022 host.
 
 If the output does not contain `microsoft_bluetooth_a2dp.inf` plus its catalog, stop before installation and extend the read-only search to WinSxS. Do not manually copy only `BthA2dp.sys`.
+
+## Exporter v1 audit — what it does and does not collect
+
+The existing `Export-Win10-A2DP-Package.ps1` was inspected (Library file ID `file_00000000ae6c82108239f67bdde421be`, 5,108 bytes). It searches DriverStore and `%windir%\\INF`, copies matching package directories, captures `BthA2dp.sys`, and writes hashes, file versions, Authenticode status and the direct INF Include/Needs list. It is read-only.
+
+It does **not** search WinSxS, recursively resolve every included INF, enumerate all codec/transport/provider DLLs or COM registrations, parse PE imports/exports/delay-imports, or verify CAT membership. If the common INF or CAT is absent, expand the read-only search to WinSxS; do not install or copy a partial package.
+
+The wider collectors already in Library are available if broader system context is needed: `Collect-Win10-Bluetooth-A2DP.ps1 -IncludeDriverPackages` and `Collect-Bluetooth-A2DP-Compare.ps1`. Their output still needs offline PE/catalog analysis. Do not ask for the old archives again; the only missing deliverable is the complete targeted Win10 package export.
 
 ## Work after the package arrives
 

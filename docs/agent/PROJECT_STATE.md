@@ -1,4 +1,4 @@
-# Current state — 2026-11-23 22:36 Europe/Kyiv
+# Current state — 2026-11-23 23:40 Europe/Kyiv
 
 **Priority reset:** the project is now on the Windows 10 A2DP package-adaptation path. No new Bluetooth/ACX driver work is authorized as the next step.
 
@@ -635,3 +635,13 @@ Win10 Kernel-Drivers.csv shows BthA2dp and other demand-start kernel drivers as 
 
 ### Next action
 Run targeted read-only `Export-Win10-A2DP-Package.ps1` to recursively locate/copy every available A2DP-related INF package directory (especially `microsoft_bluetooth_a2dp.inf`), catalogs and BthA2dp.sys, and emit Include/Needs dependency list plus hashes/signature metadata. Then inspect INF decorations and package catalog before any Server-side experiment. No Server changes.
+
+## 2026-11-23 23:40 — component-path audit
+
+- The targeted Win10 exporter was inspected directly from Library. It is read-only and can recover named A2DP INF package folders from DriverStore / Windows INF locations, but it is not a full component-closure collector. It does not search WinSxS, enumerate arbitrary codec/provider DLLs or COM registrations, parse PE imports/exports/delay-imports, or verify CAT membership.
+- Existing broader collectors are already in Library: `Collect-Win10-Bluetooth-A2DP.ps1` with optional `-IncludeDriverPackages`, and `Collect-Bluetooth-A2DP-Compare.ps1`. They add PnP, service, registry and selected system-driver context; PE and catalog verification remain offline tasks.
+- Current repository CMake explicitly builds `ldacBT_enc` and `ldacBT_abr` as STATIC libraries and links them into `ldacsvc_core`; `service/encoder.cpp` calls the encoder API. This is source/static code, not a Windows 10 LDAC DLL.
+- Microsoft documents Windows 10 A2DP codecs as SBC and aptX Classic; its profile driver is selected by INF/PnP and communicates with `Bthport.sys` using WDM IRPs/BRBs. No user-mode codec-provider DLL extension point is documented in that model.
+- Official Alternative A2DP 1.8.3 supports Windows 10 22H2 and Windows 11 21H2–25H2; its FAQ requires the Windows 10/11 inbox Bluetooth stack and per-device driver installation. It is a third-party driver, not a DLL, and does not list Server 2022.
+- BlueCaster 3.0.4 is an existing open-source alternative using WASAPI capture, codec encoders, BTstack A2DP/AVDTP/L2CAP and WinUSB. It requires a USB adapter and takes ownership of it; its published support is Windows 10 22H2 / Windows 11, not Server 2022.
+- No new build, CI run, driver install, physical-host query, or host mutation occurred in this pass. The package-export dependency remains open.

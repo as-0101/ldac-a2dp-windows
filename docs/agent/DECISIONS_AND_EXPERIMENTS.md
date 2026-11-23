@@ -5,8 +5,8 @@
 | ID | Decision | Rationale | State |
 |---|---|---|---|
 | D-001 | Keep the physical user's Server 2022 unchanged during investigation. | Avoid risking production Bluetooth/audio and system stability. | ACTIVE |
-| D-002 | Keep ACX version as the isolated experimental variable. | Do not simultaneously alter DriverTargetPlatform, INF matching or KMDF version. | ACTIVE |
-| D-003 | Keep `DriverTargetPlatform=Universal` for the ACX 1.0 experiment. | Avoid confounding variables; current evidence does not make Universal the leading cause. | ACTIVE |
+| D-002 | Keep ACX version as the isolated experimental variable. | Historical experiment control; no longer the current project path. | PARKED — HISTORICAL |
+| D-003 | Keep `DriverTargetPlatform=Universal` for the ACX 1.0 experiment. | Historical experiment control; no longer the current project path. | PARKED — HISTORICAL |
 | D-004 | Do not merge draft PR #2. | It is a diagnostic branch until physical binding behavior is known. | ACTIVE |
 | D-005 | Preserve Notion journal append-only. | Retain all historical reasoning and failed experiments. | ACTIVE |
 
@@ -195,3 +195,14 @@ BlueCaster offers a ready user-mode LDAC/SBC stack over WinUSB, but its publishe
 **Entry criteria:** source INF + common INF + catalog + complete package folders available.  
 **Required outputs:** SHA-256; PE machine/version/imports/delay-imports/exports; API-set and OS assumptions; INF Include/Needs graph; catalog signature and member verification; Server 2022 counterpart comparison.  
 **No code or driver build is required for this audit.**
+
+## Decisions — component-path audit, 2026-11-23 23:40
+
+### D-024 — Do not treat an LDAC DLL as a Microsoft A2DP plug-in without a proven interface
+Microsoft documents a PnP-selected WDM A2DP profile driver communicating with BthPort through IRPs/BRBs, and Windows 10's inbox codecs as SBC/aptX Classic. No user-mode codec-provider DLL hook is documented. A standalone LDAC encoder is not sufficient to extend `BthA2dp.sys`.
+
+### D-025 — Keep Alternative A2DP and BlueCaster as fallback architectures only
+Alternative A2DP is a third-party kernel driver with official support for Windows 10 22H2 / Windows 11, not Server 2022. BlueCaster is a user-mode BTstack/WinUSB stack for Windows 10 22H2 / Windows 11 that takes over a USB adapter. Neither is a Microsoft inbox DLL.
+
+### D-026 — No ACX/WDK bind-probe until the component/package path proves ACX is the blocker
+The next evidence gate is the complete Windows 10 A2DP package and its dependency closure. CI #248 and #255 remain closed historical evidence; no repeat bind-probe.

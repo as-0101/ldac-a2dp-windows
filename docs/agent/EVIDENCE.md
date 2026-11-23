@@ -358,3 +358,37 @@ Next: targeted Win10 capture must resolve every INF Include/Needs dependency, es
 - **Observation:** OpenA2DP describes itself as pre-alpha and its driver path is still experimental / not validated with real headphones.
 - **Impact:** Do not switch to another custom kernel-driver project while the existing Microsoft package path remains unexplored.
 - **Source:** https://github.com/RafiMota/open-a2dp
+
+### E-085 — Targeted Win10 package exporter inspected
+
+- **Status:** CONFIRMED — STATIC_ANALYSIS
+- **Observation:** `Export-Win10-A2DP-Package.ps1` (Library file ID `file_00000000ae6c82108239f67bdde421be`, Library ID `libfile_c5e086cd16e0819183aa8607e6c40e94`, 5,108 bytes / 95 lines) only searches DriverStore and `%windir%\\INF` for its fixed INF list. It copies matching package directories and `BthA2dp.sys`, and emits direct Include/Needs, file versions, hashes and Authenticode status.
+- **Limitations:** no WinSxS search, recursive Include closure, full DLL/COM-provider inventory, PE imports/exports/delay-imports, or CAT membership verification.
+- **Impact:** useful for recovering the missing common INF/package; not sufficient by itself for the requested full component map.
+
+### E-086 — Existing broader Win10 collectors are available
+
+- **Status:** CONFIRMED — LIBRARY_SOURCE
+- **Observation:** `Collect-Win10-Bluetooth-A2DP.ps1` (file ID `file_00000000f4b08210aad8e3d4dd2e07eb`) supports `-IncludeDriverPackages` and records wider PnP/service/registry/system-driver context. `Collect-Bluetooth-A2DP-Compare.ps1` (file ID `file_00000000187482108c2566e9f9e8147f`) captures Win10/Server comparison data.
+- **Impact:** do not create another collector before using these existing scripts; they do not replace offline PE and catalog analysis.
+
+### E-087 — Microsoft A2DP stack is a WDM profile-driver path; no inbox LDAC codec
+
+- **Status:** CONFIRMED — OFFICIAL_DOCUMENTATION
+- **Observation:** Microsoft lists Windows 10 A2DP codecs as SBC and aptX Classic; its Bluetooth stack loads a profile driver by PnP/INF and the profile driver communicates with `Bthport.sys` through WDM IRPs/BRBs. Windows Server SKUs are documented as lacking in-box Bluetooth support.
+- **Impact:** the Microsoft package is the SBC transport/profile route. A standalone LDAC DLL cannot be assumed to plug into `BthA2dp.sys`; no user-mode codec-provider DLL hook is documented.
+- **Sources:** [Bluetooth Classic audio](https://learn.microsoft.com/en-us/windows-hardware/drivers/bluetooth/bluetooth-classic-audio), [Using the Bluetooth driver stack](https://learn.microsoft.com/en-us/windows-hardware/drivers/bluetooth/using-the-bluetooth-driver-stack), [Previous Windows Bluetooth support](https://learn.microsoft.com/en-us/windows-hardware/drivers/bluetooth/bluetooth-support-in-previous-windows-versions).
+
+### E-088 — Alternative A2DP is a Windows 10-compatible third-party driver, not a DLL
+
+- **Status:** CONFIRMED — OFFICIAL_VENDOR_DOCUMENTATION
+- **Observation:** official version history lists Alternative A2DP 1.8.3 for Windows 10 22H2 and Windows 11 21H2–25H2. The vendor FAQ requires the Windows 10/11 inbox Bluetooth stack and per-device driver installation; Server 2022 is not in the supported matrix.
+- **Impact:** possible licensed fallback/reference if its package is available, but not a Microsoft inbox codec DLL and not a supported Server 2022 solution.
+- **Sources:** [Version history](https://www.bluetoothgoodies.com/a2dp/version-history/), [FAQ](https://www.bluetoothgoodies.com/a2dp/faq/).
+
+### E-089 — BlueCaster is an existing user-mode alternative, not a Microsoft-stack plug-in
+
+- **Status:** CONFIRMED — UPSTREAM_SOURCE
+- **Observation:** BlueCaster 3.0.4 uses WASAPI capture, codec encoders including LDAC, BTstack A2DP/AVDTP/L2CAP and WinUSB. It takes over a USB Bluetooth adapter; published requirements are Windows 10 22H2 / Windows 11, not Server 2022.
+- **Impact:** keep as a fallback for a disposable VM with a dedicated USB adapter; do not confuse it with a Windows 10 LDAC DLL or the Microsoft A2DP stack.
+- **Source:** [BlueCaster repository](https://github.com/SeiyaFunaokaJP/BlueCaster), [architecture](https://seiyafunaokajp.github.io/BlueCaster/architecture).

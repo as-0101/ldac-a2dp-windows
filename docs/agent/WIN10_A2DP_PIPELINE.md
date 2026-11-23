@@ -110,3 +110,39 @@ Do not claim this is the current live state; the physical server was not queried
 - CI #248 and CI #255 are closed historical evidence; do not repeat them.
 - No code changes on `docs/project-source-reorg`; documentation only.
 - No physical Server 2022 driver install, device restart, BCD/test-signing/security change, certificate change, OS update/rollback, or installer/rollback script execution.
+
+## 7. Component availability and existing alternatives — 2026-11-23 23:40
+
+### 7.1 Microsoft inbox A2DP is a profile-driver path, not a documented codec-DLL plug-in system
+
+Microsoft's documented flow is: Bluetooth stack discovers paired devices, PnP selects a profile driver using device IDs and INF registration, and the profile driver sends IRPs/BRBs down to `Bthport.sys`. Microsoft documents Windows 10 A2DP codecs as SBC and aptX Classic; it does not list LDAC or a separate inbox LDAC codec DLL. Therefore:
+
+- `BthA2dp.sys` is the Microsoft A2DP profile/transport driver, not an LDAC codec DLL.
+- The source/common INF package and its catalog are required for a valid profile binding; do not copy only the SYS.
+- A standalone LDAC encoder DLL would not automatically be loaded by the Microsoft profile driver. No public user-mode codec-provider DLL hook is documented in the Microsoft driver-stack model.
+- Any private codec interface would need to be proven from the actual binary/import/export/registry evidence; it must not be assumed.
+
+Sources: [Bluetooth Classic audio](https://learn.microsoft.com/en-us/windows-hardware/drivers/bluetooth/bluetooth-classic-audio), [Using the Bluetooth driver stack](https://learn.microsoft.com/en-us/windows-hardware/drivers/bluetooth/using-the-bluetooth-driver-stack), [Bluetooth support in previous Windows versions](https://learn.microsoft.com/en-us/windows-hardware/drivers/bluetooth/bluetooth-support-in-previous-windows-versions).
+
+### 7.2 Existing third-party LDAC paths
+
+| Implementation | What it actually is | Published platform / constraints | Project disposition |
+|---|---|---|---|
+| Alternative A2DP Driver 1.8.3 | Third-party signed A2DP kernel driver, not a codec DLL; uses the Windows 10/11 inbox Bluetooth stack and is installed per A2DP device | Official matrix: Windows 10 22H2 and Windows 11 21H2–25H2; no Server 2022 entry. Requires administrator privileges for package/device-driver changes. | Keep as a licensed reference/fallback if its package is available; do not assume Server compatibility. |
+| BlueCaster 3.0.4 | Open-source user-mode stack: WASAPI capture → codec encoders (including LDAC) → BTstack A2DP/AVDTP/L2CAP → WinUSB → USB Bluetooth adapter | Windows 10 22H2 / Windows 11; requires a USB adapter and takes it over from Windows while active. Server 2022 is not listed. | Fallback only, preferably disposable VM + dedicated USB adapter; not a Microsoft-stack plug-in. |
+
+Official sources: [Alternative A2DP version history](https://www.bluetoothgoodies.com/a2dp/version-history/), [Alternative A2DP FAQ](https://www.bluetoothgoodies.com/a2dp/faq/), [BlueCaster source](https://github.com/SeiyaFunaokaJP/BlueCaster), [BlueCaster architecture](https://seiyafunaokajp.github.io/BlueCaster/architecture).
+
+### 7.3 Project-owned LDAC code is static source, not a Windows 10 DLL
+
+The repository CMake file declares `ldacBT_enc` and `ldacBT_abr` as `STATIC` libraries and links them into `ldacsvc_core`. `service/encoder.cpp` calls the AOSP LDAC encoder API. This proves the current project owns reusable encoder source, but it does not establish a DLL that Microsoft `BthA2dp.sys` can load.
+
+Source: [CMakeLists.txt](https://github.com/as-0101/ldac-a2dp-windows/blob/docs/project-source-reorg/CMakeLists.txt), [service/encoder.cpp](https://github.com/as-0101/ldac-a2dp-windows/blob/docs/project-source-reorg/service/encoder.cpp).
+
+### 7.4 Targeted exporter audit
+
+The existing `Export-Win10-A2DP-Package.ps1` is 5,108 bytes / 95 lines and read-only. It scans `DriverStore\\FileRepository` and `%windir%\\INF` for a fixed list of A2DP/AVRCP/HFP INFs, copies matching DriverStore package directories and `BthA2dp.sys`, and writes direct Include/Needs, file version, SHA-256 and Authenticode status.
+
+It does not search WinSxS, recursively resolve all included INF files, inventory the complete DLL/COM provider set, parse PE imports/exports/delay imports, or verify catalog membership. It is sufficient to recover the missing common INF/package if present in those locations, but not sufficient for the full component audit. If the common INF/CAT is absent, extend the read-only search to WinSxS before staging.
+
+The broader Win10 collector with `-IncludeDriverPackages` and the Win10/Server comparison collector are already in Library. Use them before creating another collection tool.

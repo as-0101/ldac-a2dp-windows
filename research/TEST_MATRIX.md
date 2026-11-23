@@ -61,3 +61,9 @@ The stages below are independent. A pass at one stage never proves a later stage
 8. Only with a different LDAC-capable sink: LDAC negotiation, then real LDAC media/audio proof.
 
 No stage is marked passed by this documentation update; no runtime test was executed.
+
+| T-031 | Win10 exporter static audit | Library source `Export-Win10-A2DP-Package.ps1`, 5,108 bytes / 95 lines | Confirm exact collection scope and safety | Read-only; scans DriverStore and Windows INF; copies matching package directories and BthA2dp.sys; records direct Include/Needs, versions, hashes and signature status | CONFIRMED — STATIC_ANALYSIS | Treat as targeted package recovery only; WinSxS/DLL/COM/PE/CAT-member closure is not covered |
+| T-032 | Complete Win10 A2DP package export | `AS-KRM-WIN10`, Windows 10 x64 build 19045 | Source + common INF + CAT + complete package folders | Not yet produced in this run | BLOCKED — EXTERNAL_COLLECTION | Run the existing read-only exporter on the Win10 reference machine |
+| T-033 | Codec/transport/provider DLL and COM inventory | `AS-KRM-WIN10` | Candidate DLLs, PE machine/imports/delay-imports/exports, COM registration, hashes and OS assumptions | No complete inventory captured; no LDAC DLL is documented in the Microsoft inbox codec set | BLOCKED — EXTERNAL_COLLECTION / STATIC_ANALYSIS | After package recovery, inspect all collected binaries and resolve any missing DLL/COM dependencies |
+
+No service, device, profile-driver, endpoint, SBC negotiation, audio-stream, LDAC negotiation, or LDAC audio test was run in this research pass.

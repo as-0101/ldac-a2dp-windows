@@ -151,3 +151,13 @@ Archive SHA-256 is recorded only where explicitly stated in prior project eviden
 - Current project AOSP encoder source: `third_party/libldac`, called from `service/encoder.cpp`; not a Win10 DLL.
 - Alternative A2DP 1.8.3.1: documented `AltA2DP.sys` / `oem96.inf` on a separate Win11 laptop; no package binary currently indexed in Library.
 - BlueCaster: external user-mode WinUSB/BTstack project; not copied into this repository or Library.
+
+## Collector audit — 2026-11-23 23:40
+
+| Existing file | File ID | Library ID | Size | Audited scope / limitation |
+|---|---|---|---:|---|
+| `Export-Win10-A2DP-Package.ps1` | `file_00000000ae6c82108239f67bdde421be` | `libfile_c5e086cd16e0819183aa8607e6c40e94` | 5,108 bytes | Read-only targeted A2DP INF/package capture; DriverStore + Windows INF only; no WinSxS, full DLL/COM scan, PE import/export parse, or CAT member verification |
+| `Collect-Win10-Bluetooth-A2DP.ps1` | `file_00000000f4b08210aad8e3d4dd2e07eb` | `libfile_92cbe93ca6088191af6e314201155e50` | 14,623 bytes | Existing broad read-only collector; optional `-IncludeDriverPackages`; captures PnP/service/registry and selected system-driver context |
+| `Collect-Bluetooth-A2DP-Compare.ps1` | `file_00000000187482108c2566e9f9e8147f` | `libfile_d1b948264d648191b4c9041736c4f387` | 7,815 bytes | Existing Win10/Server comparison collector; does not replace PE/catalog audit |
+
+No new archive bytes were produced or re-hashed in this pass. The existing Win10 package capture remains incomplete until the common INF, CAT and full package folder are exported.

@@ -47,3 +47,11 @@ CI #16 Library copies were independently re-materialized and matched against the
 - No physical-host action or runtime installation was performed.
 - Next build/test work is deferred until the complete Windows 10 A2DP source/common INF package and catalog are captured and audited.
 - CI #248 and CI #255 remain closed historical ACX evidence. No ACX bind-probe is the next step.
+
+## 2026-11-23 23:40 — package-path research pass
+
+- No driver or service build was run.
+- No CI run ID or build artifact was created.
+- No source code or driver package was changed.
+- The pass was limited to read-only source inspection and official documentation review.
+- CI #248 and #255 remain closed historical ACX evidence; no ACX bind-probe is scheduled next.
