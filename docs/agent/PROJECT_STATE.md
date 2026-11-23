@@ -1,3 +1,34 @@
+# Current state — 2026-11-23 22:36 Europe/Kyiv
+
+**Priority reset:** the project is now on the Windows 10 A2DP package-adaptation path. No new Bluetooth/ACX driver work is authorized as the next step.
+
+## Current result
+
+- Windows 10 reference machine `AS-KRM-WIN10` has a Microsoft A2DP source profile binding through `microsoft_bluetooth_a2dp_src.inf` version `10.0.19041.1`.
+- The captured `BthA2dp.sys` is version `10.0.19041.4355`, size `282,624`, SHA-256 `5FBA5EE606AAC39D9CBDA51C0A14DBABBB3A9B47BBD8AC5485ED137B4F354EC3`.
+- The source INF is a thin binding and delegates through `Include` / `Needs` to `microsoft_bluetooth_a2dp.inf`. That common INF and the package catalog are missing from the current capture. No package installation or compatibility conclusion is allowed until they are recovered.
+- The read-only exporter `Export-Win10-A2DP-Package.ps1` is already in Library. Its output is the only current external dependency.
+- Microsoft's Windows 10 built-in A2DP codecs are SBC and classic aptX; no inbox LDAC or AAC. OPPO Enco Buds2 ETE41 supports AAC/SBC only, so SBC is the first and only common codec for this receiver.
+- Windows Server 2022 build 20348 / UBR 5761 is not an in-box Bluetooth-supported SKU. The latest recorded Server snapshot is 2026-11-23 20:41 Kyiv, not a live check. It shows the 0x110B A2DP service enumerating through generic `bth.inf` / `BthGenericService`, with no Microsoft A2DP source package. The last recorded custom target node was `oem75.inf`, version `0.2.325.1600`, Code 37 / `0xC000000D`.
+- The current repository's LDAC encoder is AOSP `third_party/libldac`, built as static code and used by `service/encoder.cpp`; it is not a Windows 10 LDAC DLL. The current `LdacA2dp.sys` is a custom replacement profile driver with its own AVDTP/L2CAP path and ACX 1.1 endpoint. It is parked.
+- The only documented third-party LDAC driver in project evidence is Alternative A2DP Driver 1.8.3.1 on a separate Windows 11 laptop (`AltA2DP.sys`, `oem96.inf`); it is a kernel driver, not a DLL, and its package is not in the Windows 10 archive. BlueCaster is a user-mode WinUSB/BTstack alternative, but its supported OS matrix is Windows 10/11, not Server 2022.
+
+## Current gate
+
+**Blocked before package staging:** complete source/common INF + catalog not yet captured. No Server 2022 package install, profile-driver load, endpoint, SBC negotiation, or actual audio test was run in this cycle.
+
+## Next action
+
+Run the existing read-only `Export-Win10-A2DP-Package.ps1` on `AS-KRM-WIN10`; then audit the full package before any disposable-VM test.
+
+## Safety / paused work
+
+No physical Server 2022 changes. No driver installation, device restart, BCD/security/test-signing changes, certificate changes, OS update/rollback, or install/upgrade/rollback script execution. CI #248 and #255 are closed historical evidence; no new ACX bind-probe. All code changes, if later proven necessary, must be on a separate experimental branch; documentation stays on `docs/project-source-reorg`.
+
+> All following state entries are historical snapshots. This section supersedes their older ACX-first next steps.
+
+---
+
 ## Investigation update — 2026-11-22 20:28 Kyiv
 
 ### WDF class-binding stage

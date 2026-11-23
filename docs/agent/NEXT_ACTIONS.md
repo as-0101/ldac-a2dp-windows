@@ -1,3 +1,40 @@
+# NEXT_ACTIONS — current priority
+
+**Updated:** 2026-11-23 22:36 Europe/Kyiv
+
+## Only current external dependency
+
+Run the already available read-only `Export-Win10-A2DP-Package.ps1` on the Windows 10 reference machine (`AS-KRM-WIN10`). The current Win10 archives are not a complete installable package: the source INF is present, but `microsoft_bluetooth_a2dp.inf` and its catalog are missing.
+
+Library path: `/Bluetooth на Windows Sever 2022/Export-Win10-A2DP-Package.ps1`  
+Command (elevated PowerShell, from the script directory):
+
+`powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\Export-Win10-A2DP-Package.ps1"`
+
+Expected output: source and common A2DP INFs, complete containing DriverStore package directories, catalogs, `BthA2dp.sys`, INF Include/Needs report, file/version/signature inventory, SHA-256 manifest, and ZIP. The script is read-only. Do not run it on the physical Server 2022 host.
+
+If the output does not contain `microsoft_bluetooth_a2dp.inf` plus its catalog, stop before installation and extend the read-only search to WinSxS. Do not manually copy only `BthA2dp.sys`.
+
+## Work after the package arrives
+
+1. Verify every INF, CAT, SYS, DLL and related file: SHA-256, version resource, PE machine, imports, delay imports, exports, API-set references, OS assumptions, Authenticode/catalog signature, and catalog membership.
+2. Resolve the full INF `Include` / `Needs` graph and service/interface registrations.
+3. Compare every required binary with its Server 2022 counterpart and the Server runtime.
+4. Create a disposable Server 2022 VM test plan. Do not install anything on the physical host.
+5. Test in order: service start → BTHENUM enumeration → profile driver load → A2DP endpoint → SBC negotiation → actual SBC stream/audio.
+6. Only after SBC passes, test LDAC with a different LDAC-capable receiver. Enco Buds2 is AAC/SBC-only.
+
+## Parked
+
+- ACX AudioCodec bind-probe and all new ACX/WDK bind experiments.
+- New Bluetooth/A2DP driver development.
+- Any physical Server 2022 driver install, device restart, BCD/test-signing/security/certificate change, OS update/rollback, or installer/upgrade/rollback script.
+- HFP/microphone work.
+
+> Historical action lists below are preserved for traceability. This section supersedes their old ACX next steps and any request to re-run already completed collectors.
+
+---
+
 # Current next action — resolve common Microsoft A2DP INF dependency (2026-11-23)
 
 The newly received Win10 archive confirms the A2DP source INF is only a thin profile binding. It contains:

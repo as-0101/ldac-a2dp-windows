@@ -33,3 +33,31 @@ For every new test record: unique ID, local date/time, branch + commit + run ID,
 
 | T-021 | WDK 20348.1 / VS2019 toolchain-bundle control | CI #17 / run 45158705058, branch `experiment/acx10-wdk20348-control`, commit `79460f03492a54444473589dd142da864a703a73` | Determine whether the Server 2022-era EWDK contains ACX 1.0 headers/stub and KMDF 1.31 libraries, then build the same probe | Parser/XML gates passed; EWDK download/stub inspection/build step still in progress at 12:53 Kyiv; no artifact or runtime test yet | UNTESTED — BUILD_ONLY | Verify actual EWDK entrypoint and environment, compare stub hash/descriptor, and run hosted bind test only if build succeeds. |
 | T-022 | CI #16 artifact integrity | GitHub artifact downloads vs durable Library copies | Verify byte-identical preservation | Build artifact 14779061024 and runtime artifact 14779107472 match Library copies; build ZIP corrected to SHA-256 `d332fc338cbd8c4aa41f56338bb68104059b2956558067362d69b495a0ba8e72`; runtime ZIP SHA-256 `7d53835ecaababca7451c19e0ce79bab7186f9e59568fcc3a3b047efa3e95214` | CONFIRMED — STATIC_ANALYSIS | Use corrected build digest in Build Registry and Artifact Index. |
+
+## A2DP transport-first gates — 2026-11-23
+
+The stages below are independent. A pass at one stage never proves a later stage.
+
+| ID | Gate | Required proof | Windows 10 reference | Server 2022 latest recorded evidence |
+|---|---|---|---|---|
+| T-023 | Service start | `bthserv` and A2DP profile service start without errors | Package/service registration present; live on-demand start not proven | Core Bluetooth service state is in archive; Microsoft `BthA2dp` package absent |
+| T-024 | Device enumeration | BTHENUM Audio Sink UUID `0x110B` appears as expected profile devnode | Present | Present, but generic `bth.inf` / `BthGenericService` placeholder |
+| T-025 | Profile driver load | `BthA2dp.sys` loads and PnP problem code is 0 | Binary/package recorded; active runtime load not proven | No Microsoft `BthA2dp.sys`; last custom node `oem75.inf` Code 37 / `0xC000000D` |
+| T-026 | A2DP endpoint | AudioEndpointBuilder exposes a stereo render endpoint | Endpoint inventory exists; endpoint presence is not playback proof | No Microsoft A2DP render endpoint recorded |
+| T-027 | SBC negotiation | AVDTP SetConfiguration shows SBC and negotiated parameters | Not captured | Not tested |
+| T-028 | Actual SBC stream | RTP/media packets flow and audible stereo is verified | Not captured | Not tested |
+| T-029 | LDAC negotiation | AVDTP vendor-specific LDAC codec selected by both sides | Not supported by Win10 inbox stack; Enco Buds2 does not advertise LDAC | Not testable with Enco Buds2 |
+| T-030 | Actual LDAC audio | LDAC media frames are observed and decoded/verified | Requires a different LDAC-capable sink and non-inbox LDAC path | Blocked by sink capability and missing LDAC transport |
+
+### Disposable-VM execution order
+
+1. Complete package audit and signature/catalog verification.
+2. Service start.
+3. BTHENUM device enumeration.
+4. Microsoft A2DP profile driver load and PnP problem code 0.
+5. A2DP endpoint creation.
+6. SBC negotiation with Enco Buds2.
+7. Actual SBC media stream and audible stereo.
+8. Only with a different LDAC-capable sink: LDAC negotiation, then real LDAC media/audio proof.
+
+No stage is marked passed by this documentation update; no runtime test was executed.

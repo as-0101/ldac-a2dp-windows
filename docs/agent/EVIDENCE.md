@@ -307,3 +307,54 @@ Important correction: the current Win10 `Kernel-Drivers.csv` reports BthA2dp/Bth
 Comparison with Server archive AS-KRM-WS, Server 2022 build 20348: BTHENUM 0x110B Audio Sink Service is present via generic `bth.inf`, but no A2DP MEDIA profile devnode, `microsoft_bluetooth_a2dp_src.inf` entry, `BthA2dp.sys` binary inventory row, or BthA2dp service entry is present. Bluetooth core (BTHPORT/BTHUSB/BthEnum) and Windows Audio/AudioEndpointBuilder are present. This localizes the difference to the profile-driver/package layer rather than proving a missing Bluetooth radio/core stack.
 
 Next: targeted Win10 capture must resolve every INF Include/Needs dependency, especially `microsoft_bluetooth_a2dp.inf`, and collect its entire DriverStore directory including CAT. Also inspect `btampm.inf` only if dependency directives or package contents show it is required. Do not copy binaries or install packages on Server until OS decorations, package signing, dependencies, and Server applicability are verified.
+
+
+## Evidence update — 2026-11-23 strategy reset
+
+### E-077 — Microsoft Windows 10 A2DP codec matrix
+- **Class:** Official platform capability
+- **Observation:** Microsoft documents SBC and classic aptX for Windows 10 built-in A2DP. AAC is listed for Windows 11, not Windows 10; LDAC is not listed as an inbox codec.
+- **Impact:** There is no Microsoft inbox LDAC codec DLL to transplant. The Windows 10 package path can establish SBC, not LDAC.
+- **Source:** https://learn.microsoft.com/en-us/windows-hardware/drivers/bluetooth/bluetooth-classic-audio
+
+### E-078 — Windows Server Bluetooth SKU support
+- **Class:** Official platform support
+- **Observation:** Microsoft states that Windows Server SKUs do not include in-box Bluetooth support; third-party IHV drivers may be available.
+- **Impact:** Server core Bluetooth components do not imply that the A2DP profile package is supported or installed. Treat package adaptation as an unsupported research experiment in a disposable VM.
+- **Source:** https://learn.microsoft.com/en-us/windows-hardware/drivers/bluetooth/bluetooth-support-in-previous-windows-versions
+
+### E-079 — Microsoft Bluetooth profile-driver model
+- **Class:** Official architecture
+- **Observation:** Microsoft documents profile drivers as PnP-selected drivers that communicate with the Bluetooth port driver through WDM requests / Bluetooth Request Blocks.
+- **Impact:** A2DP is a profile-driver/package binding problem, not a user-mode DLL loaded by the Bluetooth service. No public Microsoft A2DP codec-provider plug-in API has been identified.
+- **Source:** https://learn.microsoft.com/en-us/windows-hardware/drivers/bluetooth/using-the-bluetooth-driver-stack
+
+### E-080 — OPPO Enco Buds2 codec capability
+- **Class:** Official hardware specification
+- **Observation:** OPPO identifies model ETE41 and lists Bluetooth codecs AAC/SBC.
+- **Impact:** Enco Buds2 cannot negotiate LDAC. SBC is the common codec with Windows 10 built-in A2DP; use another sink for the later LDAC stage.
+- **Source:** https://www.oppo.com/ua/accessories/oppo-enco-buds2/specs/
+
+### E-081 — Current repository LDAC implementation is source/static, not a Win10 DLL
+- **Class:** Repository source inspection
+- **Observation:** `third_party/libldac` derives from AOSP `external/libldac`; `service/encoder.cpp` calls the LDAC encoder API; the current project builds/links the encoder as part of its own service. The custom driver implements its own AVDTP/L2CAP path and ACX endpoint.
+- **Impact:** Reusable LDAC encoder source, but not a Windows 10 codec DLL and not a plug-in for Microsoft `BthA2dp.sys`. The custom driver path remains parked.
+- **Sources:** https://github.com/as-0101/ldac-a2dp-windows/tree/server-2022-oppo/third_party/libldac ; https://github.com/as-0101/ldac-a2dp-windows/blob/server-2022-oppo/service/encoder.cpp ; https://github.com/as-0101/ldac-a2dp-windows/blob/server-2022-oppo/driver/LdacA2dp/driver.c
+
+### E-082 — Alternative A2DP is a third-party driver, not a codec DLL
+- **Class:** Existing implementation evidence
+- **Observation:** Project reference docs identify Alternative A2DP Driver 1.8.3.1 (Luculent Systems) as `AltA2DP.sys` bound by `oem96.inf` in the MEDIA class on a separate Windows 11 laptop. It provided LDAC 96 kHz playback; it is not documented as part of the AS-KRM-WIN10 capture.
+- **Impact:** A possible commercial driver reference, not a redistributable Windows 10 DLL. Its binary package is not currently in Library and Server 2022 compatibility is unproven.
+- **Sources:** https://github.com/as-0101/ldac-a2dp-windows/blob/server-2022-oppo/docs/jbl-live-780nc.md ; https://github.com/as-0101/ldac-a2dp-windows/blob/server-2022-oppo/docs/real-machine.md
+
+### E-083 — BlueCaster is a user-mode fallback, not the Microsoft stack
+- **Class:** Existing upstream implementation
+- **Observation:** BlueCaster uses WASAPI capture, codec encoders, BTstack A2DP/AVDTP/L2CAP and WinUSB to a selected adapter. Its published platform matrix is Windows 10 22H2 / Windows 11, not Server 2022. It takes ownership of the selected adapter.
+- **Impact:** A ready fallback to evaluate only if the Microsoft package path fails, preferably with a dedicated USB adapter in a disposable VM. Server 2022 compatibility is unverified; distributed builds also have BTstack personal/non-commercial licensing constraints.
+- **Source:** https://seiyafunaokajp.github.io/BlueCaster/
+
+### E-084 — OpenA2DP is not a ready binary
+- **Class:** Upstream survey
+- **Observation:** OpenA2DP describes itself as pre-alpha and its driver path is still experimental / not validated with real headphones.
+- **Impact:** Do not switch to another custom kernel-driver project while the existing Microsoft package path remains unexplored.
+- **Source:** https://github.com/RafiMota/open-a2dp

@@ -168,3 +168,30 @@ CI #16's actual Server 2022 Wdf01000 PDB reports `WDF_CLASS_BIND_INFO` base size
 ## D-017 — Keep WDK 20348.1 strictly research-only
 
 Microsoft lists WDK 20348.1 as unsupported and pairs it with VS2019. The legacy SDK/WDK installers are marked affected by CVE-2024-29187, while the EWDK distribution is marked not affected. Use only the official EWDK ISO for this isolated diagnostic experiment; never ship this kit or treat it as the production build toolchain. The supported current path when remaining on VS2022 is WDK 26100.6584.
+
+
+## Decisions — 2026-11-23 strategy reset
+
+### D-018 — Microsoft Windows 10 A2DP package is the primary first-milestone path
+Reuse the complete signed Win10 A2DP source package to establish SBC stereo in a disposable Server 2022 VM. Do not develop a replacement Bluetooth/ACX driver while this package path is incomplete.
+
+### D-019 — No Microsoft inbox LDAC DLL exists to transplant
+Windows 10's documented built-in A2DP codec set is SBC and classic aptX; LDAC is not present. The project's AOSP `libldac` is source/static code, not a Win10 DLL and not a documented plug-in for `BthA2dp.sys`.
+
+### D-020 — OPPO Enco Buds2 is an SBC milestone receiver, not an LDAC test sink
+ETE41 supports AAC/SBC only. Windows 10's built-in stack and this headset share SBC. LDAC negotiation/audio requires a different LDAC-capable receiver.
+
+### D-021 — ACX bind-probe is paused
+CI #248 and #255 remain closed evidence. No new ACX AudioCodec bind-probe unless package and component analysis proves ACX bind is the necessary blocker.
+
+### D-022 — No physical Server 2022 changes
+Only read-only evidence may be collected from the physical host. All staging/install tests belong in a disposable Server 2022 VM. No BCD, test-signing, security, certificate, device restart, or OS changes.
+
+### D-023 — BlueCaster is a fallback, not the primary path
+BlueCaster offers a ready user-mode LDAC/SBC stack over WinUSB, but its published platform support is Windows 10 22H2 / Windows 11, not Server 2022, and it takes ownership of the selected adapter. Evaluate only in a disposable VM with a suitable adapter if the Microsoft package path fails.
+
+### Experiment — WIN10-A2DP-PACKAGE-AUDIT
+**Status:** BLOCKED pending read-only package export from `AS-KRM-WIN10`.  
+**Entry criteria:** source INF + common INF + catalog + complete package folders available.  
+**Required outputs:** SHA-256; PE machine/version/imports/delay-imports/exports; API-set and OS assumptions; INF Include/Needs graph; catalog signature and member verification; Server 2022 counterpart comparison.  
+**No code or driver build is required for this audit.**

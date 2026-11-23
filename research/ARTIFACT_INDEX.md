@@ -120,3 +120,34 @@ Workflow run 45158705058 / commit `79460f03492a54444473589dd142da864a703a73` is 
 - Purpose: provenance/report from the official EWDK 20348.1 inspection.
 - Result: `EWDK_ACX10_STUB_FOUND=false`; no ACX 1.0 probe SYS was built and the hosted runtime job was skipped. The green workflow status reflects successful inspection/skip logic, not a driver test.
 - Retention: GitHub Actions artifact; preserve before expiry if later analysis requires it. No durable Library copy is claimed.
+
+
+## Windows 10 A2DP source and Server comparison artifacts — 2026-11-23
+
+All paths below are in Library folder `/Bluetooth на Windows Sever 2022/`. File IDs are recorded for exact retrieval; no file was re-uploaded during this run.
+
+| Artifact | File ID | Library ID | Size | Status / use |
+|---|---|---|---:|---|
+| `Bluetooth-A2DP-Compare-AS-KRM-WIN10-20261123-204910.zip` | `file_00000000d88c8210b1f196dcd824b5de` | `libfile_40e5b2f397548191adf91284ec279e0d` | 3,395,313 bytes | Targeted Win10 comparison archive; source INF present, common INF/catalog still missing |
+| `Win10-Bluetooth-A2DP-20261123-201418.zip` | `file_000000006994821096915807feeeb159` | `libfile_ff5486df416081919f09274f08e8ea38` | 5,153,885 bytes | Win10 reference collector archive; package folders not included; prior project state records SHA-256 `3bebbee156019cfa6e1c031e8158c8d1e230fd6f64dd57f3a3bc5aae991254cd` |
+| `Bluetooth-A2DP-Compare-AS-KRM-WS-20261123-204114.zip` | `file_000000002fc08210b073a5416f7ca6d7` | `libfile_b9bb8bde48908191b78e2d741b8ffa5d` | 3,140,988 bytes | Latest recorded Server 2022 read-only comparison snapshot; not a live host check |
+| `Export-Win10-A2DP-Package.ps1` | `file_00000000ae6c82108239f67bdde421be` | `libfile_c5e086cd16e0819183aa8607e6c40e94` | 5,108 bytes | Read-only targeted package exporter; output not yet produced |
+| `Collect-Win10-Bluetooth-A2DP.ps1` | `file_00000000f4b08210aad8e3d4dd2e07eb` | `libfile_92cbe93ca6088191af6e314201155e50` | 14,623 bytes | Existing read-only collector; optional `-IncludeDriverPackages` copies active DriverStore package folders |
+| `Collect-Bluetooth-A2DP-Compare.ps1` | `file_00000000187482108c2566e9f9e8147f` | `libfile_d1b948264d648191b4c9041736c4f387` | 7,815 bytes | Existing read-only Win10/Server comparison collector |
+
+### Binary / INF facts currently recorded
+
+| File | Version | Architecture | SHA-256 | Notes |
+|---|---|---|---|---|
+| `BthA2dp.sys` | `10.0.19041.4355` | PE machine not yet independently parsed | `5FBA5EE606AAC39D9CBDA51C0A14DBABBB3A9B47BBD8AC5485ED137B4F354EC3` | 282,624 bytes; Microsoft A2DP profile driver |
+| `microsoft_bluetooth_a2dp_src.inf` | `10.0.19041.1` | INF x64 target decoration to be audited | Not recorded | Thin source/profile binding; delegates to common INF |
+| `microsoft_bluetooth_a2dp.inf` | Unknown | Unknown | Not available | Missing from current capture |
+| Package catalog (.cat) | Unknown | N/A | Not available | Missing from current capture |
+
+Archive SHA-256 is recorded only where explicitly stated in prior project evidence. The targeted 20:49 Win10 archive and 20:41 Server archive have not been independently re-hashed in this run because the Project Source file provider did not expose raw bytes for local hashing.
+
+### Existing LDAC implementation references
+
+- Current project AOSP encoder source: `third_party/libldac`, called from `service/encoder.cpp`; not a Win10 DLL.
+- Alternative A2DP 1.8.3.1: documented `AltA2DP.sys` / `oem96.inf` on a separate Win11 laptop; no package binary currently indexed in Library.
+- BlueCaster: external user-mode WinUSB/BTstack project; not copied into this repository or Library.

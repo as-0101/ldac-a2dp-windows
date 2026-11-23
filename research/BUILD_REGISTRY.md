@@ -38,3 +38,12 @@ Status vocabulary: `BUILT`, `STATICALLY_VERIFIED`, `VM_TESTED`, `HARDWARE_TESTED
 | CI #17 / 45158705058 | `experiment/acx10-wdk20348-control`, `79460f03492a54444473589dd142da864a703a73` | Intended EWDK/WDK 10.0.20348.1 + VS2019; ACX 1.0 / KMDF 1.31; x64 / Windows Driver. No DriverVer until build completes. | No artifact available at 2026-11-23 12:53 Kyiv. | PowerShell parser and project XML gates passed. Build job 137638217372 remains in step 4 (official EWDK ISO download, ACX 1.0 stub inspection and build). Hosted runtime job has not started. | PENDING — BUILD_ONLY |
 
 CI #16 Library copies were independently re-materialized and matched against the downloaded GitHub artifact ZIP bytes. The earlier PROJECT_STATE build ZIP digest `d332fc56...` was a transcription error; the correct digest is the one in the table above. CI #17 is a toolchain-bundle comparison (WDK and compiler generation both change), not a pure WDK-only A/B test. WDK 20348.1 is unsupported and research-only; the experiment uses the official EWDK distribution, not the legacy SDK/WDK MSI installers.
+
+
+## 2026-11-23 strategy reset — no new build
+- No driver or service build was run in this cycle.
+- No source code was changed.
+- No CI run ID was created.
+- No physical-host action or runtime installation was performed.
+- Next build/test work is deferred until the complete Windows 10 A2DP source/common INF package and catalog are captured and audited.
+- CI #248 and CI #255 remain closed historical ACX evidence. No ACX bind-probe is the next step.
