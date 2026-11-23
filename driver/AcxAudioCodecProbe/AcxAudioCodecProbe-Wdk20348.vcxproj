@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="Current" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{A2D0C2F1-7C88-4E77-9C2A-203480000001}</ProjectGuid>
+    <TemplateGuid>{497e31cb-056b-4f31-abb8-447fd55ee5a5}</TemplateGuid>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <MinimumVisualStudioVersion>16.0</MinimumVisualStudioVersion>
+    <Configuration>Release</Configuration>
+    <Platform>x64</Platform>
+    <RootNamespace>AcxAudioCodecProbeWdk20348</RootNamespace>
+    <ImportDirectoryBuildProps>false</ImportDirectoryBuildProps>
+    <WindowsTargetPlatformVersion>$(LatestTargetPlatformVersion)</WindowsTargetPlatformVersion>
+    <ACX_VERSION_MAJOR>1</ACX_VERSION_MAJOR>
+    <ACX_VERSION_MINOR>0</ACX_VERSION_MINOR>
+    <KMDF_VERSION_MAJOR>1</KMDF_VERSION_MAJOR>
+    <KMDF_VERSION_MINOR>31</KMDF_VERSION_MINOR>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <TargetVersion>Windows10</TargetVersion>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>WindowsKernelModeDriver10.0</PlatformToolset>
+    <ConfigurationType>Driver</ConfigurationType>
+    <DriverType>KMDF</DriverType>
+    <DriverTargetPlatform>Windows Driver</DriverTargetPlatform>
+    <SignMode>Off</SignMode>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <PropertyGroup>
+    <OutDir>$(MSBuildThisFileDirectory)..\..\build\AcxAudioCodecProbe-Wdk20348\</OutDir>
+    <IntDir>$(MSBuildThisFileDirectory)..\..\build\AcxAudioCodecProbe-Wdk20348\obj\</IntDir>
+    <TargetName>AcxAudioCodecProbe</TargetName>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level4</WarningLevel>
+      <TreatWarningAsError>true</TreatWarningAsError>
+      <AdditionalIncludeDirectories>$(DDK_INC_PATH)\acx\km\1.0;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>ACX_VERSION_MAJOR=1;ACX_VERSION_MINOR=0;KMDF_VERSION_MAJOR=1;KMDF_VERSION_MINOR=31;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <AdditionalDependencies>$(DDK_LIB_PATH)\libcntpr.lib;acx\km\1.0\acxstub.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <DriverSign>
+      <FileDigestAlgorithm>sha256</FileDigestAlgorithm>
+    </DriverSign>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="Driver.cpp" />
+    <Inf Include="AcxAudioCodecProbe.inf" />
+    <FilesToPackage Include="$(TargetPath)" />
+  </ItemGroup>
+  <Target Name="VerifyAcxAudioCodecProbeWdk20348Toolchain" BeforeTargets="PrepareForBuild">
+    <Error Condition="'$(DDK_INC_PATH)' == '' Or '$(DDK_LIB_PATH)' == ''"
+           Text="EWDK 20348 DDK include/library paths are empty." />
+    <Error Condition="!Exists('$(DDK_INC_PATH)\acx\km\1.0\acx.h')"
+           Text="The selected WDK include path does not contain the ACX 1.0 header." />
+    <Error Condition="!Exists('$(DDK_LIB_PATH)\acx\km\1.0\acxstub.lib')"
+           Text="The selected WDK library path does not contain the ACX 1.0 stub." />
+    <Error Condition="'$(WindowsTargetPlatformVersion)' == ''"
+           Text="The EWDK did not resolve a Windows SDK target version." />
+    <Error Condition="'$(ACX_VERSION_MAJOR)' != '1' Or '$(ACX_VERSION_MINOR)' != '0'"
+           Text="This control must compile against ACX 1.0." />
+    <Error Condition="'$(KMDF_VERSION_MAJOR)' != '1' Or '$(KMDF_VERSION_MINOR)' != '31'"
+           Text="This control must compile against KMDF 1.31." />
+    <Error Condition="'$(Platform)' != 'x64'"
+           Text="This control is x64-only." />
+    <Error Condition="'$(DriverTargetPlatform)' != 'Windows Driver'"
+           Text="This sample-derived control must use the official sample's Windows Driver target platform." />
+    <Message Importance="High"
+             Text="PROBE_TOOLCHAIN|DDK_INC_PATH=$(DDK_INC_PATH)|DDK_LIB_PATH=$(DDK_LIB_PATH)|SDK=$(WindowsTargetPlatformVersion)|ACX=$(ACX_VERSION_MAJOR).$(ACX_VERSION_MINOR)|KMDF=$(KMDF_VERSION_MAJOR).$(KMDF_VERSION_MINOR)|TARGET=$(DriverTargetPlatform)|PLATFORM=$(Platform)" />
+  </Target>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+</Project>
