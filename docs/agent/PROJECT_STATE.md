@@ -584,3 +584,23 @@ The radio and classic Bluetooth stack work sufficiently to pair and enumerate th
 2. Compare INF OS decorations, catalog trust, package dependencies, target-build compatibility and class registration. Do not install/copy anything yet.
 3. Keep physical Server untouched. Treat the custom LdacA2dp load failure separately from the in-box package absence.
 4. The collector's SHA256SUMS.csv finalization has a benign self-read/write sharing bug; it does not invalidate collected files or archive. Exclude SHA256SUMS.csv from its own hash enumeration in the next script revision.
+
+
+## Windows 10 package comparison — 2026-11-23 20:49 Kyiv
+
+New Win10 archive received and inspected: AS-KRM-WIN10 / Windows 10 Enterprise x64 / build 19045. Manifest: 26 PnP entries, 7 AudioEndpoint entries, 26 signed-driver entries.
+
+### Confirmed A2DP package facts
+- PnP devnode: `Microsoft Bluetooth A2dp Source`, class MEDIA, device ID begins `BTHENUM\\{0000110b-0000-1000-8000-00805f9b34fb}`, INF `microsoft_bluetooth_a2dp_src.inf`, version 10.0.19041.1.
+- Binary: `BthA2dp.sys`, file version 10.0.19041.4355, 282,624 bytes, SHA-256 `5FBA5EE606AAC39D9CBDA51C0A14DBABBB3A9B47BBD8AC5485ED137B4F354EC3`.
+- Crucial INF structure: `microsoft_bluetooth_a2dp_src.inf` matches BTHENUM service 0x110B, but the install sections are delegated to `microsoft_bluetooth_a2dp.inf` via Include/Needs. The source INF is not a complete self-contained install package.
+- The current capture lacks `microsoft_bluetooth_a2dp.inf`, its catalog, and its complete package directory. This is the next missing evidence item.
+
+### Server comparison
+Server archive AS-KRM-WS / Windows Server 2022 Datacenter / build 20348 contains the generic BTHENUM Audio Sink Service through `bth.inf`, but the captured PnP signed-driver list has no Microsoft Bluetooth A2DP Source MEDIA devnode and no `microsoft_bluetooth_a2dp_src.inf`. Its binary inventory has no `BthA2dp.sys`; service inventory has no `BthA2dp`. Core BTHPORT/BTHUSB/BthEnum and Windows Audio/AudioEndpointBuilder are present.
+
+### State-reporting correction
+Win10 Kernel-Drivers.csv shows BthA2dp and other demand-start kernel drivers as Stopped/Manual at collection time. This must not be described as currently running; the signed PnP driver record proves installed/bound profile presence, while service state is only a point-in-time observation.
+
+### Next action
+Run targeted read-only `Export-Win10-A2DP-Package.ps1` to recursively locate/copy every available A2DP-related INF package directory (especially `microsoft_bluetooth_a2dp.inf`), catalogs and BthA2dp.sys, and emit Include/Needs dependency list plus hashes/signature metadata. Then inspect INF decorations and package catalog before any Server-side experiment. No Server changes.
