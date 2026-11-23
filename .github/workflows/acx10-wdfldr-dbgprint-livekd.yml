@@ -1,4 +1,5 @@
 name: ACX 1.0 WDF loader DbgPrint capture via LiveKD
+# Runtime-only diagnostic; normal repository build jobs are skipped on this branch.
 
 on:
   push:
