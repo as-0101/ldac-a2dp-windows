@@ -1,7 +1,26 @@
-# START HERE
+# LDAC A2DP — project entry
 
-The canonical Project Source entry point is [LDAC_Project_Source_START_HERE.md](LDAC_Project_Source_START_HERE.md).
+**Code branch:** [server-2022-oppo](https://github.com/as-0101/ldac-a2dp-windows/tree/server-2022-oppo)  
+**Documentation branch:** [docs/project-source-reorg](https://github.com/as-0101/ldac-a2dp-windows/tree/docs/project-source-reorg)  
+**Current direction:** 2026-11-24 01:42 Europe/Kyiv
 
-**Current direction (2026-11-23 23:40):** stop ACX/WDK bind-probe work. Recover and audit the complete signed Windows 10 Microsoft A2DP source package, then test SBC stereo in a disposable Server 2022 VM. The targeted exporter is read-only but does not collect the full DLL/COM/PE dependency closure. Windows 10 has no inbox LDAC codec; Enco Buds2 is SBC/AAC-only. Alternative A2DP and BlueCaster are third-party fallback architectures, not Microsoft codec DLLs. See [the pipeline map](docs/agent/WIN10_A2DP_PIPELINE.md).
+The next engineering milestone is **SBC stereo on Windows Server 2022**, using the existing Windows 10 inbox A2DP package if its component ownership and kernel dependencies prove compatible. The ACX/WDK bind-probe path is parked.
 
-The detailed status, evidence, tests, artifacts, and decisions are maintained in the canonical Project Source file and the linked registries. Historical ACX experiments remain recorded but are not the current next step.
+Important codec boundary:
+- Windows 10 inbox A2DP documents SBC and aptX Classic, not LDAC.
+- OPPO Enco Buds2 ETE41 documents AAC/SBC only. SBC is the only common codec; these earbuds cannot be the LDAC test sink.
+- Alternative A2DP Driver advertises LDAC but is proprietary, hardware-licensed, and not published as Server 2022-supported. Do not transplant or reverse-engineer its binaries.
+
+The 2026-11-23 23:49 Win10 package archive already exists and includes the common/source/sink A2DP INFs, btampm.inf, BthA2dp.sys and BtaMPM.sys. Do not rerun the exporter or ask for the same archive. The remaining package-ownership blocker is the original Windows 10/Server 2022 WIM component metadata.
+
+## Read in this order
+
+1. [LDAC_Project_Source_START_HERE.md](https://github.com/as-0101/ldac-a2dp-windows/blob/docs/project-source-reorg/LDAC_Project_Source_START_HERE.md)
+2. [WIN10_COMPONENT_AUDIT.md](https://github.com/as-0101/ldac-a2dp-windows/blob/docs/project-source-reorg/docs/agent/WIN10_COMPONENT_AUDIT.md)
+3. [WIN10_A2DP_PIPELINE.md](https://github.com/as-0101/ldac-a2dp-windows/blob/docs/project-source-reorg/docs/agent/WIN10_A2DP_PIPELINE.md)
+4. [NEXT_ACTIONS.md](https://github.com/as-0101/ldac-a2dp-windows/blob/docs/project-source-reorg/docs/agent/NEXT_ACTIONS.md)
+5. PROJECT_STATE.md, EVIDENCE.md, DECISIONS_AND_EXPERIMENTS.md, BUILD_REGISTRY.md, TEST_MATRIX.md and ARTIFACT_INDEX.md.
+
+## Safety
+
+Physical Server 2022 is read-only during this investigation. No driver install, device restart, BCD/security/test-signing or certificate changes, OS update/rollback, or execution of prepare/upgrade/install/rollback scripts is authorized. HFP/microphone remains out of scope. Notion journal remains append-only.
