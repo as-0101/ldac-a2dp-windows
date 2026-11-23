@@ -1,3 +1,15 @@
+# Current continuation — 2026-11-24 (MSSysFx provider identified)
+
+1. The `mssysfx.CopyFilesAndRegister` dependency is a section imported from `wdmaudio.inf`, not evidence of a separate `mssysfx.inf` file. Microsoft Learn's Bluetooth audio INF example explicitly pairs `Include=...wdmaudio.inf...` with `Needs=...mssysfx.CopyFilesAndRegister`.
+2. Next read-only check on physical Server 2022: inspect `[mssysfx.CopyFilesAndRegister]` and its `FX.CopyList` / `FX.RegisterDlls` sections in `C:\\Windows\\INF\\wdmaudio.inf`; verify `%windir%\\System32\\WMALFXGFXDSP.dll` and `SysFxUI.dll` exist. This only establishes dependency presence, not package applicability.
+3. If present, close MSSysFx as a missing-prerequisite hypothesis. Focus remaining package gap on explicit `BtaMpm.inf` / `BtaMPM.sys` and the Microsoft A2DP profile package `microsoft_bluetooth_a2dp*.inf` / `BthA2dp.sys`.
+4. On the Win10 reference, collect catalog-complete package identity and component servicing provenance; do not transplant individual files or import registry.
+5. Any install/load test remains restricted to a disposable Server 2022 VM. No physical-host driver, registry, BCD, security, or service changes.
+
+Evidence: E-109–E-111 in [EVIDENCE.md](EVIDENCE.md).
+
+---
+
 # Current continuation — 2026-11-24 (BtaMPM / MSSysFx dependency semantics)
 
 1. **Do not search for or assume a standalone `mssysfx.inf` package.** The captured common A2DP INF does not Include it; it asks for the section `mssysfx.CopyFilesAndRegister`. Find the actual provider of that section in the Win10 reference INF environment, beginning with full `wdmaudio.inf` and SetupAPI/INF section resolution.
