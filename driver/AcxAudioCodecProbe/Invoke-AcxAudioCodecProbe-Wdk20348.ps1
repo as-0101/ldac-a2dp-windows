@@ -12,6 +12,7 @@ function Save-State([object]$Value) {
     $Value | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $statePath -Encoding utf8
 }
 
+[CmdletBinding()]
 function Get-PnpDeviceCompat([string]$InstanceId,[switch]$PresentOnly) {
     $devices = Get-CimInstance -ClassName Win32_PnPEntity -ErrorAction Stop
     foreach ($device in $devices) {
@@ -37,11 +38,11 @@ function Get-PnpDeviceCompat([string]$InstanceId,[switch]$PresentOnly) {
 
 function Get-PnpValue([string]$InstanceId,[string]$KeyName) {
     $device = Get-PnpDeviceCompat -InstanceId $InstanceId | Select-Object -First 1
-    $enumKey = "HKLM:\\SYSTEM\\CurrentControlSet\\Enum\\$InstanceId"
+    $enumKey = "HKLM:\SYSTEM\CurrentControlSet\Enum\$InstanceId"
     $enum = Get-ItemProperty -LiteralPath $enumKey -ErrorAction SilentlyContinue
     $class = $null
     if ($enum -and $enum.Driver) {
-        $classKey = "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Class\\$($enum.Driver)"
+        $classKey = "HKLM:\SYSTEM\CurrentControlSet\Control\Class\$($enum.Driver)"
         $class = Get-ItemProperty -LiteralPath $classKey -ErrorAction SilentlyContinue
     }
     switch ($KeyName) {
@@ -64,7 +65,7 @@ function Get-PnpValue([string]$InstanceId,[string]$KeyName) {
             $output = & pnputil.exe /enum-devices /instanceid $InstanceId /properties 2>&1
             $output | Out-File -LiteralPath (Join-Path $reportRoot 'pnp-properties-pnputil.txt') -Encoding utf8
             $raw = $output -join [Environment]::NewLine
-            $match = [regex]::Match($raw, '(?im)(?:Problem Status|DEVPKEY_Device_ProblemStatus)\\s*:\\s*(0x[0-9a-f]{8})')
+            $match = [regex]::Match($raw, '(?im)(?:Problem Status|DEVPKEY_Device_ProblemStatus)\s*:\s*(0x[0-9a-f]{8})')
             if ($match.Success) { return [Convert]::ToInt64($match.Groups[1].Value.Substring(2),16) }
             return $null
         }
@@ -660,6 +661,8 @@ try {
     $deviceNow = Get-PnpDeviceCompat -InstanceId $state.DeviceInstanceId -ErrorAction SilentlyContinue
     if (-not $deviceNow) { throw 'Root device disappeared before PnP state capture.' }
     $deviceNow | Format-List * | Out-File -LiteralPath (Join-Path $reportRoot 'pnp-device.txt') -Encoding utf8
+    $pnputilDrivers = & pnputil.exe /enum-devices /instanceid $state.DeviceInstanceId /drivers 2>&1
+    $pnputilDrivers | Out-File -LiteralPath (Join-Path $reportRoot 'pnp-drivers-pnputil.txt') -Encoding utf8
 
     $pnpProperties = [ordered]@{}
     foreach ($key in @('DEVPKEY_Device_DriverInfPath','DEVPKEY_Device_DriverVersion','DEVPKEY_Device_DriverProvider','DEVPKEY_Device_Service','DEVPKEY_Device_ProblemCode','DEVPKEY_Device_ProblemStatus','DEVPKEY_Device_HardwareIds')) {
