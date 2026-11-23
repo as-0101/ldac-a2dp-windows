@@ -127,7 +127,7 @@ OPPO's official specification lists AAC and SBC. It does not list LDAC. Use thes
 
 BluetoothGoodies' Alternative A2DP Driver publicly advertises LDAC and other codecs, with version 1.8.3 dated 2026-06-22 and a published support matrix of Windows 10 22H2 / Windows 11 21H2–25H2. The project record separately notes a 1.8.3.1 driver on another Windows 11 laptop.
 
-The vendor EULA states that the license is hardware-bound/non-transferable and restricts reverse engineering, decompilation, disassembly and modification/derivative works, except where applicable law overrides. Do not extract, patch, transplant or reverse-engineer its proprietary binaries. It is not a supported Server 2022 package. A black-box, as-is test would require an appropriate license and explicit vendor confirmation of Server support.
+The vendor EULA states that the license is hardware-bound/non-transferable and restricts reverse engineering, decompilation, disassembly, modification and transfer, except where applicable law overrides. Its Additional Terms list AOSP as an OSS component, but do not identify the bundled files; that OSS exception does not grant rights to the proprietary AltA2DP driver. The project already has its own AOSP libldac source. Do not extract, patch, transplant or reverse-engineer the proprietary driver. It is not a supported Server 2022 package. A black-box, as-is test would require an appropriate license and explicit vendor confirmation of Server support.
 
 ### Existing open-source repository
 
