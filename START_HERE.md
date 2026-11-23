@@ -32,6 +32,14 @@ The working Windows 10 reference uses the classic Microsoft A2DP WDM profile dri
 
 The latest re-uploaded Win10 ZIP is byte-identical to the earlier archive (SHA-256 `3bebbee156019cfa6e1c031e8158c8d1e230fd6f64dd57f3a3bc5aae991254cd`); it is not a new corrected-collector run and contains no Server inventory or copied A2DP INF/DriverStore package.
 
+## Latest finding — Windows 10 A2DP package dependency (2026-11-23 20:49 Kyiv)
+
+The new reference archive confirms the Win10 A2DP profile devnode is bound to `microsoft_bluetooth_a2dp_src.inf` and `BthA2dp.sys` (10.0.19041.4355). Crucially, the source INF delegates installation to `microsoft_bluetooth_a2dp.inf` via Include/Needs. The latter common INF and its catalog/package were **not** captured yet. Do not treat the source INF alone as an installable package. The Server 2022 inventory has generic BTHENUM Audio Sink Service via `bth.inf`, but no A2DP MEDIA profile devnode, A2DP INF, BthA2dp.sys or BthA2dp service. Core Bluetooth and Windows Audio components are present. See E-044–E-048 in [EVIDENCE](docs/agent/EVIDENCE.md).
+
+The Win10 collector's Kernel-Drivers.csv reports demand-start kernel drivers as Stopped/Manual at snapshot time. This does not negate the signed PnP A2DP devnode record; do not claim BthA2dp was Running from that CSV.
+
+**Next:** run the targeted read-only [Export-Win10-A2DP-Package.ps1](../../../../?) to capture `microsoft_bluetooth_a2dp.inf`, all Include/Needs dependencies, CAT files, and BthA2dp.sys with hashes/signature metadata. Then verify package OS decorations and Server applicability. Physical Server remains unchanged.
+
 ## Read in this order — do not read the whole history
 
 1. This page.
