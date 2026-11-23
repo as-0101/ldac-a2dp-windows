@@ -90,3 +90,20 @@ The CI #13 sample SYS hash is 70BA9899BF1B54989E7C6C3F6C0DEDAE2ADFCEF16D7AE6A980
 Both Library copies were materialized and SHA-256 matched the original GitHub artifact bytes. Runtime package inner hashes: SYS `BAB3C54C0EAB186CC8C9D89B07BCA871112454175C0C45F8D199DA57927114B6`; INF `CC2A09F6D2F8590DA5395CB366FE62C83164D48EF8B227E3B0004447E0112DC7`; CAT `9A120CCB4D5B8781EED86D50C096A5A95CC59140954A5A1E9830F0875A42ABD8`; PDB `4FDC48C1C86C33DC6939A8130E8CD594016E80EA64DB3ADADE846D083B03CCB7`. Build and runtime SYS/INF/PDB bytes match; the CAT differs because the runtime package is signed with the ephemeral test certificate.
 
 GitHub artifact retention is 14 days from the run; durable Library copies are retained independently.
+
+
+## CI #16 sample bind probe and descriptor report — 2026-11-23
+
+The original GitHub artifacts were downloaded again and compared byte-for-byte with their durable Library copies. All three hashes below match. The build ZIP digest previously transcribed in PROJECT_STATE was wrong; this is the verified digest.
+
+| Artifact | GitHub run / artifact ID | Repository commit | Library path | Project file ID | Library ID | Size | SHA-256 |
+|---|---|---|---|---|---|---:|---|
+| CI #16 build | 45084678951 / 14779061024 | `9da48c3ecd5921f8cab47888325b156dc9a536f3` | `/LDAC Project/Incoming/CI-16-ACX10-Sample-Bind-Build.zip` | `file_00000000bca08211bc1de8bfd1963463` | `libfile_302ac31a94f881919afbd7001981672d` | 126,939 | `d332fc338cbd8c4aa41f56338bb68104059b2956558067362d69b495a0ba8e72` |
+| CI #16 runtime | 45084678951 / 14779107472 | `9da48c3ecd5921f8cab47888325b156dc9a536f3` | `/Bluetooth LDAC Research/Artifacts/CI-16-ACX10-Sample-Bind-Runtime.zip` | `file_00000000f95c8210885725aee73f1356` | `libfile_f82f167acb64819197c7a42682180d12` | 162,186 | `7d53835ecaababca7451c19e0ce79bab7186f9e59568fcc3a3b047efa3e95214` |
+| CI #16/#255 descriptor compatibility report | Derived from CI #16 runtime artifact 14779107472 and CI #255 stub artifact 14769755224 | `9da48c3ecd5921f8cab47888325b156dc9a536f3` | `/LDAC Project/Incoming/CI-16-255-Descriptor-Compatibility-Analysis.md` | `file_00000000373c8209b70496924c4066c6` | `libfile_7382ad8229608191bf4927498dd58227` | 6,016 | `8523e7f5063c829541adae3fcacad0fe97e6f7eee4c39a914d16d7dce86bac5a` |
+
+Inner build package hashes from `build-manifest.json`: SYS `F7BAE855C1B184ABCF0BFCBC258EF11740700788BC08270A3C22041E76860E37`; INF `25C1E5AAEF51FB417E6E0ED2113C33841A08D4DDC05DABF60AA7AFB1BF41CD39`; PDB `7B2FEDE81388EDA93FD930B2B88A47FDFB72BC8686A7C47D7967A449D7863855`. The full 17,174,368,256-byte LiveKD dump is not included in the runtime ZIP; its hash and zero-missing-page count are preserved in the debugger transcript/capture report.
+
+## CI #17 pending artifact state — 2026-11-23 12:53 Kyiv
+
+Workflow run 45158705058 / commit `79460f03492a54444473589dd142da864a703a73` is still in its build step. No build/runtime artifact exists yet. Add artifact IDs, original ZIP hashes, Library IDs and inner SYS/INF/PDB hashes only after the workflow produces and verifies them.
