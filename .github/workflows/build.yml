@@ -69,8 +69,3 @@ jobs:
           path: build/ldac-a2dp-oppo-server2022-test.zip
           if-no-files-found: error
           retention-days: 7
-
-  acx-wdfldr-dbgprint:
-    name: ACX 1.0 WDF loader DbgPrint LiveKD probe
-    if: github.ref == 'refs/heads/experiment/acx10-wdfldr-dbgprint-livekd'
-    uses: ./.github/workflows/acx10-wdfldr-dbgprint-livekd.yml
