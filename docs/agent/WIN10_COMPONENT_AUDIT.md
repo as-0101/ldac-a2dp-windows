@@ -1,0 +1,166 @@
+# Windows 10 Bluetooth A2DP component audit
+
+**Updated:** 2026-11-24 01:42 Europe/Kyiv  
+**Scope:** Windows 10 22H2 A2DP source package → Windows Server 2022 build 20348.5761.  
+**Execution status:** static research only. No build, CI run, driver installation, device restart, or physical-host mutation was performed.
+
+## Executive result
+
+1. The captured Windows 10 inbox A2DP path is a **kernel-mode WDM/KS profile-driver package**, not a standalone user-mode LDAC codec DLL.
+2. The Microsoft Windows 10 Classic Audio codec list is SBC and aptX Classic. It does not list LDAC or AAC. The OPPO Enco Buds2 ETE41 supports AAC/SBC, so **SBC is the only common codec** for the first milestone. These earbuds cannot negotiate LDAC; LDAC testing needs a different sink that advertises LDAC.
+3. The 2026-11-23 23:49 Win10 package archive already contains the common A2DP INF, source/sink INFs, btampm.inf, BthA2dp.sys and BtaMPM.sys. Do not rerun the collector or ask for the same archive.
+4. The absence of a package-local .cat is not evidence that the inbox package is unsigned: the captured system-supplied INFs have no CatalogFile directive, and Microsoft documents that system-supplied INFs are validated using system catalogs. The source catalog identity and component-store ownership still need to be recovered for cross-SKU staging.
+5. The recorded Server 2022 inventory already has the generic audio dependencies (ks.inf, wdmaudio.inf and the referenced MSSysFx DLLs), while the A2DP profile package is absent from that archived comparison. This is consistent with Server's documented lack of in-box Bluetooth support, but does not prove that the Windows 10 profile binaries are technically incompatible.
+6. Alternative A2DP Driver is the only located off-the-shelf Windows product that explicitly adds LDAC to the inbox Bluetooth stack. It is proprietary, hardware-licensed, its EULA restricts reverse engineering/modification/transfer, and its published support matrix is Windows 10/11—not Server 2022. It is **not** a legal binary-transplant candidate without vendor authorization.
+7. The existing as-0101 repository is a fork of yariktop133/ldac-a2dp-windows, a separate open-source replacement-driver project. It is not a Windows 10 codec DLL package. Its ACX/WDK path remains parked.
+
+## 1. Existing source artifacts — already present
+
+| Artifact | Library file ID | Size | Use |
+| --- | --- | ---: | --- |
+| Win10-A2DP-Package-20261123-234936.zip | file_00000000144c8210a8e309fe18b9e8c4 | 454,831 bytes | Current Win10 package capture; supersedes the earlier partial comparison |
+| Win10-A2DP-DriverStore-20261123-234936.zip | file_00000000b3888210bd459ae2490c25d9 | 135,772 bytes | DriverStore package copy |
+| a2dp_pe_imports_report(2).txt | file_0000000033e482109479f740ed5a8030 | 8,098 bytes | PE imports for a separate System32 BthA2dp copy |
+| a2dp_pe_imports_report(3).txt | file_000000008d708210bada16b6cb44c429 | 8,098 bytes | Duplicate/cross-check report for the System32 copy |
+| a2dp_pe_imports_report.txt | file_00000000f33882109a6b1f79c3aaf72d | 1,315,472 bytes | Broader PE import report |
+| 00-33.txt | file_000000004d5882109961f477df8a1c48 | 29,125 bytes | INF inspection output |
+| 00-34.txt | file_000000004c208210bec65c68b97e9b69 | 5,564 bytes | INF dependency/section inspection output |
+| Export-Win10-A2DP-Package.ps1 | file_00000000ae6c82108239f67bdde421be | 5,108 bytes | Existing read-only exporter; its output already exists |
+
+The archive MANIFEST identifies AS-KRM-WIN10, build 19045, capture time 2026-11-23 23:49. The archive contains 31 entries and no .cat files. Its raw ZIP bytes are retained in Project Sources/Library; the current analysis workspace exposes the extracted text reports but not a raw-byte materialization path for those Project files. No re-upload of the existing archive is required.
+
+## 2. Exact INF and driver graph
+
+### A2DP source role — the direction needed for earbuds
+
+The remote OPPO device advertises the A2DP Sink service (UUID 0x110B). The captured source INF matches the corresponding BTHENUM service node:
+
+~~~text
+BTHENUM\{0000110B-0000-1000-8000-00805F9B34FB}
+    -> microsoft_bluetooth_a2dp_src.inf
+        -> microsoft_bluetooth_a2dp.inf (common install)
+~~~
+
+The sink INF is for the reverse direction (the Windows host acting as an A2DP sink for a remote source); it is not required for playback to earbuds.
+
+### Common INF closure
+
+The captured microsoft_bluetooth_a2dp.inf is Class=MEDIA, DriverVer 10.0.19041.4355, x64-only (NTamd64). Its Include/Needs closure is:
+
+~~~text
+Include = ks.inf, wdmaudio.inf, BtaMpm.inf
+Needs   = KS.Registration,
+          WDMAUDIO.Registration,
+          BtaMPM.CopyFilesOnly,
+          mssysfx.CopyFilesAndRegister
+~~~
+
+It copies BthA2dp.sys, registers the BthA2dp kernel service as demand-start (StartType=3, ServiceBinary=%12%\\BthA2dp.sys), and registers KSCATEGORY_AUDIO source/sink interfaces plus endpoint properties.
+
+The separate btampm.inf is Class=SYSTEM, DriverVer 10.0.19041.5848, x64-only. Its BtaMPM.CopyFilesOnly section copies BtaMPM.sys to System32\\drivers. The INF explicitly exists to satisfy external Include/Needs references; it is not a separate PnP device-install section.
+
+### Audio and COM/ APO boundary
+
+- ks.inf and wdmaudio.inf provide the Kernel Streaming/WDM audio registration.
+- mssysfx.CopyFilesAndRegister copies/registers WMALFXGFXDSP.dll and SysFxUI.dll.
+- The MSFX/FX property registrations are Windows audio-effect/APO registrations. Microsoft describes APOs as user-mode COM objects that process audio effects. They are not A2DP codec providers and are not LDAC encoders.
+- No LDAC CLSID, codec-provider interface, or user-mode LDAC DLL was identified in the captured Microsoft A2DP INFs or PE reports.
+- The A2DP profile is selected by PnP/INF matching. The profile driver communicates with the Bluetooth port stack through the documented driver/IRP path; BthPort is not expected to appear as a normal PE import from BthA2dp.sys.
+- The audio endpoint is exposed through the KS audio interface and consumed by the Windows audio endpoint/audio-engine path. This is distinct from the Bluetooth transport and distinct from the codec implementation.
+
+## 3. Binary inventory and provenance
+
+| File/copy | Version | Size | SHA-256 | PE / imports | Status |
+| --- | --- | ---: | --- | --- | --- |
+| DriverStore BthA2dp.sys | 10.0.19041.4355 | 282,624 | 5FBA5EE606AAC39D9CBDA51C0A14DBABBB3A9B47BBD8AC5485ED137B4F354EC3 | PE32+ x64, native kernel; direct imports reported from ntoskrnl.exe only; no delay-import directory in E-119 | Package copy; export table not captured |
+| System32 BthA2dp.sys | Not recorded | 279,040 | 0442A18BBED4E323265C66561C8F8C171D8E934E9089C12B94D1DFDBB057B737 | PE32+ x64; 8 import descriptors / 144 imported functions | Different binary; do not merge with DriverStore report |
+| BtaMPM.sys | 10.0.19041.5848 | 43,008 | DA5CBBDCE6AC511EF8400E121DF6B6EACA7D05C0F40A01F7353CE9F220EB3DCD | PE32+ x64; imports ntoskrnl.exe, cng.sys and WppRecorder.sys; no delay-import directory in E-120 | Multi-profile management dependency, not codec |
+
+The System32 BthA2dp copy imports from:
+- ntoskrnl.exe — 70 functions
+- HAL.dll — 1
+- ks.sys — 40
+- btampm.sys — 10
+- WppRecorder.sys — 4
+- SleepStudyHelper.sys — 8
+- WDFLDR.SYS — 4
+- ksecdd.sys — 7
+
+That report is explicitly for C:\\A2DP-Research\\Win10\\Windows\\System32\\drivers\\BthA2dp.sys. It is not the 282,624-byte DriverStore copy. The package copy's E-119 import report and the System32 copy's 8-descriptor report must remain separate until the exact source paths and file versions are reconciled.
+
+The System32 BthA2dp copy imports BtaMpm functions such as GetRemoteDeviceProfileVersionAndAttribute, UpdatePlayStatus, Register/Unregister, UpdateSuspendStatus, RegisterPnp/UnregisterPnp and UpdateConnectionStatus. These are profile/control-management operations, not codec encode/decode entry points.
+
+### What is still not proven at PE level
+
+- Export tables for BthA2dp.sys and BtaMPM.sys have not been captured.
+- The package-copy import report is static; it does not prove whether a component is loaded dynamically through another mechanism.
+- The System32 copy's delay-import directory and full PE header OS-version fields have not been reconciled with the package copy.
+- No API-set imports were reported for the package-copy kernel drivers; a complete Dependencies/PEInspector pass is still pending.
+- The exact Microsoft system catalog that covers the source INF/SYS files has not been identified from the original image.
+- Import resolution against the exact Server 2022 20348.5761 kernel and dependency exports has not been performed.
+
+## 4. Windows Server 2022 comparison — archived evidence only
+
+The recorded Server 2022 build 20348.5761 comparison found:
+- ks.inf and wdmaudio.inf present.
+- WMALFXGFXDSP.dll and SysFxUI.dll present at version 10.0.20348.5756.
+- The Microsoft A2DP source/common INF package and BthA2dp/BtaMPM components absent from the captured Server inventory.
+- Generic BTHENUM handling in bth.inf is not the same as the A2DP profile-driver binding.
+
+Microsoft's support matrix says Windows 10 SKUs have in-box Bluetooth support and Windows Server SKUs do not. That is product-support policy, not proof that a Windows 10 A2DP binary cannot load on Server 2022.
+
+The last recorded physical-host PnP state is still the user-provided oem75.inf / DriverVer 0.2.325.1600 / Code 37 / ProblemStatus 0xC000000D record. It is historical evidence, not a fresh live check from this run. No physical-host command was run.
+
+## 5. Codec reality and existing LDAC candidates
+
+### Microsoft inbox stack
+
+Microsoft's Windows 10 Classic Audio documentation lists SBC and aptX Classic. It does not list LDAC or AAC. Therefore the Windows 10 inbox A2DP package is a valid SBC/aptX transport/profile candidate, but not a source of an LDAC encoder DLL.
+
+For an A2DP source, the host needs an encoder; the remote earbuds perform decoding. A separate host-side LDAC decoder is not required for the transmit path.
+
+### OPPO Enco Buds2
+
+OPPO's official specification lists AAC and SBC. It does not list LDAC. Use these earbuds for the SBC milestone; do not use them to validate LDAC negotiation or LDAC audio.
+
+### Alternative A2DP Driver
+
+BluetoothGoodies' Alternative A2DP Driver publicly advertises LDAC and other codecs, with version 1.8.3 dated 2026-06-22 and a published support matrix of Windows 10 22H2 / Windows 11 21H2–25H2. The project record separately notes a 1.8.3.1 driver on another Windows 11 laptop.
+
+The vendor EULA states that the license is hardware-bound/non-transferable and restricts reverse engineering, decompilation, disassembly and modification/derivative works, except where applicable law overrides. Do not extract, patch, transplant or reverse-engineer its proprietary binaries. It is not a supported Server 2022 package. A black-box, as-is test would require an appropriate license and explicit vendor confirmation of Server support.
+
+### Existing open-source repository
+
+The as-0101/ldac-a2dp-windows repository is a fork of yariktop133/ldac-a2dp-windows and is one upstream commit behind. The upstream project is a complete replacement A2DP source implementation (driver/protocol/encoder service), not a pre-existing Windows 10 codec DLL. The current code path remains frozen; no ACX/WDK work is authorized as the next step.
+
+## 6. Next actions — ordered, minimal
+
+1. Obtain the original Windows 10 22H2 and Server 2022 install.wim/install.esd metadata (or the corresponding mounted image/component stores). No ISO/WIM/ESD/CAB/MSU media was found in the current Library inventory.
+2. From those images, identify the exact CBS package/component identities, MUMs, manifests, system catalogs, architecture and applicability for microsoft_bluetooth_a2dp_src.inf, microsoft_bluetooth_a2dp.inf and btampm.inf. Determine whether the same component is present but disabled/omitted in Server 2022, or is client-only.
+3. Reconcile the two BthA2dp.sys copies by full path, file version, SHA-256 and catalog membership. Re-run the PE audit against the exact DriverStore package copy and BtaMPM.sys.
+4. Use the existing Dependencies tool for direct/forwarded/delay-load imports, exports and API-set resolution; use PEInspector or pefile as a second static cross-check. Dependencies does not detect arbitrary runtime LoadLibrary calls, so static analysis is not the whole runtime story.
+5. Compare every imported function against exports from the exact Server 2022 20348.5761 ntoskrnl, HAL, KS, CNG, WPP, WDF and security components.
+6. Only if the original package and dependencies are compatible, test the unmodified inbox package in a disposable Server 2022 VM. Do not touch the physical server.
+7. Keep runtime gates separate: service start → BTHENUM device enumeration → profile-driver load → A2DP render endpoint → SBC negotiation → actual stereo audio. LDAC negotiation and actual LDAC audio require a different LDAC-capable sink.
+
+## 7. Safety and scope
+
+- No physical server install, device restart, BCD/security/test-signing change, certificate change, OS update/rollback or driver rollback.
+- No execution of prepare-oppo-host.cmd, upgrade-oppo.cmd, install-oppo.cmd or rollback-oppo.cmd.
+- No HFP/microphone work.
+- No new ACX bind-probe. CI #248 and #255 remain closed evidence, not a reason to repeat ACX experiments.
+- No code changes in this audit. Documentation only on docs/project-source-reorg; Notion journal append-only.
+- No runtime test was performed, and no successful A2DP endpoint/audio/LDAC claim is made.
+
+## Sources
+
+- [Microsoft — Bluetooth Classic audio](https://learn.microsoft.com/en-us/windows-hardware/drivers/bluetooth/bluetooth-classic-audio)
+- [Microsoft — Using the Bluetooth driver stack](https://learn.microsoft.com/en-us/windows-hardware/drivers/bluetooth/using-the-bluetooth-driver-stack)
+- [Microsoft — Bluetooth support in previous Windows versions](https://learn.microsoft.com/en-us/windows-hardware/drivers/bluetooth/bluetooth-support-in-previous-windows-versions)
+- [Microsoft — INF Version section and system-supplied catalogs](https://learn.microsoft.com/en-us/windows-hardware/drivers/install/inf-version-section)
+- [Microsoft — Audio Processing Object architecture](https://learn.microsoft.com/en-us/windows-hardware/drivers/audio/audio-processing-object-architecture)
+- [OPPO — Enco Buds2 specifications](https://www.oppo.com/uk/accessories/enco-buds2/specs/)
+- [BluetoothGoodies — Alternative A2DP Driver version history](https://www.bluetoothgoodies.com/a2dp/version-history/)
+- [BluetoothGoodies — Alternative A2DP Driver EULA](https://www.bluetoothgoodies.com/a2dp/eula/)
+- [Dependencies — open-source PE dependency analysis](https://github.com/lucasg/Dependencies)
+- [Upstream LDAC A2DP Windows project](https://github.com/yariktop133/ldac-a2dp-windows)
