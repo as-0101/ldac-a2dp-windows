@@ -427,3 +427,15 @@ Interpretation: Windows 10's classic A2DP path is concretely a MEDIA-class WDM/K
 - The INF's `NTamd64` model decoration alone does **not** prove Server 2022 support. Microsoft explicitly says Windows Server SKUs do not have in-box Bluetooth support. This remains an unsupported compatibility experiment.
 - No catalog file was included in either archive. Do not treat this alone as evidence that the package is unsigned: the Win10-side inventory records valid Microsoft catalog-based Authenticode verification. Recover the original catalog only if required for an isolated package test.
 - No physical Server files, services, devices, registry, BCD, or security settings have been changed.
+
+
+## Evidence update — 2026-11-24 (Server WinSxS file-level search)
+
+| ID | Claim / observation | Status | Source |
+|---|---|---|---|
+| E-096 | A recursive PowerShell file-name search of Server 2022 `%windir%\\WinSxS` for `btampm.inf`, `mssysfx.inf`, `BtaMPM.sys`, and `BthA2dp.sys` returned no paths for any of the four files. | CONFIRMED — USER-PROVIDED SEARCH OUTPUT | PowerShell output, 2026-11-24. |
+| E-097 | A second independent search using `where /r %windir%\\WinSxS` for the same four file names also returned no paths. | CONFIRMED — USER-PROVIDED SEARCH OUTPUT | PowerShell output, 2026-11-24. |
+| E-098 | The four named files are absent from the Server 2022 WinSxS file tree as tested. Combined with E-093, the Windows 10 A2DP profile driver and its BtaMPM dependency are absent from the searched active INF/DriverStore roots and WinSxS. This still does not establish whether an equivalent component exists under another name or package identity. | CONFIRMED — SEARCH SCOPE QUALIFIED | User-provided outputs, 2026-11-24. |
+
+### Updated interpretation
+The WinSxS file-level search closes the previously pending check from E-093/E-094: no matching A2DP/BtaMPM/MSSysFx files were found in the component store. The Server 2022 image therefore lacks the exact Windows 10 package payload/dependency files searched for. Next investigation should identify the Windows 10 component/package ownership and catalog/signing chain, then decide whether a catalog-complete, dependency-closed package can be evaluated in a disposable Server 2022 VM. This is not authorization to install on the physical Server, and it does not establish that cross-SKU installation is viable.
