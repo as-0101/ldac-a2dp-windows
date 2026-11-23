@@ -1,13 +1,34 @@
-# Current continuation — 2026-11-24 (Win10 package audit corrected)
+# Current continuation — 2026-11-24 01:42 (Win10 A2DP component audit)
 
-1. The Win10 19045 capture already contains the common A2DP INF, source/sink INFs, `btampm.inf`, `BthA2dp.sys`, and `BtaMPM.sys`. Do not rerun the targeted exporter just to obtain these files.
-2. The capture is not yet portable/catalog-complete: no CAT files were exported. Captured BthA2dp SYS has a valid Microsoft catalog signature on AS-KRM-WIN10, but the catalog file and complete CBS/component ownership metadata remain missing.
-3. Server 2022 MSSysFx dependency is confirmed present (E-112–E-113). The explicit package gap is BtaMPM/A2DP.
-4. Next research gate: obtain and inspect original Windows 10 22H2 and Server 2022 install image metadata (WIM indices, offline DriverStore INF/CAT presence, CBS package manifests/MUMs and component manifests) to establish whether the A2DP components are shipped only in Client images. Compare package identities and applicability; do not infer compatibility from `NTamd64`.
-5. In parallel, perform static analysis of the already captured Win10 INF/SYS package: INF decorations, Include/Needs closure, PE machine/imports/exports, file versions, and catalog membership once CAT is recovered. No need to ask for another Win10 collection unless a specific missing artifact is identified.
-6. If original WIM media is not available in the current environment, ask for the ISO/WIM only after finishing all analysis possible from the current archive. No physical Server changes; any staging/install test stays in a disposable Server 2022 VM.
+## Established facts
 
-Evidence: E-109–E-118 in [EVIDENCE.md](EVIDENCE.md).
+1. The 2026-11-23 23:49 Win10 19045 package archive already contains the common A2DP INF, source/sink INFs, btampm.inf, BthA2dp.sys and BtaMPM.sys. Do not rerun the exporter and do not ask for the same archive.
+2. The common INF is Class=MEDIA, DriverVer 10.0.19041.4355. It includes ks.inf, wdmaudio.inf and BtaMpm.inf; Needs KS.Registration, WDMAUDIO.Registration, BtaMPM.CopyFilesOnly and mssysfx.CopyFilesAndRegister. It installs BthA2dp as a demand-start kernel service and registers KSCATEGORY_AUDIO interfaces.
+3. btampm.inf is Class=SYSTEM, DriverVer 10.0.19041.5848; BtaMPM.CopyFilesOnly supplies BtaMPM.sys.
+4. No package-local .cat was exported, but the captured system-supplied INFs have no CatalogFile directive. Microsoft documents that system-supplied INFs are validated through system catalogs. Do not call the archive unsigned. The exact source system catalog and CBS/component owner still need to be identified for Server staging.
+5. Two BthA2dp.sys copies have different sizes/hashes and different import reports. DriverStore package copy: 282,624 bytes / SHA-256 5FBA... / version 10.0.19041.4355 / direct imports from ntoskrnl only in E-119. Separate System32 copy: 279,040 bytes / SHA-256 0442... / 8 import descriptors / 144 functions. Do not merge these reports. BtaMPM.sys is 43,008 bytes / SHA-256 DA5C... / version 10.0.19041.5848.
+6. The Microsoft Windows 10 Classic Audio list is SBC and aptX Classic; it does not list LDAC or AAC. OPPO Enco Buds2 ETE41 is AAC/SBC only. SBC is the only common codec; LDAC cannot be negotiated with these earbuds.
+7. Alternative A2DP Driver advertises LDAC, but its EULA restricts reverse engineering, modification and transfer; its published support matrix is Windows 10 22H2 / Windows 11 21H2–25H2, not Server 2022. Do not transplant or inspect its proprietary binaries.
+8. The as-0101 repository is a fork of yariktop133/ldac-a2dp-windows, a separate replacement-driver project, not a Windows 10 codec DLL package. The ACX/WDK path remains parked.
+
+## Next research gate
+
+1. Obtain original Windows 10 22H2 and Server 2022 install.wim/install.esd metadata or mounted component stores. No ISO/WIM/ESD/CAB/MSU media was found in the current Library inventory.
+2. Resolve CBS package/component identities, MUMs, manifests, system catalogs, architecture and applicability for microsoft_bluetooth_a2dp_src.inf, microsoft_bluetooth_a2dp.inf and btampm.inf. Determine whether the A2DP components are client-only or simply absent from the Server image.
+3. Reconcile the DriverStore and System32 BthA2dp.sys copies by exact path/version/hash. Complete PE exports, delay-import and API-set analysis on the exact package binaries.
+4. Compare every imported function with exports from the exact Server 2022 20348.5761 ntoskrnl, HAL, KS, CNG, WPP, WDF and security components.
+5. Only if the original package and dependencies are compatible, stage the unmodified inbox package in a disposable Server 2022 VM.
+6. Runtime gates remain separate: service start → BTHENUM enumeration → profile-driver load → A2DP endpoint → SBC negotiation → actual stereo audio. LDAC negotiation and real LDAC audio require a different LDAC-capable sink.
+
+## Explicit blockers and safety
+
+- WIM/ESD component metadata is the remaining input blocker; do not request another copy of the already captured Win10 ZIP.
+- No fresh physical-host query was performed in this run. The oem75.inf / 0.2.325.1600 / Code 37 record remains historical.
+- No physical Server changes, driver installation, service/device restart, BCD/security/test-signing or certificate changes, OS update/rollback, or prepare/upgrade/install/rollback script execution.
+- No new ACX bind-probe. CI #248 and #255 remain closed historical evidence.
+- No HFP/microphone work.
+
+Detailed audit: [WIN10_COMPONENT_AUDIT.md](WIN10_COMPONENT_AUDIT.md). Evidence: E-114–E-128 in [EVIDENCE.md](EVIDENCE.md).
 
 ---
 
