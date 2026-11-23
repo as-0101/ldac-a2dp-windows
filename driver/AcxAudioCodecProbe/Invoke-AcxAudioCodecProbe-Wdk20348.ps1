@@ -12,8 +12,9 @@ function Save-State([object]$Value) {
     $Value | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $statePath -Encoding utf8
 }
 
-[CmdletBinding()]
-function Get-PnpDeviceCompat([string]$InstanceId,[switch]$PresentOnly) {
+function Get-PnpDeviceCompat {
+    [CmdletBinding()]
+    param([string]$InstanceId,[switch]$PresentOnly)
     $devices = Get-CimInstance -ClassName Win32_PnPEntity -ErrorAction Stop
     foreach ($device in $devices) {
         $id = [string]$device.PNPDeviceID
