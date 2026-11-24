@@ -344,3 +344,14 @@ CI #463's metadata artifact (workflow artifact ID `14883494285`, ZIP SHA-256 `2c
 This is direct evidence that Windows 10's A2DP profile package is CBS-owned by the client desktop required package. It does not prove that PnPUtil/SetupAPI cannot stage the complete signed dualModeDriver package independently on Server. Do not inject the whole Client-Desktop-Required package. The next check is exact WIM DriverStore/CAT membership, INF target decorations and OS applicability. The 74-byte/71-byte INF files in expanded update payloads are PSF delta artifacts/placeholders, not complete INF files.
 
 UUP audit #4/#5 parser failure and #6 regression fix are documented above. CI #6 still needs its final metadata artifact and both image identities before any PE/CAT compatibility result is accepted.
+
+
+## 2026-11-24 07:20 — CBS ownership and directional package minimization
+
+CI #463 metadata artifact `microsoft-catalog-a2dp-audit.zip` (artifact ID `14883494285`, SHA-256 `2cd35a38abcdcde42fb0e175dfa042715aae8bb7e6eb2adf9c40c475886c9d38`) shows:
+
+- KB5036979 MUM `Microsoft-Windows-Client-Desktop-Required-Package~31bf3856ad364e35~amd64~~10.0.19041.4355.mum` declares `microsoft_bluetooth_a2dp.inf` as `Product-onecore__dual_microsoft_bluetooth_a2dp.inf`, version 10.0.19041.4355, type `dualModeDriver`; it also declares `btampm.inf`, `microsoft_bluetooth_a2dp_snk.inf` and `microsoft_bluetooth_a2dp_src.inf`.
+- KB5126657 MUM declares A2DP common 10.0.19041.7802 and BtaMPM 10.0.19041.7725. The Server KB5126655 scan has no matching A2DP/BtaMPM MUM/manifest hits.
+- For PC → OPPO playback, only `microsoft_bluetooth_a2dp_src.inf` is required: it matches the remote A2DP Sink UUID 0x110B. The separate `microsoft_bluetooth_a2dp_snk.inf` is the reverse direction (Windows as A2DP sink) and is excluded from this milestone. The source INF chains to the common INF and its BtaMPM/KS/WDMAUDIO/MSSysFx dependencies.
+
+This is CBS ownership and static INF direction evidence, not proof of standalone staging. Do not inject the entire Client-Desktop-Required package. Next: verify exact DriverStore/CAT membership, INF target decorations and OS applicability, then stage only the source/common dependency closure in a disposable Server 2022 VM. UUP audit #6 is still required for exact PE and offline registry/CAT data.
