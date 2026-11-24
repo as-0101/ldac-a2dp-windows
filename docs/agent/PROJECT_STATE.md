@@ -891,3 +891,18 @@ Official sources:
 - The GitHub search result for `YoshKoz/LDACast` returned 404 when opened; do not treat it as a verified project or candidate.
 
 No third-party installer was downloaded, reverse-engineered, installed or patched. Alternative A2DP Driver remains a black-box candidate only; it is not officially supported on Server 2022. BlueCaster remains a fallback requiring a separate USB radio.
+
+## Latest verified state — 2026-11-24 (CI #11)
+
+Offline package evidence:
+- Win10 19045.5917 and Server 20348.5761 images were both mounted and audited; both image records in the artifact manifest are COMPLETED.
+- Five exact Win10 A2DP files were verified by SignTool against one CBS servicing catalog. The catalog SHA-256 is 78772FA12959C072D687283F08D08367B8A8EF1A2F07D7B72F20BCAFD12483BF.
+- The catalog belongs to Microsoft-Windows-Client-Desktop-Required-Package 10.0.19041.5917. Its MUM records the A2DP common/source and BtaMPM driver components.
+- Server 20348.5761 contains BthPort, BthEnum, BTHUSB, AudioSrv and AudioEndpointBuilder registrations. BthA2dp is absent. BtaMPM is not registered as a service in either OS.
+- The Win10 catalog membership result does not establish that Server 2022 recognizes that catalog. Cross-SKU membership remains the immediate gate.
+
+CI status:
+- Run 45347639357 produced a complete metadata artifact (14901033654, SHA-256 277ed892887f10383e34bb9f3c3690a0ebdf290d32cb9f4899d6016e78fbadff). The workflow job nevertheless concluded failure with process exit code 1 after the script printed its completion message; treat the artifact's completed per-image records as usable, but the process exit propagation remains a tooling defect.
+- Follow-up branch experiment/win10-a2dp-cross-sku-catalog-audit-20261124 adds Server-side membership checks, Server positive controls and explicit exit 0 after successful completion.
+
+No PnP staging, driver load, A2DP endpoint, SBC negotiation or audio stream has been tested by CI #11. Physical Server 2022 remains untouched.
