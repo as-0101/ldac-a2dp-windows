@@ -97,7 +97,23 @@ jobs:
           [Inf]::Verify('published',$published)
           [Inf]::Verify('identical-copy',$copy)
           $octets = [IO.File]::ReadAllBytes($copy)
-          [IO.File]::WriteAllBytes($copy,[byte[]]($octets + [byte[]](32,0)))
+          # Change one ASCII letter inside an existing comment, preserving encoding and length.
+          $utf16 = $octets[0] -eq 255 -and $octets[1] -eq 254
+          $encoding = if ($utf16) { [Text.Encoding]::Unicode } else { [Text.Encoding]::Latin1 }
+          $body = $encoding.GetString($octets)
+          $match = [regex]::Match($body,'(?m)^\s*;[^\r\n]*?([A-Za-z])')
+          if (!$match.Success) { throw 'Comment control not found' }
+          $index = $match.Groups[1].Index
+          if ($utf16) { $index *= 2 }
+          $octets[$index] = $octets[$index] -bxor 32
+          [IO.File]::WriteAllBytes($copy,$octets)
+          $control = [Inf]::SetupOpenInfFileW($copy,[IntPtr]::Zero,2,[IntPtr]::Zero)
+          if ($control.ToInt64() -eq -1) { throw 'Modified control INF did not parse' }
+          try {
+            $lines = [Inf]::SetupGetLineCountW($control,'WDMAUDIO.Registration')
+            "MUTATION parsed=True registration_lines=$lines length=$($octets.Length)"
+            if ($lines -ne 2) { throw 'Unexpected modified control section' }
+          } finally { [Inf]::SetupCloseInfFile($control) }
           if ((Get-FileHash -LiteralPath $copy).Hash -eq $originalHash) { throw 'Mutation failed' }
           [Inf]::Verify('changed-copy',$copy)
           [Inf]::Verify('absent',(Join-Path $root 'absent.inf'))
