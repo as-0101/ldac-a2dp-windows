@@ -754,7 +754,6 @@ function Invoke-StagePackageSmokeTest {
     }
     $signToolPath = $null
     $catalog = $null
-    $catalogAdded = $false
     $stagedEntries = @()
     try {
         if ($env:GITHUB_ACTIONS -ne "true" -or $env:RUNNER_ENVIRONMENT -ne "github-hosted") {
@@ -813,7 +812,7 @@ function Invoke-StagePackageSmokeTest {
             files=$packageFiles
             originalInfHasCatalogFile=$false
             sourceInf="microsoft_bluetooth_a2dp_src.inf"
-            installCommand="pnputil /add-driver <source-inf> (no /install)"
+            installCommand="pnputil /add-driver <common-inf>, then <mpm-inf>, then <source-inf> (one invocation each, no /install)"
         }
 
         $kitsRoot = Join-Path ([Environment]::GetFolderPath("ProgramFilesX86")) "Windows Kits\10\bin"
@@ -852,76 +851,58 @@ function Invoke-StagePackageSmokeTest {
             if ($verifyExit -ne 0) { throw "SignTool verification failed on Server 2022 runner for $($check.name)." }
         }
 
-        $sourceInf = Join-Path $StagePackageDirectory "microsoft_bluetooth_a2dp_src.inf"
-        $before = Get-DriverStoreSnapshot
-        $preOutput = & (Join-Path $env:WINDIR "System32\pnputil.exe") /add-driver $sourceInf 2>&1
-        $preExit = $LASTEXITCODE
-        $after = Get-DriverStoreSnapshot
-        $preEntries = @(Get-NewDriverStoreEntries -Before $before -After $after)
-        $preSourceStaged = @($preEntries | Where-Object { $_.originalName -ieq "microsoft_bluetooth_a2dp_src.inf" }).Count -gt 0
-        $result.preCatalogStage = [ordered]@{
-            exitCode=$preExit
-            sourceInfStaged=$preSourceStaged
-            newDriverStoreEntries=$preEntries
-            output=($preOutput | Out-String).Trim()
+        $pnputil = Join-Path $env:WINDIR "System32\pnputil.exe"
+        $setupLogPath = Join-Path $env:WINDIR "INF\setupapi.dev.log"
+        $stageOrder = @("microsoft_bluetooth_a2dp.inf", "btampm.inf", "microsoft_bluetooth_a2dp_src.inf")
+        $result.attempts = @()
+        $initial = Get-DriverStoreSnapshot
+        if ($initial.exitCode -ne 0) { throw "Initial DriverStore inventory failed." }
+        $before = $initial
+        foreach ($name in $stageOrder) {
+            $old = @(Get-Content -LiteralPath $setupLogPath)
+            $output = & $pnputil /add-driver (Join-Path $StagePackageDirectory $name) 2>&1
+            $exitCode = $LASTEXITCODE
+            $currentLog = @(Get-Content -LiteralPath $setupLogPath)
+            $logStart = 0
+            if ($old.Count -gt 0 -and $currentLog.Count -ge $old.Count -and $currentLog[$old.Count - 1] -eq $old[-1]) {
+                $logStart = $old.Count
+            }
+            $newLog = @($currentLog | Select-Object -Skip $logStart)
+            $after = Get-DriverStoreSnapshot
+            $entries = @(Get-NewDriverStoreEntries -Before $before -After $after |
+                Where-Object { $_.originalName -in $stageOrder })
+            $stagedEntries = @($entries) + @($stagedEntries)
+            $staged = @($entries | Where-Object originalName -ieq $name).Count -gt 0
+            $attempt = [pscustomobject]@{
+                inf=$name
+                exitCode=$exitCode
+                newMatchingPackage=$staged
+                newDriverStoreEntries=$entries
+                output=($output | Out-String).Trim()
+                setupLogAppendedOnly=($logStart -gt 0)
+                setupLog=$newLog
+            }
+            $result.attempts += $attempt
+            Write-Host "STAGING inf=$name exit=$exitCode newMatchingPackage=$staged"
+            Write-Host $attempt.output
+            $newLog | Where-Object { $_ -match '!!!|exit\s+status|catalog|included INF' } | ForEach-Object { Write-Host "SETUP $_" }
+            if ($after.exitCode -ne 0) { throw "DriverStore inventory failed after $name." }
+            $before = $after
         }
-        if ($preSourceStaged -and $preExit -eq 0) {
-            $stagedEntries = $preEntries
-            $result.status = "PASS_WITH_EXISTING_CATALOG_DATABASE"
+        if (@($result.attempts | Where-Object { $_.exitCode -ne 0 -or -not $_.newMatchingPackage }).Count -eq 0) {
+            $result.status = "PASS_DEPENDENCY_FIRST"
         } else {
-            $preCleanup = Remove-StagedDriverStoreEntries -Entries $preEntries
-            $result.preCatalogStage.cleanup=$preCleanup
-            $catdbOutput = & $signToolPath catdb /v /u $catalog.FullName 2>&1
-            $catdbExit = $LASTEXITCODE
-            $result.catalogDbRegistration = [ordered]@{
-                exitCode=$catdbExit
-                status=if ($catdbExit -eq 0) { "CATALOG_ADDED_TO_SYSTEM_COMPONENT_AND_DRIVER_DATABASE" } else { "FAILED" }
-                output=($catdbOutput | Out-String).Trim()
-                certificateStoreChanged=$false
-            }
-            if ($catdbExit -ne 0) { throw "SignTool catdb could not register the original Microsoft CAT in the disposable runner." }
-            $catalogAdded = $true
-
-            $before2 = Get-DriverStoreSnapshot
-            $postOutput = & (Join-Path $env:WINDIR "System32\pnputil.exe") /add-driver $sourceInf 2>&1
-            $postExit = $LASTEXITCODE
-            $after2 = Get-DriverStoreSnapshot
-            $postEntries = @(Get-NewDriverStoreEntries -Before $before2 -After $after2)
-            $postSourceStaged = @($postEntries | Where-Object { $_.originalName -ieq "microsoft_bluetooth_a2dp_src.inf" }).Count -gt 0
-            $result.postCatalogStage = [ordered]@{
-                exitCode=$postExit
-                sourceInfStaged=$postSourceStaged
-                newDriverStoreEntries=$postEntries
-                output=($postOutput | Out-String).Trim()
-            }
-            $stagedEntries = $postEntries
-            if ($postSourceStaged -and $postExit -eq 0) {
-                $result.status = "PASS_AFTER_CATALOG_DB_ADD"
-            } else {
-                $result.status = "FAILED"
-            }
+            $result.status = "FAILED"
         }
     } catch {
         $result.status = "FAILED"
         $result.error = $_.Exception.Message
     } finally {
         $cleanupDriver = Remove-StagedDriverStoreEntries -Entries $stagedEntries
-        $cleanupCatalog = $null
-        if ($catalogAdded -and $catalog -and $signToolPath) {
-            $removeOutput = & $signToolPath catdb /v /r /u $catalog.FullName 2>&1
-            $cleanupCatalog = [pscustomobject]@{
-                exitCode=$LASTEXITCODE
-                output=($removeOutput | Out-String).Trim()
-                attempted=$true
-            }
-        } else {
-            $cleanupCatalog = [pscustomobject]@{ attempted=$false; reason="Catalog was not added by this test." }
-        }
         $finalSnapshot = Get-DriverStoreSnapshot
         $remaining = @($finalSnapshot.records | Where-Object { $_.originalName -match "^(microsoft_bluetooth_a2dp_src\.inf|microsoft_bluetooth_a2dp\.inf|btampm\.inf)$" })
         $result.cleanup = [ordered]@{
             driverStoreRemoval=$cleanupDriver
-            catalogDatabaseRemoval=$cleanupCatalog
             remainingA2dpPackages=$remaining
         }
         $setupLogPath = Join-Path $env:WINDIR "INF\setupapi.dev.log"
