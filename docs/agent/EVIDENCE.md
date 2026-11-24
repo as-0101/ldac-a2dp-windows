@@ -819,3 +819,26 @@ Decision: no new LDAC encoder/decoder work is needed. Keep the existing AOSP enc
 | E-176 | CI #11 PowerShell parser and x64 SignTool preflight passed; offline image/catalog/service audit remains in progress. | CONFIRMED — PREFLIGHT ONLY | [CI #11](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45347639357), job 138285969226. |
 | E-177 | CI #7 partial artifact contains 20 Server PE JSON reports only; no catalog-membership, offline service-registry or complete manifest result was produced. | CONFIRMED | Artifact 14896789955, SHA-256 `dca3859cab81728950b037d93b43f170e2fc730412adda369340d67839152380`. |
 
+## E-172 — Win10 A2DP package catalog and Server service inventory (2026-11-24)
+
+- Source run: GitHub Actions run 45347639357 on experiment/win10-a2dp-catalog-registry-audit-20261124.
+- Artifact: uup-image-a2dp-audit-metadata, artifact ID 14901033654, 331,349 bytes, SHA-256 277ed892887f10383e34bb9f3c3690a0ebdf290d32cb9f4899d6016e78fbadff.
+- Offline image identities: Windows Server 2022 Datacenter 20348.5761 (EditionID=ServerDatacenter); Win10 19045.5917 (EditionID=Professional, InstallationType=Client). The Win10 WIM label is Windows 10 Pro, but offline ProductName is Windows 10 Enterprise; this metadata discrepancy remains open.
+- SignTool verified five exact Win10 package files against the same servicing catalog Windows\servicing\Packages\Microsoft-Windows-Client-Desktop-Required-Package~31bf3856ad364e35~amd64~~10.0.19041.5917.cat, catalog SHA-256 78772FA12959C072D687283F08D08367B8A8EF1A2F07D7B72F20BCAFD12483BF:
+  - BthA2dp.sys 10.0.19041.4355, SHA-256 5FBA5EE606AAC39D9CBDA51C0A14DBABBB3A9B47BBD8AC5485ED137B4F354EC3 (/kp).
+  - BtaMPM.sys 10.0.19041.5848, SHA-256 DA5CBBDCE6AC511EF8400E121DF6B6EACA7D05C0F40A01F7353CE9F220EB3DCD (/kp).
+  - microsoft_bluetooth_a2dp.inf 10.0.19041.4355, SHA-256 4F3B988B658E1E7F8B97E645C1C92BE0BA270D4DB76832DAB871516EEDCBCF0C (/pa).
+  - microsoft_bluetooth_a2dp_src.inf 10.0.19041.1, SHA-256 B97D1DD53BB6FD040CE5C2527015A09416C29FCBD6B528802D595CBDEEAD4A6A (/pa).
+  - btampm.inf 10.0.19041.5848, SHA-256 C657A6B32AC8CCFDEEF3C12630686B87C973DD114BEE73AEC288D86B989961EF (/pa).
+- All five matched the same catalog after 386 of 3,326 catalog files were scanned. This proves Win10 image catalog membership only; Server-side trust/membership was not checked in this run.
+- Win10 CBS MUM owner: Microsoft-Windows-Client-Desktop-Required-Package~31bf3856ad364e35~amd64~~10.0.19041.5917.mum; it declares A2DP common 10.0.19041.4355, A2DP source 10.0.19041.1 and BtaMPM 10.0.19041.5848 as dualModeDriver.
+- Offline SYSTEM hive: Server has BthPort, BthEnum and BTHUSB (type 1, start 3), AudioSrv and AudioEndpointBuilder (type 16/32, start 3); BthA2dp and BtaMPM service keys are absent. Win10 has BthA2dp (type 1, start 3); BtaMPM service key is absent; core Bluetooth services exist. AudioSrv/AudioEndpointBuilder start values are 2 on Win10 and 3 on Server.
+- No package staging, PnP enumeration, driver load, endpoint, SBC negotiation or audio-stream test occurred.
+
+## E-173 — Cross-SKU catalog audit implementation (2026-11-24)
+
+- Isolated branch: experiment/win10-a2dp-cross-sku-catalog-audit-20261124.
+- Script commit: 05555dc8fac8b2f551826b71cba40084defe9a46.
+- Workflow commit: 08663c4ca7d1536b96c554fd5e484382262b1250.
+- The script mounts Win10 first, retains temporary copies of the exact five package files, then checks those same bytes against Server 20348.5761 catalogs. Server BthPort/BthEnum/BTHUSB/bth.inf are positive controls. Temporary package files are removed before artifact upload. A final explicit exit 0 avoids the prior post-completion exit-code ambiguity.
+- CI result/run ID is pending verification; no compatibility conclusion is assigned yet.
