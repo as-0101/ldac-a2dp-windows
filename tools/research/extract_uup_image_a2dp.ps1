@@ -555,6 +555,7 @@ function Get-TargetCatalogMembership {
             targetCopyPath=$target.copyPath
             catalogPath=$null
             catalogSha256=$null
+            catalogSignature=$null
             catalogsScanned=0
             catalogCount=$catalogFiles.Count
             verificationPolicy=$target.policy
@@ -592,6 +593,7 @@ function Get-TargetCatalogMembership {
         $base.catalogsScanned = $tested
         $base.catalogPath = if ($match) { $match.FullName.Substring($MountDirectory.Length).TrimStart("\") } else { $null }
         $base.catalogSha256 = if ($match) { (Get-FileHash -LiteralPath $match.FullName -Algorithm SHA256).Hash.ToUpperInvariant() } else { $null }
+        $base.catalogSignature = if ($match) { Get-SignatureRecord -Path $match.FullName } else { $null }
         $base.output = $lastOutput
         [pscustomobject]$base
     }
@@ -776,7 +778,7 @@ function Save-AuditReports {
 - SHA-256 comparisons are made against the already-recorded Win10 archive hashes.
 - PE reports include imports, delay imports, exports, API-set imports and a static comparison of Win10 imports against Server 2022 exports.
 - Win10 A2DP files are checked against Win10 system catalogs and then the same exact file hashes are checked against the Server 2022 offline catalog set. Server Bluetooth core files are positive controls for the Server catalog scan.
-- Catalog membership is checked with SignTool; embedded Authenticode status is reported separately. A successful Win10 membership check alone does not prove Server 2022 can validate the package.
+- Catalog membership is checked with SignTool; the matched catalog's embedded Authenticode signer/status is recorded separately. A successful Win10 membership check alone does not prove Server 2022 can validate the package.
 - Offline SYSTEM hive service registrations are captured from a temporary copy; source images remain read-only.
 - Win10 package file copies are temporary and removed before the workflow uploads metadata.
 - No Microsoft binary payloads or ISO files are uploaded by this workflow; only metadata and text reports are retained.
