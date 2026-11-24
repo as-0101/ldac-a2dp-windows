@@ -688,7 +688,7 @@ The Windows 10 package capture is complete enough for static INF/PE work. This c
 
 ### PE provenance and limits
 - DriverStore BthA2dp.sys: 10.0.19041.4355, 282,624 bytes, SHA-256 5FBA5EE606AAC39D9CBDA51C0A14DBABBB3A9B47BBD8AC5485ED137B4F354EC3; E-119 reports PE32+ x64, native kernel, no delay-import directory, direct imports from ntoskrnl.exe only.
-- A separate System32 BthA2dp.sys report is 279,040 bytes, SHA-256 0442A18BBED4E323265C66561C8F8C171D8E934E9089C12B94D1DFDBB057B737, with 8 import descriptors / 144 imported functions. Its file version is not recorded. Do not merge this with the DriverStore report.
+- A separate System32 BthA2dp.sys report is 279,040 bytes, SHA-256 0442A18BBED4E323265C66561C8F8C171D8E934E9089C12B94D1DFDBB057B737, with 8 import descriptors / 144 imported functions. Secondary public inventories list a 279,040-byte BthA2dp.sys as 10.0.19041.1, but do not publish the hash; the 0442-to-version mapping remains provisional. Do not merge this with the DriverStore report. Prioritize the 10.0.19041.4355 DriverStore copy for compatibility analysis.
 - BtaMPM.sys: 10.0.19041.5848, 43,008 bytes, SHA-256 DA5CBBDCE6AC511EF8400E121DF6B6EACA7D05C0F40A01F7353CE9F220EB3DCD; PE32+ x64, imports ntoskrnl.exe, cng.sys and WppRecorder.sys.
 - Export tables and complete Server-side import/export compatibility are not yet proven.
 
