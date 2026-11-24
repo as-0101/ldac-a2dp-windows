@@ -27,6 +27,22 @@ jobs:
             public static extern bool SetupOpenAppendInfFileW(string file, IntPtr handle, IntPtr line);
             [DllImport("setupapi.dll", CharSet=CharSet.Unicode, SetLastError=true)]
             public static extern int SetupGetLineCountW(IntPtr handle, string section);
+            [StructLayout(LayoutKind.Sequential, CharSet=CharSet.Unicode)]
+            public struct Signer {
+              public uint size;
+              [MarshalAs(UnmanagedType.ByValTStr, SizeConst=260)] public string catalog;
+              [MarshalAs(UnmanagedType.ByValTStr, SizeConst=260)] public string signer;
+              [MarshalAs(UnmanagedType.ByValTStr, SizeConst=260)] public string version;
+              public uint score;
+            }
+            [DllImport("setupapi.dll", CharSet=CharSet.Unicode, SetLastError=true)]
+            private static extern bool SetupVerifyInfFileW(string path, IntPtr platform, ref Signer signer);
+            public static string Verify(string label, string path) {
+              var signer = new Signer { size=(uint)Marshal.SizeOf(typeof(Signer)) };
+              bool ok=SetupVerifyInfFileW(path,IntPtr.Zero,ref signer);
+              int err=ok ? 0 : Marshal.GetLastWin32Error();
+              return String.Format("VERIFY case={0} ok={1} error=0x{2:X8} catalog={3}", label,ok,err,System.IO.Path.GetFileName(signer.catalog));
+            }
             [DllImport("setupapi.dll")] public static extern void SetupCloseInfFile(IntPtr handle);
           }
           '@
@@ -73,6 +89,18 @@ jobs:
               if ($mode -eq 'missing' -and ($append -or $count -ne -1)) { throw 'Missing-file control failed' }
             } finally { [Inf]::SetupCloseInfFile($h) }
           }
+          $published = Join-Path $env:windir 'INF\wdmaudio.inf'
+          $copy = Join-Path $root 'wdmaudio.inf'
+          Copy-Item -LiteralPath $published -Destination $copy
+          $originalHash = (Get-FileHash -LiteralPath $published).Hash
+          if ((Get-FileHash -LiteralPath $copy).Hash -ne $originalHash) { throw 'Copy mismatch' }
+          [Inf]::Verify('published',$published)
+          [Inf]::Verify('identical-copy',$copy)
+          $octets = [IO.File]::ReadAllBytes($copy)
+          [IO.File]::WriteAllBytes($copy,[byte[]]($octets + [byte[]](32,0)))
+          if ((Get-FileHash -LiteralPath $copy).Hash -eq $originalHash) { throw 'Mutation failed' }
+          [Inf]::Verify('changed-copy',$copy)
+          [Inf]::Verify('absent',(Join-Path $root 'absent.inf'))
           $caps = @(Get-WindowsCapability -Online -ErrorAction Stop)
           $matches = @($caps | Where-Object Name -match 'Bluetooth|A2DP')
           "CAPABILITIES total=$($caps.Count) named_matches=$($matches.Count)"
