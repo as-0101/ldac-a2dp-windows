@@ -232,3 +232,14 @@ The 23:49 archive is the current package source. It supersedes the earlier 20:49
 ### Parser provenance correction
 
 The legacy 1.3 MB report is not a trustworthy multi-descriptor import report. Its generating script reuses the same descriptor offset for every loop iteration. The 8,098-byte reports (2)/(3) are separate outputs, but their corrected generating script was not found in the Library. Until those exact binaries are re-run with a retained parser and a second tool, treat the 144-function count as provisional. The GNU objdump E-119 report for the 282,624-byte DriverStore package copy remains a separate record and must not be conflated with the System32 report.
+
+
+## Microsoft public symbol-index cross-check — 2026-11-24 02:35
+
+| Captured binary | SHA-256 | Winbindex x64 hash-only page | What this proves / does not prove |
+|---|---|---|---|
+| DriverStore `BthA2dp.sys` (282,624 bytes; inventory version 10.0.19041.4355) | `5FBA5EE606AAC39D9CBDA51C0A14DBABBB3A9B47BBD8AC5485ED137B4F354EC3` | https://winbindex.m417z.com/hashes/5f.html | Exact hash is indexed under `btha2dp.sys`; no version/OS/update/CAT metadata on the simplified page. |
+| System32 `BthA2dp.sys` (279,040 bytes; separate secondary copy) | `0442A18BBED4E323265C66561C8F8C171D8E934E9089C12B94D1DFDBB057B737` | https://winbindex.m417z.com/hashes/04.html | Exact distinct hash is indexed under `btha2dp.sys`; keep separate from DriverStore copy. |
+| `BtaMPM.sys` (43,008 bytes; inventory version 10.0.19041.5848) | `DA5CBBDCE6AC511EF8400E121DF6B6EACA7D05C0F40A01F7353CE9F220EB3DCD` | https://winbindex.m417z.com/hashes/da.html | Exact hash is indexed under `btampm.sys`; no version/OS/update/CAT metadata on the simplified page. |
+
+Winbindex README: https://github.com/m417z/winbindex. It states that full download links are generated for Microsoft's public symbol server (msdl.microsoft.com). The current tool path exposed only the hash-only pages; PE timestamp/virtual size, exact symbol-server URL, version mapping and catalog membership remain unverified. No binary was downloaded.

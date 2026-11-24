@@ -208,3 +208,14 @@ The Library script `pe_imports_a2dp.py` does not advance its import-descriptor o
 6. For LDAC, use a different sink. Evaluate BlueCaster only after SBC and after Server/WinUSB/licensing constraints are resolved.
 
 No build, CI, install, runtime test, physical-host query or physical-host mutation was performed in this update.
+
+
+### 8.6 Microsoft public symbol-index hash cross-check
+
+Winbindex's x64 hash-only pages independently list all three exact hashes already recorded from the Win10 archive/inventory:
+
+- DriverStore `BthA2dp.sys`, 282,624 bytes, version 10.0.19041.4355, SHA-256 `5FBA5EE606AAC39D9CBDA51C0A14DBABBB3A9B47BBD8AC5485ED137B4F354EC3`: [hash page 5f](https://winbindex.m417z.com/hashes/5f.html).
+- Separate System32 `BthA2dp.sys`, 279,040 bytes, SHA-256 `0442A18BBED4E323265C66561C8F8C171D8E934E9089C12B94D1DFDBB057B737`: [hash page 04](https://winbindex.m417z.com/hashes/04.html).
+- `BtaMPM.sys`, 43,008 bytes, version 10.0.19041.5848, SHA-256 `DA5CBBDCE6AC511EF8400E121DF6B6EACA7D05C0F40A01F7353CE9F220EB3DCD`: [hash page da](https://winbindex.m417z.com/hashes/da.html).
+
+Winbindex's [README](https://github.com/m417z/winbindex) says its full download links target Microsoft's public symbol server (msdl.microsoft.com). The simplified pages establish hash presence only; they do not expose file version, PE timestamp/virtual size, OS/update identity or catalog membership. The full metadata/download URL is still needed before a reproducible public-symbol retrieval can replace the inaccessible Project Source archive bytes.
