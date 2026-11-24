@@ -713,3 +713,15 @@ Runs [#4 / 45325486392](https://github.com/as-0101/ldac-a2dp-windows/actions/run
 ## E-165 — Missing PE delay-import hint handled and regression-tested
 
 Isolated experiment commit [6778022b4453857e53acf8a18afe54bb7e46f5f5](https://github.com/as-0101/ldac-a2dp-windows/commit/6778022b4453857e53acf8a18afe54bb7e46f5f5) changes `collect_import_table()` to preserve absent hints as null, adds tests for named delay imports with no hint, ordinal imports with no hint and named imports with a numeric hint, and runs them before UUP download. CI #6 / [45332165839](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45332165839), job `138235648697`, passed the regression-test step. The full image audit was still running at evidence capture. This confirms the parser fix only; it does not confirm any target binary, PE closure, CAT/CBS membership or runtime behavior.
+
+
+## E-166 — Win10 A2DP driver package is CBS-owned by Client-Desktop-Required
+
+CI #463 artifact `microsoft-catalog-a2dp-audit.zip`, workflow artifact ID `14883494285`, ZIP SHA-256 `2cd35a38abcdcde42fb0e175dfa042715aae8bb7e6eb2adf9c40c475886c9d38`, is stored in Library `/LDAC Project/Incoming/CI-463-microsoft-catalog-a2dp-audit.zip`. Its `manifest-search-hits.json` SHA-256 is `f40acc6f4af0df375c9e1553600e8e611e3b21c95bc3add5a475b2b9aa70c24c`; `catalog-package-results.json` SHA-256 is `2e52f5e8846f9186a1d426fb21710e3c653b42a205dd59787ff0849cee28cc0b`.
+
+For KB5036979 / captured package version 10.0.19041.4355, the MUM `Microsoft-Windows-Client-Desktop-Required-Package~31bf3856ad364e35~amd64~~10.0.19041.4355.mum` declares:
+- `microsoft_bluetooth_a2dp.inf` → `Product-onecore__dual_microsoft_bluetooth_a2dp.inf`, version 10.0.19041.4355, type `dualModeDriver`;
+- `btampm.inf` → `Product-onecore__dual_btampm.inf`, version 10.0.19041.1;
+- `microsoft_bluetooth_a2dp_snk.inf` and `microsoft_bluetooth_a2dp_src.inf` → corresponding `dualModeDriver` assemblies version 10.0.19041.1.
+
+For KB5126657, the MUM declares A2DP common 10.0.19041.7802 and BtaMPM 10.0.19041.7725. The Server KB5126655 catalog scan has no matching A2DP/BtaMPM package/MUM hits. This confirms Win10 client CBS ownership and Server package absence in the scanned update; it does not prove that the driver package cannot be independently staged on Server. Full image CAT/registry/INF applicability and disposable-VM staging remain untested.

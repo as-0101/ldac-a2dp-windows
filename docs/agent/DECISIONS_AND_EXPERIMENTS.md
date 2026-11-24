@@ -355,3 +355,10 @@ Runs #4/#5 proved the UUP image identity path works for Server 20348.5761 but ex
 - #4 / 45325486392 and #5 / 45325586394 both verified the Server 20348.5761 offline SOFTWARE hive, then failed at `int(None)` while parsing AudioEndpointBuilder.dll delay imports. No Win10 image, PE report, CAT/CBS result or artifact was produced.
 - Isolated experiment commit `6778022b4453857e53acf8a18afe54bb7e46f5f5` added the nullable-hint fix and three regression tests; CI #6 / 45332165839 passed the tests.
 - Full UUP audit #6 remains the active run. No driver/package staging, runtime test or physical-host action is authorized or performed.
+
+
+## D-053 — Do not inject the full Client-Desktop-Required package into Server 2022
+
+CI #463 MUM evidence shows that the Win10 A2DP common/source/sink and BtaMPM INF packages are declared as `dualModeDriver` entries owned by `Microsoft-Windows-Client-Desktop-Required-Package`. The Server KB5126655 catalog scan has no corresponding package references. This explains why the Server SKU lacks the profile package, but it does not establish whether the underlying signed driver package can be independently staged on Server.
+
+Keep the minimal Win10 A2DP source/common package as the SBC candidate, but do not inject the entire client CBS package or manually copy SYS/INF files. First verify exact DriverStore/CAT membership, INF target decorations, OS applicability and whether PnPUtil/SetupAPI can stage the complete signed driver package independently in a disposable Server 2022 VM.

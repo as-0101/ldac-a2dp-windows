@@ -156,3 +156,11 @@ No service, device, profile-driver, endpoint, SBC negotiation, audio-stream, LDA
 | T-066 | UUP audit #4/#5 parser robustness | Parse named delay-import entries whose hint is absent | Both runs verified Server 20348.5761 identity, then failed on `int(None)` in AudioEndpointBuilder.dll; no Win10 image or metadata report was reached | FAILED — HARNESS ONLY; no binary conclusion |
 | T-067 | PE parser regression tests | Preserve absent hint as null; retain numeric hints | CI #6 run 45332165839, job 138235648697: all three unit tests passed before UUP download | CONFIRMED — BUILD_ONLY; full UUP audit still in progress |
 
+
+
+## 2026-11-24 07:18 Europe/Kyiv — CBS ownership of A2DP profile package
+
+| ID | Gate | Required proof | Actual result | Status / next |
+|---|---|---|---|---|
+| T-068 | Win10 A2DP CBS ownership | Identify the package MUM and exact dualModeDriver assembly identities | CI #463 KB5036979 MUM declares A2DP common 19041.4355, BtaMPM, source and sink INFs under Client-Desktop-Required; KB5126657 updates A2DP common to 7802 and BtaMPM to 7725; Server KB5126655 has no corresponding hits | CONFIRMED — STATIC_ANALYSIS; standalone staging/CAT applicability pending |
+

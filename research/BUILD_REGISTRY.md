@@ -126,3 +126,12 @@ Read-only source audit only. The current fork statically links AOSP libldac 2.0.
 | UUP audit #6 / 45332165839 | same branch, `6778022b4453857e53acf8a18afe54bb7e46f5f5` | IN PROGRESS at update | Three PE parser regression tests passed; UUP extraction/audit still running; no result accepted yet |
 
 The failures in #4/#5 are not binary or OS compatibility results. Do not use them as evidence against BthA2dp. No driver/runtime build or physical-host test was performed.
+
+
+## 2026-11-24 07:18 — CBS package ownership evidence (CI #463)
+
+- CI #463 / run 45311922753 / artifact 14883494285 / ZIP SHA-256 `2cd35a38abcdcde42fb0e175dfa042715aae8bb7e6eb2adf9c40c475886c9d38`.
+- KB5036979 MUM `Microsoft-Windows-Client-Desktop-Required-Package~31bf3856ad364e35~amd64~~10.0.19041.4355.mum` declares the A2DP common INF assembly as `dualModeDriver` version 10.0.19041.4355, and also declares BtaMPM plus A2DP source/sink INFs.
+- KB5126657 latest MUM declares A2DP common 10.0.19041.7802 and BtaMPM 10.0.19041.7725.
+- Server KB5126655 scan has no corresponding A2DP/BtaMPM MUM/manifest hits.
+- Status: STATICALLY_VERIFIED — CBS ownership only. Standalone DriverStore staging, exact CAT membership, Server INF applicability and runtime remain untested.

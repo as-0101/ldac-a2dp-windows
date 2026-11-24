@@ -338,3 +338,16 @@ Git blob identifiers above are not file SHA-256 values. No Incus `ldac.dll` bina
 | UUP audit #6 | Run `45332165839`; commit `6778022b4453857e53acf8a18afe54bb7e46f5f5`; job `138235648697` | Regression tests passed; image audit still running; no metadata artifact available at this update |
 
 No Microsoft binary payload or UUP image was committed. Existing Win10 source package archives were not recollected.
+
+
+## 2026-11-24 07:18 Europe/Kyiv — A2DP CBS package ownership from CI #463
+
+| Artifact / source | Identity | Purpose / status |
+|---|---|---|
+| CI-463-microsoft-catalog-a2dp-audit.zip | Library `/LDAC Project/Incoming/CI-463-microsoft-catalog-a2dp-audit.zip`; artifact ID `14883494285`; ZIP SHA-256 `2cd35a38abcdcde42fb0e175dfa042715aae8bb7e6eb2adf9c40c475886c9d38` | Contains catalog package results and manifest search hits; metadata only |
+| `manifest-search-hits.json` inside CI #463 ZIP | SHA-256 `f40acc6f4af0df375c9e1553600e8e611e3b21c95bc3add5a475b2b9aa70c24c` | Shows Client-Desktop-Required MUM driver entries and dualModeDriver assembly identities |
+| `catalog-package-results.json` inside CI #463 ZIP | SHA-256 `2e52f5e8846f9186a1d426fb21710e3c653b42a205dd59787ff0849cee28cc0b` | Captures KB5036979 / KB5126657 / KB5126655 package extraction status |
+| KB5036979 MUM | `Microsoft-Windows-Client-Desktop-Required-Package~31bf3856ad364e35~amd64~~10.0.19041.4355.mum` | A2DP common 10.0.19041.4355, BtaMPM, source/sink INFs declared as dualModeDriver package entries |
+| KB5126657 MUM | `Microsoft-Windows-Client-Desktop-Required-Package~31bf3856ad364e35~amd64~~10.0.19041.7807.mum` | Later A2DP common 10.0.19041.7802 and BtaMPM 10.0.19041.7725 |
+| KB5126655 Server scan | CI #463 catalog package results | No matching A2DP/BtaMPM MUM/manifest references; not a full offline Server image inventory |
+

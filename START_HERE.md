@@ -1,15 +1,13 @@
-> **ACTIVE PROJECT OVERRIDE — 2026-11-24 07:13 Europe/Kyiv**
+> **ACTIVE PROJECT OVERRIDE — 2026-11-24 07:18 Europe/Kyiv**
 >
-> Priority is the smallest Windows 10 A2DP package adaptation for Server 2022, starting with SBC stereo. Do not create a new Bluetooth/ACX driver and do not resume ACX bind-probe work; CI #248/#255 are closed.
-> - Existing Win10 source/common/sink INF, DriverStore and System32 artifacts are already in Project Sources/Library. Do not re-export or ask the user to resend them.
-> - CI #463 (run 45311922753) succeeded. Catalog packages contain PSF forward-delta SYS payloads; Winbindex returned 0/3 exact SHA identities. Metadata artifacts are already in Library `/LDAC Project/Incoming`.
-> - UUP audit #3 (45317582562) failed before image mount because the DISM object lacked `.Version`; no image/component result.
-> - UUP audits #4 (45325486392) and #5 (45325586394) both verified the Server image identity as Windows Server 2022 Datacenter 20348.5761 / ServerDatacenter, then failed in the PE parser on `AudioEndpointBuilder.dll`: a named delay-import entry had `hint=None`, and the parser called `int(None)`. This is a tooling failure, not a binary incompatibility. Neither run reached the Win10 image; neither produced a metadata artifact.
-> - Isolated experiment commit [6778022](https://github.com/as-0101/ldac-a2dp-windows/commit/6778022b4453857e53acf8a18afe54bb7e46f5f5) makes missing delay-import hints nullable, adds three regression tests, and runs them before the long UUP download. CI #6 / [45332165839](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45332165839) has passed the parser regression-test step; the offline image audit is still running. No PE/CAT/registry conclusion is available yet.
-> - Exact captured DriverStore BthA2dp 10.0.19041.4355, separate System32 copy and BtaMPM 10.0.19041.5848 remain distinct. Do not transfer import conclusions across versions. Exact 20348.5761 comparison is pending.
-> - Server `bth.inf` routes remote A2DP Sink UUID 0x110B to a generic fallback; Win10 source/common INF installs `BthA2dp.sys` and KSCATEGORY_AUDIO interfaces. This is a package-level candidate only; no staging or runtime success is claimed.
-> - The fork already statically links AOSP libldac 2.0.2 into `ldacsvc_core`; no Microsoft inbox LDAC provider DLL has been identified. OPPO Enco Buds2 is SBC/AAC only.
-> - `server-2022-oppo` remains unchanged. Physical Server 2022 has not been queried or modified in this run.
+> Primary target: reuse the existing Windows 10 A2DP package for SBC stereo on Server 2022. No new Bluetooth/ACX driver; CI #248/#255 remain closed.
+> - Existing Win10 source/common/sink INF, DriverStore and System32 artifacts are already in Project Sources/Library; do not re-export or ask the user to resend them.
+> - CI #463 catalog audit proves the A2DP INFs are `dualModeDriver` entries owned by `Microsoft-Windows-Client-Desktop-Required-Package`. For captured 10.0.19041.4355, the MUM declares A2DP common INF 4355, BtaMPM and source/sink INFs. The Server KB5126655 scan has no corresponding A2DP/BtaMPM package references. This is CBS ownership evidence, not proof that the package can be staged standalone on Server.
+> - UUP audits #4/#5 verified Server 20348.5761 identity but failed on a PE-parser `hint=None` edge case, not on binary compatibility. Isolated experiment commit [6778022](https://github.com/as-0101/ldac-a2dp-windows/commit/6778022b4453857e53acf8a18afe54bb7e46f5f5) fixed it and added regression tests; CI #6 / [45332165839](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45332165839) passed the test step; full image audit remains in progress.
+> - Exact captured DriverStore BthA2dp 19041.4355, separate System32 copy and BtaMPM 19041.5848 must remain distinct. Exact Server 20348.5761 import closure is pending.
+> - The smallest candidate remains the Win10 A2DP source/common package layered over Server Bluetooth core, but do not import the whole Client-Desktop-Required package into Server. First establish exact file hashes, package/catalog/CBS membership, INF applicability and whether the dualModeDriver can be staged independently.
+> - The fork already statically links AOSP libldac 2.0.2; no Microsoft inbox LDAC provider DLL has been identified. OPPO Enco Buds2 supports SBC/AAC, not LDAC.
+> - `server-2022-oppo` remains unchanged; physical Server 2022 was not queried or modified.
 >
 # LDAC A2DP — project entry
 
