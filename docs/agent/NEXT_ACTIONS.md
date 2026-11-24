@@ -23,7 +23,7 @@
 ## Explicit blockers and safety
 
 - WIM/ESD component metadata is the remaining input blocker; do not request another copy of the already captured Win10 ZIP.
-- No fresh physical-host query was performed in this run. The last recorded OPPO A2DP node was present/enumerated and bound to the project's own oem75.inf (provider LDAC A2DP Project, service LdacA2dp, version 0.2.325.1600); Code 37 / 0xC000000D occurred at custom driver start. This is not a test of the Microsoft Win10 package. The record remains historical.
+- No fresh physical-host query was performed in this run. The last recorded OPPO A2DP node was present/enumerated on the local Intel Bluetooth radio (LOCALMFG&0002) and bound to the project's own oem75.inf (provider LDAC A2DP Project, service LdacA2dp, version 0.2.325.1600); Code 37 / 0xC000000D occurred at custom driver start. This is not a test of the Microsoft Win10 package. The record remains historical.
 - No physical Server changes, driver installation, service/device restart, BCD/security/test-signing or certificate changes, OS update/rollback, or prepare/upgrade/install/rollback script execution.
 - No new ACX bind-probe. CI #248 and #255 remain closed historical evidence.
 - No HFP/microphone work.
