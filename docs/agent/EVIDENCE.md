@@ -842,3 +842,9 @@ Decision: no new LDAC encoder/decoder work is needed. Keep the existing AOSP enc
 - Workflow commit: 08663c4ca7d1536b96c554fd5e484382262b1250.
 - The script mounts Win10 first, retains temporary copies of the exact five package files, then checks those same bytes against Server 20348.5761 catalogs. Server BthPort/BthEnum/BTHUSB/bth.inf are positive controls. Temporary package files are removed before artifact upload. A final explicit exit 0 avoids the prior post-completion exit-code ambiguity.
 - CI result/run ID is pending verification; no compatibility conclusion is assigned yet.
+
+## E-175 — Catalog signer identity added to cross-SKU audit (2026-11-24)
+
+- Latest script commit on experiment/win10-a2dp-cross-sku-catalog-audit-20261124: 11f0c4776b3d1ed6c79f5dca75634dda40c19ba9.
+- The matched catalog record now includes Get-AuthenticodeSignature status, signer subject and signer thumbprint in addition to SignTool membership result and catalog SHA-256.
+- The follow-up still has no verified CI result/run ID; do not claim Server catalog acceptance until the cross-SKU artifact is available.
