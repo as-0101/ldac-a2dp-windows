@@ -614,3 +614,30 @@ All 3 exact identities failed SHA-256 verification. The symbol server returned B
 Source: UUP image audit run #3, isolated branch experiment/win10-a2dp-uup-image-audit-20261124.
 
 The run targets Windows 10 19045.5917 x64 and Server 20348.5761 x64. It is in progress after adding a narrowly scoped SHA-256 fallback to the UUP downloader helper. No runtime installation or physical-host action is part of this run.
+
+
+## E-148 — Windows 10 A2DP update payloads are PSF deltas (2026-11-24)
+
+Source: GitHub Actions CI #463, run 45311922753, artifact microsoft-catalog-a2dp-audit.zip.
+
+- KB5036979 contains A2DP component version 10.0.19041.4355; the extracted f/btha2dp.sys payload is 11,840 bytes and does not begin with PE MZ.
+- KB5126657 contains A2DP component version 10.0.19041.7802 and BtaMPM 10.0.19041.7725; extracted f/btha2dp.sys (15,766 bytes) and f/btampm.sys (7,952 bytes) are not complete PE images.
+- These files are forward-delta payloads. Package discovery/version evidence is valid; imports/exports cannot be read from these payloads without reconstruction.
+
+## E-149 — Server 2022 KB5126655 lacks the A2DP profile package (2026-11-24)
+
+Source: GitHub Actions CI #463, run 45311922753, artifact microsoft-catalog-a2dp-audit.zip.
+
+The Server 2022 build 20348.5761 package scan found no microsoft_bluetooth_a2dp*.inf, BthA2dp.sys, BtaMPM.sys, or matching A2DP/BtaMPM CBS manifest hits. It did find Microsoft-OneCore-Bluetooth-Package and Microsoft-OneCore-Connectivity-Bluetooth-Package plus other Bluetooth core/input/WinRT packages. This is evidence of a client A2DP profile-package gap in the Server update, not evidence that third-party A2DP is impossible.
+
+## E-150 — Winbindex symbol-server downloads are not exact target binaries (2026-11-24)
+
+Source: CI #463 artifact win10-a2dp-symbol-audit-metadata.zip.
+
+All 3 exact identities failed SHA-256 verification. The symbol server returned BthA2dp 10.0.19041.6392 instead of 4355, BthA2dp 10.0.19041.1030 instead of 19041.1, and BtaMPM 10.0.19041.7660 instead of 5848, while retaining the indexed timestamp/size. Do not use those downloads for exact-version PE compatibility claims.
+
+## E-151 — Exact UUP image extraction started (2026-11-24)
+
+Source: UUP image audit run #3, isolated branch experiment/win10-a2dp-uup-image-audit-20261124.
+
+The run targets Windows 10 19045.5917 x64 and Server 20348.5761 x64. It is in progress after adding a narrowly scoped SHA-256 fallback to the UUP downloader helper. No runtime installation or physical-host action is part of this run.
