@@ -437,3 +437,16 @@ Decision: do not transplant Win10 ks.inf, wdmaudio.inf, MSSysFx or related audio
 - [Installing a catalog with SignTool](https://learn.microsoft.com/en-us/windows-hardware/drivers/install/installing-a-catalog-file-by-using-signtool): SignTool catdb adds/removes a catalog; by default it targets the system component and driver database.
 - [PnPUtil command syntax](https://learn.microsoft.com/en-us/windows-hardware/drivers/devtest/pnputil-command-syntax): /add-driver stages a package into DriverStore; /install is a separate flag that installs/updates matching devices. The stage-smoke harness deliberately omits /install.
 
+
+
+## D-173 — Stage-smoke result must be labelled with the runner's actual UBR (2026-11-24 12:25 Europe/Kyiv)
+
+The disposable workflow validates Windows Server 2022, CurrentBuild=20348 and InstallationType=Server, and records the runner UBR, but does not enforce UBR=5761. Therefore a successful stage result proves acceptance only on the exact UBR recorded in the artifact. If that UBR differs from the physical target's 5761, perform a separate exact-UBR disposable VM staging test before claiming 20348.5761-specific behavior. Do not change the active run's environment gate while it is executing.
+
+## D-174 — Interpret SignTool catdb as catalog-database registration, not certificate-store modification
+
+Microsoft documents that when neither `/d` nor `/g` is supplied, `signtool catdb` updates the system component and driver catalog database. `/u` only requests a unique catalog filename; it does not import a certificate or weaken trust policy. The stage-smoke operation remains limited to the disposable runner, with explicit cleanup. This does not authorize any equivalent operation on the physical Server.
+
+## EXP-009 — Stage-smoke run #3 status review
+
+Run [45371687882](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45371687882), job 138367259323. Steps 1–6 passed; step 7 remains in progress. No package staging result or artifact is available yet. The experiment remains limited to original-CAT verification and DriverStore staging without `/install`; it does not test device binding, service start, driver load, endpoint or audio.
