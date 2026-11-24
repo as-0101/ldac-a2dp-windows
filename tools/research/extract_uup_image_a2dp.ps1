@@ -738,7 +738,7 @@ function Invoke-StagePackageSmokeTest {
             $path = Join-Path $StagePackageDirectory $name
             if (-not (Test-Path -LiteralPath $path)) { throw "Missing stage package file: $name" }
             $hash = (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToUpperInvariant()
-            if ($hash -ne $expected[$name]) { throw "Hash mismatch for $name: $hash != $($expected[$name])" }
+            if ($hash -ne $expected[$name]) { throw "Hash mismatch for $($name): $hash != $($expected[$name])" }
             $packageFiles += [pscustomobject]@{ name=$name; sizeBytes=(Get-Item -LiteralPath $path).Length; sha256=$hash }
         }
         $catalogHash = (Get-FileHash -LiteralPath $catalog.FullName -Algorithm SHA256).Hash.ToUpperInvariant()
