@@ -138,3 +138,7 @@ No service, device, profile-driver, endpoint, SBC negotiation, audio-stream, LDA
 | T-058 | Exact captured DriverStore BthA2dp 10.0.19041.4355 import revalidation | E-119 reports ntoskrnl-only direct imports; later 19041.6392 candidate has 8 descriptors / 149 imports, proving version drift. | PENDING exact-byte reparse + Server 20348.5761 export comparison |
 
 | T-059 | Official Windows LDAC provider/DLL existence check | Sony Support confirms no OS-level LDAC support in Windows/macOS, independent of controller; Microsoft Win10 codec table lists SBC/aptX Classic only. | COMPLETE — NO INBOX LDAC PROVIDER |
+
+| T-060 | UUP image identity/extraction for Win10 19045.5917 and Server 20348.5761 | Run #3 failed before mount because the DISM object lacked a `Version` property. | HARNESS FAILURE; corrected offline SOFTWARE-hive verification is being tested in runs #4/#5 |
+| T-061 | Complete static dependency closure for Win10 BthA2dp/BtaMPM against Server 20348.5761 | Run #5 adds HAL, SleepStudyHelper, WDFLDR, ksecdd and the Win10 BtaMPM companion reference. | IN PROGRESS; no PE/import/export result accepted yet |
+| T-062 | Offline service/class/MMDevices registrations and system CatRoot membership | Not completed by run #3; current UUP script still needs this extension. | NOT TESTED / NEXT IMPLEMENTATION STEP |

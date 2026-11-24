@@ -113,3 +113,27 @@ E-119 reports the exact captured DriverStore BthA2dp 19041.4355 has only ntoskrn
 
 The captured BtaMPM 10.0.19041.5848 report has 42 imports (37 ntoskrnl, 1 cng/SystemPrng, 4 WppRecorder). The names match the later 19041.7660 candidate and all are exported by the available Server 20348.5866 reference files. Re-run this check against the exact Server 20348.5761 image after UUP extraction; do not treat the later runner build as the target.
 
+## 2026-11-24 06:16 — run #3 failure and corrected reruns
+
+### Run #3 — harness failure, not a binary result
+
+[Run 45317582562](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45317582562), commit `e9900fc894772997526995feeaecfff4a9ec5ff0`, job `138188044012`, failed at line 370 while reading `$selected.Version`. PowerShell reported that the property did not exist on the `Get-WindowsImage` object. The failure occurred before `Mount-WindowsImage`; the run produced no PE/INF/CBS/CAT report and no artifact. This is a script assumption failure only.
+
+### Corrective revisions
+
+- Commit [144d42105a26d5aa21f159ae068b17a047f724a9](https://github.com/as-0101/ldac-a2dp-windows/commit/144d42105a26d5aa21f159ae068b17a047f724a9) removes the DISM object-property dependency. After mounting the selected WIM index read-only, it copies the offline SOFTWARE hive to the temporary work directory, loads that copy, and verifies CurrentBuild.UBR plus EditionID. It records ProductName, InstallationType and BuildLabEx. It also adds HAL.dll, SleepStudyHelper.sys, WDFLDR.SYS and ksecdd.sys to the target/reference set.
+- Commit [e947970356884ead996bcc7347fa0e5554aa770b](https://github.com/as-0101/ldac-a2dp-windows/commit/e947970356884ead996bcc7347fa0e5554aa770b) adds the Win10 image's DriverStore-preferred BtaMPM.sys to the export reference directory before auditing Win10 binaries. This allows BthA2dp → BtaMPM imports to resolve against the matching Win10 companion; BtaMPM's own imports are still compared against Server exports.
+
+### Verification runs
+
+- [Run #4 / 45325486392](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45325486392) uses the offline-hive identity fix and expanded kernel reference set.
+- [Run #5 / 45325586394](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45325586394) uses the latest companion-BtaMPM fix.
+- Both were in progress at this update. Do not treat either as successful until the image identity fields and output artifact are checked.
+
+### Next evidence gate
+
+1. Confirm exact image identities: Win10 19045.5917 / Professional and Server 20348.5761 / ServerDatacenter.
+2. Compare each extracted file's SHA-256 to the captured archive; never merge the DriverStore and System32 BthA2dp copies.
+3. Inspect direct/delay imports, exports, API-set references and full Server 20348.5761 resolution, including the Win10 BtaMPM companion.
+4. Add offline SYSTEM/SOFTWARE service/class/MMDevices registrations and system CatRoot membership; package-local CAT scanning is not sufficient.
+5. Only then consider staging the unmodified package in a disposable Server 2022 VM. No physical-host changes.

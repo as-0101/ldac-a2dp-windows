@@ -98,3 +98,12 @@ CI #16 Library copies were independently re-materialized and matched against the
 - **UUP image audit #3:** in progress — [45317582562](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45317582562), branch `experiment/win10-a2dp-uup-image-audit-20261124`, commit `e9900fc894772997526995feeaecfff4a9ec5ff0`. Targets Win10 19045.5917 / Server 20348.5761.
 - Code branch `server-2022-oppo` remains `39eea45ab5d93c09836819db75f2a64177fbf09a`.
 
+## 2026-11-24 — UUP audit #3 failure and corrected reruns
+
+| Run | Commit | Result | Notes |
+|---|---|---|---|
+| [#3 / 45317582562](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45317582562) | `e9900fc894772997526995feeaecfff4a9ec5ff0` | FAILED — harness | `Get-WindowsImage` result had no `Version` property; failure before image mount; no artifact |
+| [#4 / 45325486392](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45325486392) | `144d42105a26d5aa21f159ae068b17a047f724a9` | IN PROGRESS at update | Offline SOFTWARE-hive identity check; HAL/SleepStudyHelper/WDFLDR/ksecdd references |
+| [#5 / 45325586394](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45325586394) | `e947970356884ead996bcc7347fa0e5554aa770b` | IN PROGRESS at update | Latest script; adds matching Win10 BtaMPM companion export reference |
+
+No run in this block has established PE compatibility, CAT membership, driver staging/load, A2DP endpoint, SBC negotiation or audio. Run #3 produced no artifact. Do not report it as a successful image audit.

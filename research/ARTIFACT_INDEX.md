@@ -287,3 +287,14 @@ Winbindex README: https://github.com/m417z/winbindex. It states that full downlo
 
 CI #463: [45311922753](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45311922753). UUP audit #3: [45317582562](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45317582562), in progress.
 
+## UUP audit failure and corrected reruns — 2026-11-24
+
+| Artifact / source | Identity | Purpose / status |
+|---|---|---|
+| UUP audit #3 | Run `45317582562`; commit `e9900fc894772997526995feeaecfff4a9ec5ff0`; job `138188044012` | Failed before image mount because `Get-WindowsImage.Version` was absent. No metadata artifact was uploaded. |
+| Offline image identity fix | Commit `144d42105a26d5aa21f159ae068b17a047f724a9`; script blob `2e0bd7e213c7ede02e8d61461e9d442e0e871fad` | Verifies CurrentBuild.UBR and EditionID from a copied offline SOFTWARE hive; adds four omitted kernel dependencies. Git blob SHA is not a file SHA-256. |
+| Win10 BtaMPM companion fix | Commit `e947970356884ead996bcc7347fa0e5554aa770b`; script blob `b4eaf2fa5cb4372710fe087b0afb0f46c44276a9` | Adds matching Win10 BtaMPM.sys to the PE export reference set for BthA2dp. Git blob SHA is not a file SHA-256. |
+| UUP audit #4 | Run `45325486392`, commit `144d42105a26d5aa21f159ae068b17a047f724a9` | In progress at update; does not include the later companion-copy change. |
+| UUP audit #5 | Run `45325586394`, commit `e947970356884ead996bcc7347fa0e5554aa770b` | In progress at update; latest experiment revision. |
+
+The source Win10 package archives remain in Project Sources/Library and were not recollected or re-exported. Run #3 had no artifact; inspect #4/#5 artifacts only after completion. No Microsoft binary payload or image is committed to Git.

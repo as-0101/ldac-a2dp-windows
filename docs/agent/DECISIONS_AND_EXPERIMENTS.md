@@ -312,3 +312,17 @@ Sony's official support article says Windows has no system-level LDAC support re
 
 The captured BtaMPM 10.0.19041.5848 import set (42 symbols) matches the later 19041.7660 candidate and all names exist in Server 20348.5866 exports. Keep this as a partial static pass only. The target Server image is 20348.5761; exact exports and the exact BtaMPM export table are still required before staging.
 
+## D-048 — Verify UUP image identity from the offline registry, not a DISM Version property
+
+UUP audit #3 showed that the selected `Get-WindowsImage` object did not expose a `Version` property in the runner's DISM module. The script failed before mounting the image. The corrected path copies the mounted image's SOFTWARE hive to a temporary work file and checks CurrentBuild.UBR and EditionID. This verifies the actual image selected rather than relying on UUP metadata or a module-specific object property. The source image is mounted read-only.
+
+## D-049 — Resolve BthA2dp profile-management imports against its matching Win10 BtaMPM companion
+
+Server 2022 has no inbox BtaMPM.sys in the audited package set. If the Win10 BthA2dp binary imports BtaMPM entry points, those imports must be resolved against the matching Win10 companion BtaMPM.sys and then the companion's own imports resolved against Server exports. Do not count the absent Server BtaMPM as an unexplained kernel export gap.
+
+## Experiment — UUP image audit #3 failure and rerun
+
+- Run #3 / 45317582562 failed at the `Get-WindowsImage.Version` access before image mount; no PE/CBS/CAT result and no artifact.
+- Commit 144d42105a26d5aa21f159ae068b17a047f724a9 added offline SOFTWARE-hive identity verification and HAL/SleepStudyHelper/WDFLDR/ksecdd references.
+- Commit e947970356884ead996bcc7347fa0e5554aa770b added the matching Win10 BtaMPM companion to the reference directory.
+- Runs #4 / 45325486392 and #5 / 45325586394 were in progress at this update. #5 is the latest experiment revision. No compatibility conclusion is accepted until exact image versions, hashes and reports are inspected.

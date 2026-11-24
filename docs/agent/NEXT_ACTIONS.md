@@ -1,14 +1,16 @@
-# Immediate next actions — 2026-11-24 05:20 Europe/Kyiv
+# Immediate next actions — 2026-11-24 06:16 Europe/Kyiv
 
 This block supersedes older ACX-focused action lists below.
 
-1. Finish UUP audit #3; inspect exact Win10 19045.5917 and Server 20348.5761 file versions/hashes, PE imports/exports/delay imports/API sets, INF/CBS/WinSxS and CATs.
-2. Close the dependency graph: add Server `HAL.dll`, `SleepStudyHelper.sys`, `WDFLDR.SYS`, `ksecdd.sys`; resolve BthA2dp → companion BtaMPM exports and BtaMPM → Server exports.
-3. If 19045.5917 does not match captured hashes, audit the 19045.4355 UUP image as a candidate for captured BthA2dp 10.0.19041.4355. Keep the 279,040-byte System32 copy separate.
-4. Extract offline SYSTEM/SOFTWARE service/class registrations and identify system CatRoot catalog membership; package-local CAT search alone is insufficient.
-5. Only after exact static/CAT/registry checks pass, test unmodified package staging on a disposable Server 2022 CI/VM without test-signing, certificate, BCD or security changes. Record service → enumeration → driver → endpoint separately.
-6. Actual SBC stereo requires a disposable Server 2022 environment with a real Bluetooth radio and OPPO Enco Buds2. No physical-host action is authorized. OPPO ETE41 is AAC/SBC only; LDAC requires a different sink.
-7. Keep code changes on the isolated experiment branch; documentation only on `docs/project-source-reorg`. Notion journal remains append-only.
+1. Inspect UUP audit #4 ([45325486392](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45325486392)) and #5 ([45325586394](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45325586394)). #5 is the latest script revision and includes the Win10 BtaMPM companion export reference.
+2. Confirm each mounted image from its offline SOFTWARE hive: exact CurrentBuild.UBR must be 19045.5917 / 20348.5761, and EditionID must be Professional / ServerDatacenter. Do not use Get-WindowsImage.Version; that property was absent from the DISM object in run #3.
+3. Compare extracted SHA-256 values against the captured identities: DriverStore BthA2dp 5FBA5EE606AAC39D9CBDA51C0A14DBABBB3A9B47BBD8AC5485ED137B4F354EC3; separate System32 BthA2dp 0442A18BBED4E323265C66561C8F8C171D8E934E9089C12B94D1DFDBB057B737; BtaMPM DA5CBBDCE6AC511EF8400E121DF6B6EACA7D05C0F40A01F7353CE9F220EB3DCD.
+4. For every exact or explicitly non-exact candidate, record PE architecture, timestamp, OS/image/subsystem versions, direct/delay imports, exports, API-set names, embedded signature state and static Server export resolution. Keep the two BthA2dp copies separate and resolve BthA2dp → matching Win10 BtaMPM as a companion dependency.
+5. Extend the offline audit to SYSTEM/SOFTWARE service, BTHENUM/class and MMDevices registrations plus system CatRoot catalog membership. Do not infer catalog membership from an embedded signature or package-local CAT absence.
+6. If 19045.5917 does not reproduce the captured hashes, audit 19045.4355 as a separate exact-version candidate. Do not replace the current run or use Winbindex timestamp/size collisions as exact binaries.
+7. Only after static, registry, CBS and catalog checks pass, stage the unmodified signed package in a disposable Server 2022 VM. Record service start → enumeration → driver load → endpoint → SBC negotiation → actual stereo audio separately.
+8. Physical Server 2022 remains read-only. No driver install, device restart, BCD/security/test-signing/certificate change, OS update/rollback or prepare/upgrade/install/rollback script. HFP/microphone remains out of scope.
+9. Code changes stay on the isolated experiment branch; documentation only on `docs/project-source-reorg`. Notion journal remains append-only.
 
 # Current continuation — 2026-11-24 02:19 (codec ownership and PE audit correction)
 

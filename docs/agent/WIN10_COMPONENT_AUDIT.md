@@ -297,3 +297,8 @@ Sony's own support article (E-158) states that Windows and macOS do not provide 
 
 The exact captured BtaMPM 10.0.19041.5848 report (SHA-256 `DA5CBBDCE6AC511EF8400E121DF6B6EACA7D05C0F40A01F7353CE9F220EB3DCD`) lists 42 imports: 37 ntoskrnl, 1 cng (`SystemPrng`) and 4 WppRecorder. The exact import-name set matches the later 19041.7660 symbol-server candidate; all 42 names are present in the available Server 20348.5866 export reference. Exact Server 20348.5761 export confirmation and the exact 19041.5848 BtaMPM export table remain pending.
 
+## UUP audit harness correction — 2026-11-24 06:16
+
+The first exact-image attempt (run #3 / 45317582562) failed before mounting the image because the selected DISM image object did not expose a `Version` property. This does not change the component map or establish any binary incompatibility.
+
+The corrected experiment now verifies image identity from a copied offline SOFTWARE hive (CurrentBuild.UBR and EditionID), adds the previously omitted HAL/SleepStudyHelper/WDFLDR/ksecdd references, and in its latest revision includes the Win10 BtaMPM.sys companion when resolving BthA2dp imports. Runs #4 / 45325486392 and #5 / 45325586394 were still in progress at the last check. Exact PE, catalog and registry conclusions remain pending.
