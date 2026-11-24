@@ -160,3 +160,11 @@ No build or installation was performed. Public documentation screening only:
 - No build, staging or runtime test. Artifact contains metadata/text PE reports only; no Microsoft SYS/DLL/ISO payloads.
 - UUP audit #7 [45342686564](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45342686564) is in progress for offline catalog membership and SYSTEM service registry inventory. Branch experiment/win10-a2dp-catalog-registry-audit-20261124, commit 5bdbc75d904beb8c5f84787cc592ae9134df40c6.
 
+## CI #11 — offline UUP catalog and service inventory (2026-11-24)
+
+- Workflow run: 45347639357 — https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45347639357.
+- Job conclusion: failure after both image records completed and the script printed UUP image audit complete; artifact upload succeeded. Exact cause of the final process exit code 1 remains a tooling issue, not a package compatibility failure.
+- Artifact ID: 14901033654; size 331,349 bytes; SHA-256 277ed892887f10383e34bb9f3c3690a0ebdf290d32cb9f4899d6016e78fbadff.
+- Result: all five Win10 A2DP package files verified against the same Win10 CBS servicing CAT. Server catalog membership was not checked.
+- Follow-up code branch: experiment/win10-a2dp-cross-sku-catalog-audit-20261124; script commit 05555dc8fac8b2f551826b71cba40084defe9a46; workflow commit 08663c4ca7d1536b96c554fd5e484382262b1250.
+- No driver build or runtime test was performed.
