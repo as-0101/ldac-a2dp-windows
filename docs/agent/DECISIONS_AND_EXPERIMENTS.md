@@ -401,3 +401,14 @@ The earlier E-119 claim that the exact DriverStore BthA2dp imports only ntoskrnl
 
 This is not runtime compatibility proof. Catalog membership and SetupAPI applicability remain the immediate gates. Proceed only on a disposable Server 2022 CI/VM after the catalog audit; do not install or stage on the physical host. Keep server-2022-oppo and ACX work frozen.
 
+## D-172 — Separate Win10 catalog membership from Server acceptance (2026-11-24)
+
+CI #11 verifies that the five exact Win10 A2DP package files are members of one Win10 servicing catalog. This does not prove that Server 20348.5761 can validate the package: the A2DP INF files have no CatalogFile directive in the captured Version sections, and Microsoft documents that system-supplied INF signatures are validated against the OS's system-supplied catalogs. The Server catalog set must therefore be checked independently before any staging claim.
+
+Decision:
+- Preserve the original INF/SYS/CAT bytes.
+- Do not add a CatalogFile line, regenerate a catalog, alter trust policy or touch the physical host.
+- Run the isolated cross-SKU catalog audit; require positive Server controls.
+- Only if catalog acceptance is still unresolved, test supported catalog registration/staging behavior in a disposable Server 2022 VM, without certificate-store changes.
+
+The cross-SKU audit is implemented on experiment/win10-a2dp-cross-sku-catalog-audit-20261124; result pending.
