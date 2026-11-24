@@ -12,6 +12,7 @@
 - OPPO ETE41 supports AAC/SBC only; it is suitable for SBC, not LDAC.
 - The legacy PE import script lacks the 20-byte descriptor increment; its 1.3 MB report is invalid. Reports (2)/(3) need a retained parser/source and independent verification.
 - BlueCaster v3.0.4 is a ready user-mode A2DP/LDAC alternative using BTstack+WinUSB, but it requires a USB adapter, takes it over from Windows, does not list Server 2022 support, and bundles BTstack with a personal/non-commercial license.
+- Winbindex's x64 hash-only index now confirms the exact SHA-256 values for the 282,624-byte DriverStore BthA2dp.sys, the separate 279,040-byte System32 copy, and BtaMPM.sys. This confirms hash presence in the Microsoft public-symbol index, but does not supply PE timestamp/virtual size, OS/update mapping or catalog membership; see E-143–E-145.
 
 ## Remaining blockers
 

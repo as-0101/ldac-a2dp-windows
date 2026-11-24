@@ -19,6 +19,7 @@ The 2026-11-23 23:49 Win10 package archive already exists and includes the commo
 - The repo already contains AOSP `libldac` at `eeee1a3f`, compiled as static libraries into the custom service; it is not a Windows 10 codec DLL.
 - OPPO ETE41 is AAC/SBC only; SBC is the common milestone codec. LDAC requires another sink.
 - The legacy PE import report is invalid because its parser never advances to the next 20-byte import descriptor. See E-139.
+- Winbindex's x64 hash-only index now confirms the exact SHA-256 values for the 282,624-byte DriverStore BthA2dp.sys, the separate 279,040-byte System32 copy, and BtaMPM.sys. This confirms hash presence in the Microsoft public-symbol index, but does not supply PE timestamp/virtual size, OS/update mapping or catalog membership; see E-143–E-145.
 - BlueCaster v3.0.4 is a possible separate user-mode LDAC transport, but it requires WinUSB on a USB adapter, does not list Server 2022 support, and carries BTstack's personal/non-commercial license. It is not a drop-in codec DLL.
 
 
