@@ -429,3 +429,17 @@ The common INF contains `BthA2dp.sys=SignatureAttributes.DRM`, but its `[Signatu
 
 UUP audit #7 failed in the audit script before catalog/service outputs; recovery runs #8–#11 are in progress. See `WIN10_UUP_IMAGE_AUDIT.md`. No staging or runtime result exists yet.
 
+## CI #11 package ownership and signature evidence — 2026-11-24
+
+The Win10 19045.5917 offline image places all five A2DP package files in one servicing catalog:
+Windows\servicing\Packages\Microsoft-Windows-Client-Desktop-Required-Package~31bf3856ad364e35~amd64~~10.0.19041.5917.cat (SHA-256 78772FA12959C072D687283F08D08367B8A8EF1A2F07D7B72F20BCAFD12483BF).
+
+The owning MUM declares:
+- microsoft_bluetooth_a2dp.inf — 10.0.19041.4355, dualModeDriver;
+- microsoft_bluetooth_a2dp_src.inf — 10.0.19041.1, dualModeDriver;
+- btampm.inf — 10.0.19041.5848, dualModeDriver;
+- it also declares the A2DP Sink package, which remains out of scope.
+
+SignTool verified BthA2dp.sys and BtaMPM.sys with /kp, and the three INF files with /pa. All five resolve to the same catalog after 386/3,326 catalog candidates. This proves membership in the Win10 image's catalog; Server 20348.5761 catalog acceptance is still pending.
+
+The Server image's offline SYSTEM hive contains BthPort/BthEnum/BTHUSB registrations but no BthA2dp service. This confirms a profile-registration gap, not absence of the underlying Bluetooth core.
