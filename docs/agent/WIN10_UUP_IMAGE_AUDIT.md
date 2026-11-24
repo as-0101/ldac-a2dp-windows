@@ -109,3 +109,7 @@ The captured A2DP common INF/BthA2dp package version is 10.0.19041.4355. UUP Dum
 
 E-119 reports the exact captured DriverStore BthA2dp 19041.4355 has only ntoskrnl direct imports. The separate System32 copy and later 19041.6392 symbol-server candidate have 8 import descriptors, so imports are version-dependent and must be compared per exact hash.
 
+### Exact BtaMPM import check
+
+The captured BtaMPM 10.0.19041.5848 report has 42 imports (37 ntoskrnl, 1 cng/SystemPrng, 4 WppRecorder). The names match the later 19041.7660 candidate and all are exported by the available Server 20348.5866 reference files. Re-run this check against the exact Server 20348.5761 image after UUP extraction; do not treat the later runner build as the target.
+

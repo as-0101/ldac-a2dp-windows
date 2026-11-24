@@ -672,3 +672,7 @@ Sony's official support article states that Microsoft Windows and Apple macOS do
 
 Source: [Sony Support article 00260277](https://www.sony.ru/electronics/support/articles/00260277), last modified 2025-03-11.
 
+## E-159 — Exact BtaMPM 19041.5848 imports resolve in later Server 20348.5866 reference set
+
+The exact captured BtaMPM.sys 10.0.19041.5848 (43,008 bytes; SHA-256 `DA5CBBDCE6AC511EF8400E121DF6B6EACA7D05C0F40A01F7353CE9F220EB3DCD`) in reports (2)/(3) imports 42 symbols: 37 from ntoskrnl.exe, 1 (`SystemPrng`) from cng.sys and 4 from WppRecorder.sys. Its exact import-name set is identical to the non-exact 10.0.19041.7660 symbol-server candidate analyzed in CI #463. All 42 names are present in the available later Server 20348.5866 export reference set. This is a static import-closure pass for the later Server build only; exact Server 20348.5761 exports and the exact BtaMPM export table remain pending.
+

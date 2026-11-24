@@ -293,3 +293,7 @@ The exact captured BtaMPM 10.0.19041.5848 (43,008 bytes, SHA-256 `DA5CBBDCE6AC51
 
 Sony's own support article (E-158) states that Windows and macOS do not provide system-level LDAC support, independent of the Bluetooth controller. Therefore the search for a Microsoft/Sony inbox LDAC provider DLL in Windows 10 has a negative result. The Windows 10 inbox A2DP package is still useful for SBC/aptX; LDAC requires a third-party A2DP implementation or an alternate user-mode Bluetooth transport. Do not confuse a codec library such as AOSP `libldac` with a Windows A2DP provider.
 
+### Exact BtaMPM import closure cross-check
+
+The exact captured BtaMPM 10.0.19041.5848 report (SHA-256 `DA5CBBDCE6AC511EF8400E121DF6B6EACA7D05C0F40A01F7353CE9F220EB3DCD`) lists 42 imports: 37 ntoskrnl, 1 cng (`SystemPrng`) and 4 WppRecorder. The exact import-name set matches the later 19041.7660 symbol-server candidate; all 42 names are present in the available Server 20348.5866 export reference. Exact Server 20348.5761 export confirmation and the exact 19041.5848 BtaMPM export table remain pending.
+

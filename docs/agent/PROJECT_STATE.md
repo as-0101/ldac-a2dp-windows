@@ -787,3 +787,9 @@ Current stage remains package/static research only. No A2DP endpoint, SBC negoti
 - Windows 10 A2DP package remains the primary SBC path. A later LDAC milestone requires an explicit third-party A2DP provider/transport or an alternate user-mode stack; AOSP libldac alone is only an encoder library.
 - No change to code branches or physical host.
 
+## 2026-11-24 05:30 — exact BtaMPM import closure cross-check
+
+- Parsed the exact BtaMPM 10.0.19041.5848 import list from reports (2)/(3): 37 ntoskrnl, 1 cng/SystemPrng and 4 WppRecorder imports (42 total).
+- The exact 42-name set matches the 19041.7660 symbol-server candidate from CI #463. All 42 names are present in the available later Server 20348.5866 export references. This strengthens the package-compatibility lead for BtaMPM imports, but it is not a pass for target Server 20348.5761; the exact BtaMPM export table is still missing.
+- No driver/device/audio runtime test and no physical-host access.
+

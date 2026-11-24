@@ -280,3 +280,7 @@ Sony's official support article states that Windows does not support LDAC at OS 
 
 Source: [Sony Support 00260277](https://www.sony.ru/electronics/support/articles/00260277).
 
+### BtaMPM exact import closure
+
+The captured BtaMPM 10.0.19041.5848 imports 42 symbols (37 ntoskrnl, 1 cng/SystemPrng, 4 WppRecorder). That exact import-name set matches the later 19041.7660 candidate and all 42 are present in the available Server 20348.5866 exports. This is not yet proof for Server 20348.5761; exact target exports and BtaMPM exports still need the UUP image audit.
+

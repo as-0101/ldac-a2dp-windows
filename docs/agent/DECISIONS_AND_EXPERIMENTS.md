@@ -308,3 +308,7 @@ The captured DriverStore BthA2dp is 10.0.19041.4355 and E-119 reports direct imp
 
 Sony's official support article says Windows has no system-level LDAC support regardless of Bluetooth controller. Keep the Windows 10 inbox package as the SBC milestone. For LDAC, evaluate a third-party A2DP transport/provider explicitly; do not spend more cycles searching arbitrary Windows 10 system folders for an inbox LDAC DLL.
 
+## D-047 — BtaMPM import closure is promising but must be checked against exact Server 20348.5761
+
+The captured BtaMPM 10.0.19041.5848 import set (42 symbols) matches the later 19041.7660 candidate and all names exist in Server 20348.5866 exports. Keep this as a partial static pass only. The target Server image is 20348.5761; exact exports and the exact BtaMPM export table are still required before staging.
+
