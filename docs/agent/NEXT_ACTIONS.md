@@ -1,3 +1,7 @@
+## LDAC codec work status — 2026-11-24
+
+No encoder/decoder development is needed for the next milestone. The repository already contains AOSP libldac at upstream commit eeee1a3f as static libraries, and a prior Windows 11 VM/JBL Live 780NC run proved LDAC 96 kHz audio with 2,972 packets and zero drops. Reuse that as the later LDAC reference. First finish the Win10 A2DP package audit and prove SBC stereo on Server 2022. Do not claim the prior VM result is a Server 2022 result.
+
 ## INF comparison correction — 2026-11-24 08:50
 
 Do not describe BthGenericService as a Server-only behavior. The 0x110B generic fallback exists in both Win10 19045.5917 and Server 20348.5761 bth.inf. The delta is the Win10-only dedicated microsoft_bluetooth_a2dp_src.inf + common A2DP INF + BtaMPM dependency. Leave Server bth.inf untouched; test the dedicated source INF's base-UUID match and PreConfigureDriver=* behavior in the disposable VM.

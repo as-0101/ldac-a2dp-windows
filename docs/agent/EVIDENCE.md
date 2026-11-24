@@ -791,3 +791,19 @@ The actual package delta is that Win10 additionally contains microsoft_bluetooth
 
 Decision: retain Server bth.inf unchanged. Test only the dedicated source/common package closure on disposable Server 2022 after catalog validation.
 
+
+
+## E-171 — Existing LDAC encoder and historical end-to-end proof
+
+Read-only inspection of the current server-2022-oppo branch HEAD 39eea45ab5d93c09836819db75f2a64177fbf09a confirms:
+- Repository commit 95bb92866b0d77de20ee94694eb4be2979635947 imported AOSP external/libldac at upstream commit eeee1a3f.
+- CMakeLists.txt builds ldacBT_enc as STATIC from src/ldaclib.c + src/ldacBT.c and ldacBT_abr as STATIC from abr/src/ldacBT_abr.c. It does not build a Windows DLL.
+- service/encoder.cpp uses ldacBT_get_handle, ldacBT_init_handle_encode, ldacBT_encode, ldac_ABR_Proc and packages encoded frames through avdtp_media_packet.
+- avdtp/src/a2dp_codec.c implements vendor-specific LDAC capability/configuration parsing and SBC capability/configuration. This is the project's own AVDTP code, not Microsoft BthA2dp's codec provider.
+- tools/ldacverify/build-ldacdec.py fetches anonymix007/libldacdec commit c90094b only to build a verification decoder; it is not linked into the product.
+- third_party/libldac/METADATA does not declare a semantic version. Record upstream commit eeee1a3f, not an inferred "2.0.2".
+
+Historical proof (not a Server 2022 result): commit 31306e56fe69381adf66dde83eb49e02866d7e94 and docs/test-stand.md / docs/verification.md record a Windows 11 25H2 VirtualBox VM with Realtek Bluetooth 5.4 USB passthrough (0BDA:A728) and JBL Live 780NC. The custom driver negotiated LDAC 96 kHz, MTU 679, 150 ms delay; audio was heard, and the recorded run reports 2,972 packets, zero drops, SQ then Q0. This is evidence that the existing codec and custom transport work on that stand, not evidence that the custom driver works on Server 2022.
+
+Decision: no new LDAC encoder/decoder work is needed. Keep the existing AOSP encoder and custom AVDTP path as the later LDAC reference. The immediate Server work remains getting the existing Win10 Microsoft A2DP source package to stable SBC without replacing Server Bluetooth core.
+

@@ -1,3 +1,7 @@
+## LDAC codec status — 2026-11-24
+
+The existing AOSP encoder and project AVDTP LDAC implementation are already present; no new codec code or Windows DLL is required for the next milestone. Historical LDAC audio was proven on a separate Windows 11 VM with JBL Live 780NC, but Server 2022 remains unverified. The immediate goal is still SBC through the existing Win10 Microsoft A2DP source package.
+
 ## INF comparison correction — 2026-11-24 08:50
 
 Win10 and Server bth.inf both include the generic 0x110B BthGenericService mapping with _GENERIC hardware ID and null associated-service installation. The Server gap is the absence of the dedicated Win10 A2DP source/common INF package and BtaMPM companion, not a different generic bth.inf mapping. Keep Server bth.inf unchanged.

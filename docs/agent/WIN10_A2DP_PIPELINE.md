@@ -382,3 +382,19 @@ UUP #6 confirms that Win10 bth.inf 10.0.19041.5848 (SHA 8635AE12E1C0AF71E95AD0DA
 
 Therefore the generic fallback is not the delta. The Win10 image additionally has the dedicated microsoft_bluetooth_a2dp_src.inf matching the base UUID 0x110B, its common A2DP INF, and BtaMPM dependency. Those dedicated package components are absent from Server 20348.5761. Keep Server bth.inf and Bluetooth core unchanged. The source INF contains PreConfigureDriver=*; inspect its SetupAPI effect and driver ranking during the disposable staging test.
 
+
+
+## Existing LDAC codec vs Microsoft A2DP transport — exact repository provenance
+
+The current project branch server-2022-oppo (HEAD 39eea45ab5d93c09836819db75f2a64177fbf09a) contains AOSP external/libldac from upstream commit eeee1a3f, imported by repository commit 95bb92866b0d77de20ee94694eb4be2979635947.
+
+- CMake builds ldacBT_enc and ldacBT_abr as STATIC libraries, not DLLs.
+- service/encoder.cpp calls ldacBT_get_handle, ldacBT_init_handle_encode, ldacBT_encode and ldac_ABR_Proc; it uses avdtp_media_packet to frame encoded output.
+- avdtp/src/a2dp_codec.c contains the project's vendor-specific LDAC codec capability/configuration and SBC codec logic.
+- tools/ldacverify/build-ldacdec.py fetches libldacdec commit c90094b only for test decoding; it is not product code.
+- The vendored METADATA has no semantic version. The reproducible provenance is AOSP commit eeee1a3f; do not infer a 2.0.2 version.
+
+Historical hardware proof (2026-10-22, Windows 11 25H2 VM, Realtek Bluetooth 5.4 USB passthrough, JBL Live 780NC): the existing custom driver/service negotiated LDAC 96 kHz, MTU 679 and 150 ms delay; audio was heard; 2,972 packets were recorded with zero drops. See repository commit 31306e56fe69381adf66dde83eb49e02866d7e94, docs/test-stand.md and docs/verification.md. This is not a Server 2022 compatibility result.
+
+Thus no new LDAC codec implementation is needed. Microsoft Win10 BthA2dp remains the SBC path; it does not consume the project's AOSP LDAC static library. LDAC on Server will require a transport that actually advertises/negotiates the vendor codec, after the SBC milestone is stable.
+

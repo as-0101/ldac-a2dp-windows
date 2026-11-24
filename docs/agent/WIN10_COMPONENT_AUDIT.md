@@ -406,3 +406,17 @@ The generic BthGenericService mapping for UUID 0x110B is present in both Win10 b
 
 The actual OS delta is the dedicated Win10 A2DP source/common INF package and BtaMPM companion, not the generic mapping. Keep Server bth.inf unchanged. The Win10 source INF includes PreConfigureDriver=*; test its SetupAPI effect on a disposable Server 2022 VM.
 
+
+
+## LDAC source/binary inventory — current repository
+
+| Component | Source / build | Role | Status |
+|---|---|---|---|
+| AOSP libldac encoder | Upstream commit eeee1a3f; CMake target ldacBT_enc STATIC | LDAC audio encoder | Existing, built into service; no Windows DLL |
+| AOSP LDAC ABR | Same upstream source; CMake target ldacBT_abr STATIC | Adaptive bitrate control | Existing, built into service |
+| Project AVDTP codec code | avdtp/src/a2dp_codec.c | Vendor-specific LDAC + SBC capability/configuration and selection | Existing custom transport code |
+| Project encoder service | service/encoder.cpp | Calls LDAC API, creates AVDTP media packets | Existing |
+| libldacdec | External commit c90094b fetched by tools/ldacverify | Offline/test decoder only | Not product code |
+
+Historical Windows 11 VM proof: 2026-10-22 Realtek Bluetooth 5.4 USB passthrough + JBL Live 780NC, LDAC 96 kHz / MTU 679 / 150 ms, audible tone, 2,972 packets and zero drops. This validates the prior custom stack on that VM only; it does not validate Server 2022.
+

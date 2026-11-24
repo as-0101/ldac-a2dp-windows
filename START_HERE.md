@@ -1,3 +1,9 @@
+> **LDAC encoder provenance — 2026-11-24**
+>
+> The existing project already contains the AOSP Sony LDAC encoder from upstream commit eeee1a3f (imported in repository commit 95bb92866b0d77de20ee94694eb4be2979635947). CMake builds ldacBT_enc and ldacBT_abr as STATIC libraries; service/encoder.cpp calls ldacBT_get_handle, ldacBT_init_handle_encode, ldacBT_encode and ldac_ABR_Proc, then frames output with the project's AVDTP code. There is no prebuilt Windows LDAC DLL in this repository. The vendored METADATA does not declare a semantic version, so do not label it 2.0.2 without separate provenance.
+>
+> The external libldacdec commit c90094b is fetched by tools/ldacverify only to decode/verify test output; it is not part of the product. Historical hardware proof exists on a separate Windows 11 25H2 VM with Realtek USB Bluetooth 5.4 passthrough and JBL Live 780NC: LDAC 96 kHz / MTU 679 / 150 ms was negotiated, audio was heard, and the recorded run delivered 2,972 packets with zero drops (2026-10-22). This proves the existing codec/custom AVDTP path on that test stand, **not** on Server 2022. Keep the immediate Server milestone on the Microsoft Win10 A2DP SBC package path.
+>
 > **INF comparison correction — 2026-11-24 08:50 Europe/Kyiv**
 >
 > The generic BthGenericService mapping for A2DP UUID 0x110B exists in both Win10 and Server bth.inf. It is not the OS delta. Win10 bth.inf 10.0.19041.5848 (SHA-256 8635AE12E1C0AF71E95AD0DA65FA6CEEAB2AA0866D213620F49AA0A634CE976D) and Server bth.inf 10.0.20348.5756 (SHA-256 38302B73607B829CBD94D60D25320924B8727BF55CAD940052444FC22D475459) both map UUID 0x110B to BthGenericService with the _GENERIC suffix and null associated-service install.
