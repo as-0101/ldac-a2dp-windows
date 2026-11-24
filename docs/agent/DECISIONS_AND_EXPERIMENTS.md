@@ -430,3 +430,10 @@ CI #12 confirms Server ks.inf 10.0.20348.1 exposes KS.Registration and Server wd
 
 Decision: do not transplant Win10 ks.inf, wdmaudio.inf, MSSysFx or related audio components. The minimal candidate package remains A2DP Source/common + BtaMPM companion, using the Server's existing KS/WDMAUDIO registration sections. This is static INF evidence only; staging/runtime remains unproven.
 
+
+### Microsoft implementation references
+
+- [INF Version section](https://learn.microsoft.com/en-us/windows-hardware/drivers/install/inf-version-section): system-supplied INF files omit CatalogFile because the OS validates them against system-supplied catalogs.
+- [Installing a catalog with SignTool](https://learn.microsoft.com/en-us/windows-hardware/drivers/install/installing-a-catalog-file-by-using-signtool): SignTool catdb adds/removes a catalog; by default it targets the system component and driver database.
+- [PnPUtil command syntax](https://learn.microsoft.com/en-us/windows-hardware/drivers/devtest/pnputil-command-syntax): /add-driver stages a package into DriverStore; /install is a separate flag that installs/updates matching devices. The stage-smoke harness deliberately omits /install.
+
