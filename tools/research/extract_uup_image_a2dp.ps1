@@ -1,5 +1,9 @@
 [CmdletBinding()]
-param([string]$OutputDirectory = "build/uup-image-audit")
+param(
+    [string]$OutputDirectory = "build/uup-image-audit",
+    [switch]$Win10Only,
+    [switch]$StagePackageOnRunner
+)
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
@@ -15,11 +19,21 @@ $InfReportPath = Join-Path $OutputDirectory "inf-summary.txt"
 $ComponentReportPath = Join-Path $OutputDirectory "component-hits.json"
 $ServerReferenceDirectory = Join-Path $OutputDirectory "server-reference"
 $Win10PackageFilesDirectory = Join-Path $OutputDirectory "win10-package-files"
+$StagePackageDirectory = Join-Path $OutputDirectory "stage-package"
+$StageTestReportPath = Join-Path $OutputDirectory "stage-test.json"
+$ExpectedWin10CatalogName = "Microsoft-Windows-Client-Desktop-Required-Package~31bf3856ad364e35~amd64~~10.0.19041.5917.cat"
+$ExpectedWin10CatalogSha256 = "78772FA12959C072D687283F08D08367B8A8EF1A2F07D7B72F20BCAFD12483BF"
 $script:Win10CatalogTargetFiles = @()
+$script:StagePackageFiles = @()
+$script:StagePackageCatalogPath = $null
+$script:StageTestResult = $null
 New-Item -ItemType Directory -Path $OutputDirectory -Force | Out-Null
 New-Item -ItemType Directory -Path $PeDirectory -Force | Out-Null
 New-Item -ItemType Directory -Path $ServerReferenceDirectory -Force | Out-Null
 New-Item -ItemType Directory -Path $Win10PackageFilesDirectory -Force | Out-Null
+if ($StagePackageOnRunner -and -not $Win10Only) { throw "-StagePackageOnRunner requires -Win10Only; the target runner supplies the Server 2022 environment." }
+if ($StagePackageOnRunner -and $env:GITHUB_ACTIONS -ne "true") { throw "Package staging is permitted only on a disposable GitHub-hosted runner." }
+if ($StagePackageOnRunner) { New-Item -ItemType Directory -Path $StagePackageDirectory -Force | Out-Null }
 Import-Module Dism -ErrorAction Stop
 
 $Targets = @(
@@ -53,6 +67,9 @@ $ExpectedHashes = @{
     "BthA2dp.sys|DriverStore" = "5FBA5EE606AAC39D9CBDA51C0A14DBABBB3A9B47BBD8AC5485ED137B4F354EC3"
     "BthA2dp.sys|System32" = "0442A18BBED4E323265C66561C8F8C171D8E934E9089C12B94D1DFDBB057B737"
     "BtaMPM.sys|Any" = "DA5CBBDCE6AC511EF8400E121DF6B6EACA7D05C0F40A01F7353CE9F220EB3DCD"
+    "microsoft_bluetooth_a2dp.inf|Any" = "4F3B988B658E1E7F8B97E645C1C92BE0BA270D4DB76832DAB871516EEDCBCF0C"
+    "microsoft_bluetooth_a2dp_src.inf|Any" = "B97D1DD53BB6FD040CE5C2527015A09416C29FCBD6B528802D595CBDEEAD4A6A"
+    "btampm.inf|Any" = "C657A6B32AC8CCFDEEF3C12630686B87C973DD114BEE73AEC288D86B989961EF"
 }
 
 function Invoke-UupApi {
@@ -155,6 +172,9 @@ function Get-ExpectedHash {
         if ($RelativePath -match "System32\\drivers") { return $ExpectedHashes["BthA2dp.sys|System32"] }
     }
     if ($File.Name -ieq "BtaMPM.sys") { return $ExpectedHashes["BtaMPM.sys|Any"] }
+    if ($File.Name -ieq "microsoft_bluetooth_a2dp.inf") { return $ExpectedHashes["microsoft_bluetooth_a2dp.inf|Any"] }
+    if ($File.Name -ieq "microsoft_bluetooth_a2dp_src.inf") { return $ExpectedHashes["microsoft_bluetooth_a2dp_src.inf|Any"] }
+    if ($File.Name -ieq "btampm.inf") { return $ExpectedHashes["btampm.inf|Any"] }
     return $null
 }
 
@@ -439,6 +459,13 @@ function Get-TargetCatalogMembership {
                 $copyName = "{0}-{1}{2}" -f $file.BaseName, $hash.Substring(0, 12), $file.Extension
                 $copyPath = Join-Path $Win10PackageFilesDirectory $copyName
                 Copy-Item -LiteralPath $file.FullName -Destination $copyPath -Force
+                if ($StagePackageOnRunner) {
+                    $stageCopyPath = Join-Path $StagePackageDirectory $spec.name
+                    Copy-Item -LiteralPath $file.FullName -Destination $stageCopyPath -Force
+                    $stageCopyHash = (Get-FileHash -LiteralPath $stageCopyPath -Algorithm SHA256).Hash.ToUpperInvariant()
+                    if ($stageCopyHash -ne $hash) { throw "Staging copy hash mismatch for $($spec.name): $stageCopyHash != $hash" }
+                    $script:StagePackageFiles += [pscustomobject]@{ name=$spec.name; sourcePath=$file.FullName; stagedPath=$stageCopyPath; sha256=$stageCopyHash }
+                }
                 $targets += [pscustomobject]@{
                     name=$spec.name
                     sourceRole="win10"
@@ -524,6 +551,11 @@ function Get-TargetCatalogMembership {
         }
     }
     $catalogFiles = @($catalogFiles | Sort-Object FullName -Unique)
+    if ($Role -eq "win10" -and $StagePackageOnRunner) {
+        $knownCatalogs = @($catalogFiles | Where-Object { $_.Name -ieq $ExpectedWin10CatalogName })
+        if ($knownCatalogs.Count -ne 1) { throw "Expected exact Win10 servicing CAT was not found: $ExpectedWin10CatalogName" }
+        $catalogFiles = $knownCatalogs
+    }
 
     $signToolPath = $null
     $signToolCommand = Get-Command signtool.exe -ErrorAction SilentlyContinue | Select-Object -First 1
@@ -594,11 +626,243 @@ function Get-TargetCatalogMembership {
         $base.catalogPath = if ($match) { $match.FullName.Substring($MountDirectory.Length).TrimStart("\") } else { $null }
         $base.catalogSha256 = if ($match) { (Get-FileHash -LiteralPath $match.FullName -Algorithm SHA256).Hash.ToUpperInvariant() } else { $null }
         $base.catalogSignature = if ($match) { Get-SignatureRecord -Path $match.FullName } else { $null }
+        if ($Role -eq "win10" -and $StagePackageOnRunner -and $match) {
+            if ($match.Name -ine $ExpectedWin10CatalogName -or $base.catalogSha256 -ne $ExpectedWin10CatalogSha256) {
+                throw "Unexpected Win10 A2DP CAT identity: $($match.Name) / $($base.catalogSha256)"
+            }
+            $catalogCopyPath = Join-Path $StagePackageDirectory $match.Name
+            if (-not (Test-Path -LiteralPath $catalogCopyPath)) { Copy-Item -LiteralPath $match.FullName -Destination $catalogCopyPath -Force }
+            $script:StagePackageCatalogPath = $catalogCopyPath
+        }
         $base.output = $lastOutput
         [pscustomobject]$base
     }
     return $results
 }
+function Get-DriverStoreSnapshot {
+    $pnputilPath = Join-Path $env:WINDIR "System32\pnputil.exe"
+    $output = & $pnputilPath /enum-drivers 2>&1
+    $exitCode = $LASTEXITCODE
+    $text = ($output | Out-String).Trim()
+    $blocks = [regex]::Split($text, "(?m)(?=^\s*Published Name\s*:)")
+    $records = @()
+    foreach ($block in $blocks) {
+        if ($block -match "(?im)^\s*Published Name\s*:\s*(?<published>oem\d+\.inf)") {
+            $published = $Matches["published"]
+            if ($block -match "(?im)^\s*Original Name\s*:\s*(?<original>.+)$") {
+                $records += [pscustomobject]@{
+                    publishedName=$published
+                    originalName=$Matches["original"].Trim()
+                    block=$block.Trim()
+                }
+            }
+        }
+    }
+    [pscustomobject]@{ exitCode=$exitCode; text=$text; records=$records }
+}
+
+function Get-NewDriverStoreEntries {
+    param([Parameter(Mandatory)]$Before, [Parameter(Mandatory)]$After)
+    $beforeNames = @($Before.records | ForEach-Object { $_.publishedName })
+    @($After.records | Where-Object { $beforeNames -notcontains $_.publishedName })
+}
+
+function Remove-StagedDriverStoreEntries {
+    param([object[]]$Entries)
+    $pnputilPath = Join-Path $env:WINDIR "System32\pnputil.exe"
+    $results = @()
+    foreach ($entry in @($Entries)) {
+        $output = & $pnputilPath /delete-driver $entry.publishedName 2>&1
+        $results += [pscustomobject]@{
+            publishedName=$entry.publishedName
+            originalName=$entry.originalName
+            exitCode=$LASTEXITCODE
+            output=($output | Out-String).Trim()
+        }
+    }
+    $results
+}
+
+function Invoke-StagePackageSmokeTest {
+    $result = [ordered]@{
+        status="NOT_RUN"
+        timestampUtc=(Get-Date).ToUniversalTime().ToString("o")
+        scope="Disposable GitHub-hosted Windows Server 2022 runner only. Signature verification and DriverStore staging only; no /install, device enumeration, service start, driver load, audio, BCD/security/test-signing, certificate-store changes, or physical-host access."
+        runner=$null
+        package=$null
+        signatureChecks=@()
+        preCatalogStage=$null
+        catalogDbRegistration=$null
+        postCatalogStage=$null
+        cleanup=$null
+        setupApiLogTail=@()
+        error=$null
+    }
+    $signToolPath = $null
+    $catalog = $null
+    $catalogAdded = $false
+    $stagedEntries = @()
+    try {
+        if ($env:GITHUB_ACTIONS -ne "true" -or $env:RUNNER_ENVIRONMENT -ne "github-hosted") {
+            throw "Refusing to stage outside a disposable GitHub-hosted runner."
+        }
+        $os = Get-CimInstance -ClassName Win32_OperatingSystem
+        $cv = Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion"
+        $result.runner = [ordered]@{
+            caption=$os.Caption
+            version=$os.Version
+            buildNumber=$os.BuildNumber
+            productType=$os.ProductType
+            currentBuild=[string]$cv.CurrentBuild
+            ubr=[int]$cv.UBR
+            editionId=[string]$cv.EditionID
+            installationType=[string]$cv.InstallationType
+            runnerEnvironment=$env:RUNNER_ENVIRONMENT
+            githubActions=$env:GITHUB_ACTIONS
+        }
+        if ($os.Caption -notmatch "Windows Server 2022" -or [string]$cv.CurrentBuild -ne "20348" -or [string]$cv.InstallationType -ne "Server") {
+            throw "Runner is not Windows Server 2022 build 20348; refusing package staging."
+        }
+
+        $catalog = Get-ChildItem -LiteralPath $StagePackageDirectory -Filter "*.cat" -File | Select-Object -First 1
+        if (-not $catalog) { throw "The exact Win10 servicing CAT was not copied to the stage directory." }
+        $expected = [ordered]@{
+            "BthA2dp.sys"="5FBA5EE606AAC39D9CBDA51C0A14DBABBB3A9B47BBD8AC5485ED137B4F354EC3"
+            "BtaMPM.sys"="DA5CBBDCE6AC511EF8400E121DF6B6EACA7D05C0F40A1F7353CE9F220EB3DCD"
+            "microsoft_bluetooth_a2dp.inf"="4F3B988B658E1E7F8B97E645C1C92BE0BA270D4DB76832DAB871516EEDCBCF0C"
+            "microsoft_bluetooth_a2dp_src.inf"="B97D1DD53BB6FD040CE5C2527015A09416C29FCBD6B528802D595CBDEEAD4A6A"
+            "btampm.inf"="C657A6B32AC8CCFDEEF3C12630686B87C973DD114BEE73AEC288D86B989961EF"
+        }
+        $packageFiles = @()
+        foreach ($name in $expected.Keys) {
+            $path = Join-Path $StagePackageDirectory $name
+            if (-not (Test-Path -LiteralPath $path)) { throw "Missing stage package file: $name" }
+            $hash = (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToUpperInvariant()
+            if ($hash -ne $expected[$name]) { throw "Hash mismatch for $name: $hash != $($expected[$name])" }
+            $packageFiles += [pscustomobject]@{ name=$name; sizeBytes=(Get-Item -LiteralPath $path).Length; sha256=$hash }
+        }
+        $catalogHash = (Get-FileHash -LiteralPath $catalog.FullName -Algorithm SHA256).Hash.ToUpperInvariant()
+        if ($catalog.Name -ine $ExpectedWin10CatalogName -or $catalogHash -ne $ExpectedWin10CatalogSha256) {
+            throw "CAT identity mismatch: $($catalog.Name) / $catalogHash"
+        }
+        $result.package = [ordered]@{
+            catalogName=$catalog.Name
+            catalogSha256=$catalogHash
+            catalogSizeBytes=$catalog.Length
+            files=$packageFiles
+            originalInfHasCatalogFile=$false
+            sourceInf="microsoft_bluetooth_a2dp_src.inf"
+            installCommand="pnputil /add-driver <source-inf> (no /install)"
+        }
+
+        $kitsRoot = Join-Path ([Environment]::GetFolderPath("ProgramFilesX86")) "Windows Kits\10\bin"
+        $signTool = Get-ChildItem -LiteralPath $kitsRoot -Filter "signtool.exe" -File -Recurse -ErrorAction SilentlyContinue |
+            Where-Object { $_.FullName -match "\\x64\\signtool\.exe$" } |
+            Sort-Object FullName -Descending |
+            Select-Object -First 1
+        if (-not $signTool) { throw "Windows SDK x64 SignTool not found on Server 2022 runner." }
+        $signToolPath = $signTool.FullName
+        $checks = @(
+            @{ name="BthA2dp.sys"; policy="/kp" },
+            @{ name="BtaMPM.sys"; policy="/kp" },
+            @{ name="microsoft_bluetooth_a2dp.inf"; policy="/pa" },
+            @{ name="microsoft_bluetooth_a2dp_src.inf"; policy="/pa" },
+            @{ name="btampm.inf"; policy="/pa" }
+        )
+        foreach ($check in $checks) {
+            $path = Join-Path $StagePackageDirectory $check.name
+            $verifyOutput = & $signToolPath verify $check.policy /v /c $catalog.FullName $path 2>&1
+            $verifyExit = $LASTEXITCODE
+            $result.signatureChecks += [pscustomobject]@{
+                file=$check.name
+                policy=$check.policy
+                exitCode=$verifyExit
+                status=if ($verifyExit -eq 0) { "VERIFIED" } else { "FAILED" }
+                output=($verifyOutput | Out-String).Trim()
+            }
+            if ($verifyExit -ne 0) { throw "SignTool verification failed on Server 2022 runner for $($check.name)." }
+        }
+
+        $sourceInf = Join-Path $StagePackageDirectory "microsoft_bluetooth_a2dp_src.inf"
+        $before = Get-DriverStoreSnapshot
+        $preOutput = & (Join-Path $env:WINDIR "System32\pnputil.exe") /add-driver $sourceInf 2>&1
+        $preExit = $LASTEXITCODE
+        $after = Get-DriverStoreSnapshot
+        $preEntries = @(Get-NewDriverStoreEntries -Before $before -After $after)
+        $preSourceStaged = @($preEntries | Where-Object { $_.originalName -ieq "microsoft_bluetooth_a2dp_src.inf" }).Count -gt 0
+        $result.preCatalogStage = [ordered]@{
+            exitCode=$preExit
+            sourceInfStaged=$preSourceStaged
+            newDriverStoreEntries=$preEntries
+            output=($preOutput | Out-String).Trim()
+        }
+        if ($preSourceStaged -and $preExit -eq 0) {
+            $stagedEntries = $preEntries
+            $result.status = "PASS_WITH_EXISTING_CATALOG_DATABASE"
+        } else {
+            $preCleanup = Remove-StagedDriverStoreEntries -Entries $preEntries
+            $result.preCatalogStage.cleanup=$preCleanup
+            $catdbOutput = & $signToolPath catdb /v /u $catalog.FullName 2>&1
+            $catdbExit = $LASTEXITCODE
+            $result.catalogDbRegistration = [ordered]@{
+                exitCode=$catdbExit
+                status=if ($catdbExit -eq 0) { "CATALOG_ADDED_TO_SYSTEM_COMPONENT_AND_DRIVER_DATABASE" } else { "FAILED" }
+                output=($catdbOutput | Out-String).Trim()
+                certificateStoreChanged=$false
+            }
+            if ($catdbExit -ne 0) { throw "SignTool catdb could not register the original Microsoft CAT in the disposable runner." }
+            $catalogAdded = $true
+
+            $before2 = Get-DriverStoreSnapshot
+            $postOutput = & (Join-Path $env:WINDIR "System32\pnputil.exe") /add-driver $sourceInf 2>&1
+            $postExit = $LASTEXITCODE
+            $after2 = Get-DriverStoreSnapshot
+            $postEntries = @(Get-NewDriverStoreEntries -Before $before2 -After $after2)
+            $postSourceStaged = @($postEntries | Where-Object { $_.originalName -ieq "microsoft_bluetooth_a2dp_src.inf" }).Count -gt 0
+            $result.postCatalogStage = [ordered]@{
+                exitCode=$postExit
+                sourceInfStaged=$postSourceStaged
+                newDriverStoreEntries=$postEntries
+                output=($postOutput | Out-String).Trim()
+            }
+            $stagedEntries = $postEntries
+            if ($postSourceStaged -and $postExit -eq 0) {
+                $result.status = "PASS_AFTER_CATALOG_DB_ADD"
+            } else {
+                $result.status = "FAILED"
+            }
+        }
+    } catch {
+        $result.status = "FAILED"
+        $result.error = $_.Exception.Message
+    } finally {
+        $cleanupDriver = Remove-StagedDriverStoreEntries -Entries $stagedEntries
+        $cleanupCatalog = $null
+        if ($catalogAdded -and $catalog -and $signToolPath) {
+            $removeOutput = & $signToolPath catdb /v /r /u $catalog.FullName 2>&1
+            $cleanupCatalog = [pscustomobject]@{
+                exitCode=$LASTEXITCODE
+                output=($removeOutput | Out-String).Trim()
+                attempted=$true
+            }
+        } else {
+            $cleanupCatalog = [pscustomobject]@{ attempted=$false; reason="Catalog was not added by this test." }
+        }
+        $finalSnapshot = Get-DriverStoreSnapshot
+        $remaining = @($finalSnapshot.records | Where-Object { $_.originalName -match "^(microsoft_bluetooth_a2dp_src\.inf|microsoft_bluetooth_a2dp\.inf|btampm\.inf)$" })
+        $result.cleanup = [ordered]@{
+            driverStoreRemoval=$cleanupDriver
+            catalogDatabaseRemoval=$cleanupCatalog
+            remainingA2dpPackages=$remaining
+        }
+        $setupLogPath = Join-Path $env:WINDIR "INF\setupapi.dev.log"
+        if (Test-Path -LiteralPath $setupLogPath) {
+            $result.setupApiLogTail = @(Get-Content -LiteralPath $setupLogPath -Tail 250)
+        }
+    }
+    [pscustomobject]$result
+}
+
 function Collect-Image {
     param([Parameter(Mandatory)]$Target, [Parameter(Mandatory)][string]$WorkDirectory)
     $download = Download-UupIso -Target $Target -WorkDirectory $WorkDirectory
@@ -758,9 +1022,10 @@ function Save-AuditReports {
         generatedUtc=(Get-Date).ToUniversalTime().ToString("o")
         githubRunId=$env:GITHUB_RUN_ID
         githubSha=$env:GITHUB_SHA
-        scope="Offline UUP image extraction, static PE analysis, offline SYSTEM service registration inventory, and offline catalog membership verification only. No package installation, driver load, device enumeration, audio test, or physical-host access."
+        scope=if ($StagePackageOnRunner) { "Offline Win10 UUP extraction plus disposable GitHub-hosted Windows Server 2022 DriverStore staging smoke only. No /install, device enumeration, service start, driver load, audio test, certificate-store change, or physical-host access." } else { "Offline UUP image extraction, static PE analysis, offline SYSTEM service registration inventory, and offline catalog membership verification only. No package staging, driver load, device enumeration, audio test, or physical-host access." }
         expectedCapturedHashes=$ExpectedHashes
         images=$Results
+        stageTest=$script:StageTestResult
     }
     $manifest | ConvertTo-Json -Depth 30 | Set-Content -LiteralPath (Join-Path $OutputDirectory "manifest.json") -Encoding utf8
     $allInfLines | Set-Content -LiteralPath $InfReportPath -Encoding utf8
@@ -783,9 +1048,14 @@ function Save-AuditReports {
 - Win10 package file copies are temporary and removed before the workflow uploads metadata.
 - No Microsoft binary payloads or ISO files are uploaded by this workflow; only metadata and text reports are retained.
 - Static export presence does not prove driver load or runtime compatibility.
+- When -StagePackageOnRunner is used, the exact original Win10 CAT is verified and the unmodified A2DP Source INF is staged only into the disposable GitHub-hosted Server 2022 DriverStore. The command never uses /install and never binds or starts a device.
+- The stage smoke test records its runner build/UBR, SignTool verification, catalog-database add/remove, PnPUtil result, SetupAPI log tail and cleanup. It does not prove device enumeration, BthA2dp service start, driver load, endpoint creation, SBC negotiation or audio.
 - Per-image status is recorded in manifest.json; completed image results are checkpointed before the next image starts.
 "@ | Set-Content -LiteralPath (Join-Path $OutputDirectory "README.md") -Encoding utf8
 }
+
+if ($Win10Only) { $Targets = @($Targets | Where-Object { $_.Role -eq "win10" }) }
+if ($StagePackageOnRunner -and @($Targets | Where-Object { $_.Role -eq "win10" }).Count -ne 1) { throw "Stage smoke mode requires exactly one Win10 source image." }
 
 $results = @()
 $hadFailures = $false
@@ -813,6 +1083,20 @@ foreach ($target in $Targets) {
 
 if ($hadFailures) {
     throw "One or more offline image audits failed. Per-image status and completed results are preserved in manifest.json."
+}
+
+if ($StagePackageOnRunner) {
+    try {
+        $script:StageTestResult = Invoke-StagePackageSmokeTest
+    } catch {
+        $script:StageTestResult = [pscustomobject]@{ status="FAILED"; error=$_.Exception.Message; scope="Disposable GitHub-hosted Server 2022 runner only; no physical-host access." }
+    }
+    $script:StageTestResult | ConvertTo-Json -Depth 24 | Set-Content -LiteralPath $StageTestReportPath -Encoding utf8
+    Save-AuditReports -Results $results
+    Remove-Item -LiteralPath $StagePackageDirectory -Recurse -Force -ErrorAction SilentlyContinue
+    if ($script:StageTestResult.status -notlike "PASS*") {
+        throw "A2DP DriverStore staging smoke did not pass. See stage-test.json and manifest.json."
+    }
 }
 
 Remove-Item -LiteralPath $ServerReferenceDirectory -Recurse -Force -ErrorAction SilentlyContinue
