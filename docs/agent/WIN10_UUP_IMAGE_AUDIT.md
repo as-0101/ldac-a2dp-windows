@@ -257,3 +257,19 @@ The common INF also maps `BthA2dp.sys` to `SignatureAttributes.DRM`, but the cap
 - Server has BthPort/BthEnum/BTHUSB and audio service registrations; no BthA2dp service. BtaMPM has no service key in either OS.
 - Workflow job concluded failure only after the script reported completion and the artifact uploaded. The exact final exit-code propagation is being corrected with explicit exit 0 on successful completion.
 - Critical gap: the run did not test the Win10 files against Server 2022's catalog set. The new cross-SKU audit branch performs that check and uses Server core files as positive controls.
+
+## CI #12 — cross-SKU catalog membership (2026-11-24)
+
+- Run #12 [45354874225](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45354874225), branch experiment/win10-a2dp-cross-sku-catalog-audit-20261124, commit 08663c4ca7d1536b96c554fd5e484382262b1250, completed successfully.
+- Exact images: Win10 19045.5917 x64 and Server 20348.5761 x64.
+- All five exact Win10 A2DP package files verify against one Win10 servicing CAT, SHA-256 78772FA12959C072D687283F08D08367B8A8EF1A2F07D7B72F20BCAFD12483BF.
+- The same five hashes have no matching catalog in the Server image after scanning all 8,325 catalog files.
+- Server positive controls BthPort.sys, BthEnum.sys, BTHUSB.sys and bth.inf pass 4/4 against the Server OneCore Bluetooth CAT, SHA-256 B0A59B9C3B6E528487BB273332015C8CC3A65A5E60F33BF8AA263E41F6D59AA6.
+- Artifact 14907426966 is saved in Library at /LDAC Project/Incoming/CI-12-cross-sku-a2dp-audit.zip; summary is saved beside it.
+- The artifact's catalogSignature field is null; signer subject/thumbprint were not captured. Do not claim signer identity from this run.
+- Interpretation: Win10 A2DP is not already a Server in-box catalog member. Original CAT signature validation and PnP staging remain the next test; this result does not prove they are impossible.
+
+CI #13 [45355817586](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45355817586) failed because UUP Dump returned WU_REQUEST_FAILED and the script then dereferenced a missing property. This is a UUP-source/harness failure, not a package or Server compatibility result.
+
+Stage-smoke run #3 [45371687882](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45371687882) passed PowerShell parser preflight and is performing the disposable Server 2022 stage test. No device install or physical-host action.
+
