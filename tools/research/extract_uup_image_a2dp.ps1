@@ -346,6 +346,24 @@ function Collect-Image {
             }
             $matchedFiles = @($allFiles | Where-Object { $TargetFileNames -contains $_.Name } | Sort-Object FullName -Unique)
 
+            # BthA2dp imports profile-management entry points from the matching
+            # BtaMPM companion. Server 2022 has no inbox BtaMPM.sys, so place the
+            # Win10 image's companion in the same export-reference set used to
+            # resolve the Win10 A2DP profile. Prefer the DriverStore copy.
+            if ($Target.Role -eq "win10") {
+                $btaCompanion = $matchedFiles |
+                    Where-Object { $_.Name -ieq "BtaMPM.sys" } |
+                    Sort-Object @{ Expression = { if ($_.FullName -match "\\DriverStore\\FileRepository\\") { 0 } else { 1 } } }, FullName |
+                    Select-Object -First 1
+                if ($btaCompanion) {
+                    $companionPath = Join-Path $ServerReferenceDirectory "BtaMPM.sys"
+                    Copy-Item -LiteralPath $btaCompanion.FullName -Destination $companionPath -Force
+                    Write-Host "Added Win10 BtaMPM companion export reference: $($btaCompanion.FullName)"
+                } else {
+                    Write-Warning "No BtaMPM.sys found in $($Target.Name); BthA2dp companion imports will remain unresolved."
+                }
+            }
+
             $fileRecords = @()
             foreach ($file in $matchedFiles) {
                 $relative = $file.FullName.Substring($mountDirectory.Length).TrimStart("\")
