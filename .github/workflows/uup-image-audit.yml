@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - experiment/win10-a2dp-uup-image-audit-20261124
+      - experiment/win10-a2dp-catalog-registry-audit-20261124
     paths:
       - tools/research/extract_uup_image_a2dp.ps1
       - tools/research/audit_pe_binary.py
@@ -16,7 +17,7 @@ permissions:
 
 jobs:
   exact-uup-image-audit:
-    name: Win10 19045.5917 vs Server 20348.5761 offline component audit
+    name: Win10 19045.5917 vs Server 20348.5761 catalog and registry audit
     runs-on: windows-2022
     timeout-minutes: 180
     steps:
@@ -60,6 +61,8 @@ jobs:
             build/uup-image-audit/manifest.json
             build/uup-image-audit/inf-summary.txt
             build/uup-image-audit/component-hits.json
+            build/uup-image-audit/catalog-membership.json
+            build/uup-image-audit/service-registrations.json
             build/uup-image-audit/pe-audit/**
           if-no-files-found: warn
           retention-days: 7
