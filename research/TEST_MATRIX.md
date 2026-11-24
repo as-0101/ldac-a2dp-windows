@@ -79,3 +79,12 @@ No service, device, profile-driver, endpoint, SBC negotiation, audio-stream, LDA
 | T-039 | LDAC negotiation and actual audio | Separate LDAC-capable receiver + Server 2022 VM | Negotiated LDAC and sustained real audio verified | Not run; no LDAC-capable sink is identified in current project evidence | UNTESTED — DEVICE_REQUIRED | Only after SBC milestone |
 | T-040 | Alternative A2DP binary transplant | Alternative A2DP 1.8.3/1.8.3.1 | Reuse vendor LDAC driver on Server 2022 | Vendor EULA restricts reverse engineering/modification/transfer; published support matrix excludes Server 2022 | REJECTED — LICENSE/OS_SUPPORT | No transplant; vendor authorization required for any Server evaluation |
 
+
+
+## 2026-11-24 02:05 — Server PnP stage separation
+
+| T-041 | A2DP PnP enumeration | Archived Server 2022 read-only PnP snapshot | One BTHENUM A2DP Sink node is present before driver load | ldac-precheck records one present A2DP devnode; 20-36 identifies UUID 0x110B | CONFIRMED — HISTORICAL SNAPSHOT | Keep enumeration separate from driver-start result; no fresh host query |
+| T-042 | Current custom driver start | Archived 20-36 PnP properties | Bound profile driver starts successfully | oem75.inf / LdacA2dp / 0.2.325.1600 returns Code 37 / 0xC000000D | FAILED — HISTORICAL SNAPSHOT | Do not repeat ACX probe; test Microsoft inbox package only in disposable VM after WIM/PE compatibility |
+| T-043 | Microsoft A2DP package presence on Server 2022 | Archived Server 20348.5761 environment snapshot | BthA2dp.sys and Microsoft A2DP source/common INF present | btha2dp.sys absent from System32\\drivers; A2DP INF section empty in INF investigation | ABSENT — ARCHIVED INVENTORY | Resolve Windows 10 component owner/applicability from WIM |
+| T-044 | Realtek rtka2dp relevance to current local radio | Server DriverStore inventory + PnP ID semantics | INF targets current local radio | Folder exists but INF bytes/version absent; public package targets LOCALMFG&005D (Realtek), current radio LOCALMFG&0002 (Intel) | NOT APPLICABLE — LOCAL_RADIO_MISMATCH | Do not install/adapt; retain as residue/reference only |
+
