@@ -738,3 +738,14 @@ The Windows 10 package capture is complete enough for static INF/PE work. This c
 - Next runtime work, if WIM and PE compatibility pass, belongs in a disposable Server 2022 VM and must keep service start, enumeration, driver load, endpoint, SBC negotiation and actual audio as separate gates. LDAC requires a different sink.
 
 Detailed file-level map: [WIN10_COMPONENT_AUDIT.md](WIN10_COMPONENT_AUDIT.md).
+
+
+## 2026-11-24 — exact component recovery replaces symbol-server guessing
+
+GitHub Actions CI #463 (run 45311922753) completed successfully and produced the Windows 10/Server 2022 Catalog audit artifacts. It established that the A2DP SYS entries extracted from KB5036979 and KB5126657 are PSF forward-delta payloads, not full PE images. The Server 2022 KB5126655 package scan found core Bluetooth packages but no A2DP INF/SYS or BtaMPM CBS manifest references.
+
+The Winbindex symbol-server download path returned files with matching PE timestamp and size but different file versions and SHA-256 hashes from the captured 19041.4355 / 19041.1 / 19041.5848 targets. Those PE reports are not accepted as exact target evidence.
+
+A new isolated branch, experiment/win10-a2dp-uup-image-audit-20261124, now runs an offline UUP image audit for Win10 19045.5917 and Server 20348.5761. GitHub Actions run 45317582562 (workflow run #3) is in progress after a narrow Get-FileHash compatibility fix. No binary payloads are uploaded, and no physical host is touched.
+
+Current stage remains package/static research only. No A2DP endpoint, SBC negotiation, or actual audio has been demonstrated. See WIN10_UUP_IMAGE_AUDIT.md.
