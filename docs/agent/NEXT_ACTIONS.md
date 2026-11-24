@@ -10,6 +10,7 @@
 6. The Microsoft Windows 10 Classic Audio list is SBC and aptX Classic; it does not list LDAC or AAC. OPPO Enco Buds2 ETE41 is AAC/SBC only. SBC is the only common codec; LDAC cannot be negotiated with these earbuds.
 7. Alternative A2DP Driver advertises LDAC, but its EULA restricts reverse engineering, modification and transfer; its published support matrix is Windows 10 22H2 / Windows 11 21H2–25H2, not Server 2022. Do not transplant or inspect its proprietary binaries.
 8. The as-0101 repository is a fork of yariktop133/ldac-a2dp-windows, a separate replacement-driver project, not a Windows 10 codec DLL package. The ACX/WDK path remains parked.
+9. The Server DriverStore contains an rtka2dp.inf folder, but the actual INF bytes/version were not captured and it targets Realtek local radios (LOCALMFG&005D), not this host's Intel local radio (LOCALMFG&0002). The latest OPPO node is bound to the custom oem75.inf, not rtka2dp; do not pursue the Realtek residue.
 
 ## Next research gate
 
