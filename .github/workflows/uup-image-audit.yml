@@ -5,6 +5,7 @@ on:
     branches:
       - experiment/win10-a2dp-uup-image-audit-20261124
       - experiment/win10-a2dp-catalog-registry-audit-20261124
+      - experiment/win10-a2dp-cross-sku-catalog-audit-20261124
     paths:
       - tools/research/extract_uup_image_a2dp.ps1
       - tools/research/audit_pe_binary.py
@@ -65,8 +66,9 @@ jobs:
           $root = "build/uup-image-audit"
           if (Test-Path $root) {
             Remove-Item "$root/server-reference" -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item "$root/win10-package-files" -Recurse -Force -ErrorAction SilentlyContinue
             Get-ChildItem $root -Recurse -File -ErrorAction SilentlyContinue |
-              Where-Object { $_.Extension -in @(".sys", ".dll", ".exe", ".drv", ".iso", ".wim", ".esd", ".psf", ".cab", ".msu") } |
+              Where-Object { $_.Extension -in @(".sys", ".dll", ".exe", ".drv", ".inf", ".cat", ".iso", ".wim", ".esd", ".psf", ".cab", ".msu") } |
               Remove-Item -Force -ErrorAction SilentlyContinue
           }
 
