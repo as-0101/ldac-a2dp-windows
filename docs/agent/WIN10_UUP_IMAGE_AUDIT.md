@@ -247,3 +247,13 @@ The Win10 `microsoft_bluetooth_a2dp_src.inf`, `microsoft_bluetooth_a2dp.inf`, an
 
 The common INF also maps `BthA2dp.sys` to `SignatureAttributes.DRM`, but the captured DRM subsection is empty. Microsoft documents DRMLevel 1200/1300 and conditional HCK application; the exact applied signature attributes remain unverified.
 
+## CI #11 — completed image extraction, catalog and service evidence (2026-11-24)
+
+- Run: 45347639357; artifact ID 14901033654; artifact SHA-256 277ed892887f10383e34bb9f3c3690a0ebdf290d32cb9f4899d6016e78fbadff.
+- Both offline image records are COMPLETED: Server 20348.5761 Datacenter and Win10 19045.5917 Client/Professional EditionID.
+- Win10 ProductName in the offline SOFTWARE hive is Windows 10 Enterprise despite WIM label Windows 10 Pro and EditionID Professional. Preserve this discrepancy for investigation; file-level hash and catalog observations remain exact.
+- All five A2DP package files verify against the same Win10 CBS catalog Microsoft-Windows-Client-Desktop-Required-Package~31bf3856ad364e35~amd64~~10.0.19041.5917.cat (SHA-256 78772FA12959C072D687283F08D08367B8A8EF1A2F07D7B72F20BCAFD12483BF).
+- Win10 CBS MUM owns the A2DP common/source and BtaMPM driver components as dualModeDriver.
+- Server has BthPort/BthEnum/BTHUSB and audio service registrations; no BthA2dp service. BtaMPM has no service key in either OS.
+- Workflow job concluded failure only after the script reported completion and the artifact uploaded. The exact final exit-code propagation is being corrected with explicit exit 0 on successful completion.
+- Critical gap: the run did not test the Win10 files against Server 2022's catalog set. The new cross-SKU audit branch performs that check and uses Server core files as positive controls.
