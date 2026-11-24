@@ -439,3 +439,16 @@ No third-party binary was downloaded or stored.
 - Library ID: `libfile_f37d34e806088191b2e1d8d2a04bc8e3`
 - Contains PE JSON metadata and a manifest. The manifest records failure before the stage-smoke function because the exact historical Win10 CBS CAT filename was not found. No PnPUtil/SignTool staging result exists.
 - Corrected follow-up: CI #5 [45393451133](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45393451133), script commit `de3924424779a44b7d0d66ce2065c7f8dbae6655`.
+
+
+## Physical host and Win10 CBS evidence — 2026-11-24 22:05 Kyiv
+
+Original archives preserved in personal Library, /LDAC Project/Incoming. Do not publish Microsoft payloads. All hashes below are whole-ZIP SHA-256, computed locally.
+
+| Archive | Bytes | SHA-256 | Library file ID | Original / Library snapshot file IDs |
+|---|---:|---|---|---|
+| A2DP-Next-Server2022-20261124-214448.zip | 81290 | e8e2efb6134bbef254c8ff790d0f1aa872a9df08431c36ffe37a57f4206a282e | libfile_f0773d801fd4819185ecc3f64015e6f1 | file_00000000a4f8821099cc798fc2a69247 / file_000000007b288210ba355e08ea808fd8 |
+| A2DP-Next-Win10-20261124-220021.zip | 176720 | b565ace7c6eacb8b494b712b36dec2182fcd22b316891cb4c9d5249fa6aa8c5b | libfile_d51b148408808191a6597bbca2f572f9 | file_0000000071b482109714d532aad43cde / file_000000003e1c8210843bbdf1428fa64d |
+| A2DP-CBS.zip | 13087 | 1e9663e32a6ed323a4e1de2077fde2bf5da08c030d115fd23a439f52674d361b | libfile_fcd1d2f626c08191bc4af2f935f22443 | file_00000000cab88210bf48c173e2d77f40 / file_00000000a208821092f460fd7641e853 |
+
+**New confirmed static evidence**: exact package BthA2dp.sys (5fba5ee606aac39d9cbda51c0a14dbabbb3a9b47bbd8ac5485ed137b4f354ec3) 149 imports and BtaMPM.sys (da5cbbdce6ac511ef8400e121df6b6eaca7d05c0f40a01f7353ce9f220eb3dcd) 42 imports checked by corrected PE import parser against collected physical Server 20348.5761 export-name sets; 181 system imports resolve by name, remaining 10 match Win10 BtaMPM exports. Zero missing names. Not runtime proof. Four INF files byte-match previous Win10 package. KS.Registration, WDMAUDIO.Registration and mssysfx.CopyFilesAndRegister section bodies match Win10 in host INF files; full INF files differ. Catalog lookup on Win10 returns valid original CBS CAT for all six files, SHA256 bbc25ca00872388d9ba55cf0fcdcdafd92171cfa1e36638b987d22621c0b68cc, verified against archived CAT bytes. No CatalogFile in the original four INFs. CBS neutral MUM explicitly lists main/source/sink A2DP and BtaMPM as dualModeDriver updates alongside unrelated client components. The 13-entry CBS ZIP passes CRC; ten manifests are DCM/PA30 compressed, not decoded yet; three MUM files are XML. No inference of CBS applicability to Server. Do not import full unrelated client package. Next: isolated original CAT verification and staging-only experiment, using exact payloads locally and preserving signatures; no physical host modification. Check latest stage-smoke CI before repeating. No more Win10 acquisition currently required.
