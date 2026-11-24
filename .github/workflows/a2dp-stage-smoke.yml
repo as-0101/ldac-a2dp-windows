@@ -1,0 +1,94 @@
+name: Win10 A2DP package stage smoke on disposable Server 2022
+
+on:
+  push:
+    branches:
+      - experiment/win10-a2dp-stage-smoke-20261124
+    paths:
+      - tools/research/extract_uup_image_a2dp.ps1
+      - tools/research/audit_pe_binary.py
+      - tests/test_audit_pe_binary.py
+      - .github/workflows/a2dp-stage-smoke.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  stage-smoke:
+    name: Verify original Win10 CAT and stage A2DP Source package only
+    runs-on: windows-2022
+    timeout-minutes: 180
+    steps:
+      - name: Checkout isolated experiment branch
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install pinned PE parser
+        run: python -m pip install --disable-pip-version-check --no-input pefile==2024.8.26
+
+      - name: Run PE parser regression tests
+        run: python -m unittest discover -s tests -p "test_*.py" -v
+
+      - name: Validate PowerShell syntax and disposable Server 2022 target
+        shell: pwsh
+        run: |
+          $scriptPath = (Resolve-Path "./tools/research/extract_uup_image_a2dp.ps1").Path
+          $tokens = $null
+          $parseErrors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile($scriptPath, [ref]$tokens, [ref]$parseErrors) | Out-Null
+          if ($parseErrors.Count -gt 0) {
+            $parseErrors | ForEach-Object { Write-Error $_.ToString() }
+            throw "PowerShell parser rejected extract_uup_image_a2dp.ps1."
+          }
+          $os = Get-CimInstance Win32_OperatingSystem
+          $cv = Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion"
+          if ($os.Caption -notmatch "Windows Server 2022" -or [string]$cv.CurrentBuild -ne "20348" -or [string]$cv.InstallationType -ne "Server") {
+            throw "This workflow requires a disposable Windows Server 2022 build 20348 runner."
+          }
+          $kitsRoot = Join-Path ([Environment]::GetFolderPath("ProgramFilesX86")) "Windows Kits\10\bin"
+          $signTool = Get-ChildItem -LiteralPath $kitsRoot -Filter "signtool.exe" -File -Recurse -ErrorAction SilentlyContinue |
+            Where-Object { $_.FullName -match "\\x64\\signtool\.exe$" } |
+            Sort-Object FullName -Descending |
+            Select-Object -First 1
+          if (-not $signTool) { throw "Windows SDK x64 SignTool not found under $kitsRoot." }
+          Write-Host "Target=$($os.Caption); build=$($cv.CurrentBuild).$($cv.UBR); SignTool=$($signTool.FullName)"
+
+      - name: Extract exact Win10 A2DP files, verify CAT, and stage without device install
+        shell: pwsh
+        run: ./tools/research/extract_uup_image_a2dp.ps1 -OutputDirectory build/a2dp-stage-smoke -Win10Only -StagePackageOnRunner
+
+      - name: Remove all temporary Microsoft binary payloads
+        if: always()
+        shell: pwsh
+        run: |
+          $root = "build/a2dp-stage-smoke"
+          if (Test-Path $root) {
+            foreach ($directory in @("stage-package", "win10-package-files", "server-reference")) {
+              Remove-Item (Join-Path $root $directory) -Recurse -Force -ErrorAction SilentlyContinue
+            }
+            Get-ChildItem $root -Recurse -File -ErrorAction SilentlyContinue |
+              Where-Object { $_.Extension -in @(".sys", ".dll", ".exe", ".drv", ".inf", ".cat", ".iso", ".wim", ".esd", ".psf", ".cab", ".msu") } |
+              Remove-Item -Force -ErrorAction SilentlyContinue
+          }
+
+      - name: Upload metadata and text reports only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: win10-a2dp-server2022-stage-smoke
+          path: |
+            build/a2dp-stage-smoke/README.md
+            build/a2dp-stage-smoke/manifest.json
+            build/a2dp-stage-smoke/inf-summary.txt
+            build/a2dp-stage-smoke/component-hits.json
+            build/a2dp-stage-smoke/catalog-membership.json
+            build/a2dp-stage-smoke/service-registrations.json
+            build/a2dp-stage-smoke/stage-test.json
+            build/a2dp-stage-smoke/pe-audit/**
+          if-no-files-found: warn
+          retention-days: 7
