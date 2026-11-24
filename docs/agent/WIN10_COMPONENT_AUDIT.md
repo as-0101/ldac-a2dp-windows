@@ -302,3 +302,13 @@ The exact captured BtaMPM 10.0.19041.5848 report (SHA-256 `DA5CBBDCE6AC511EF8400
 The first exact-image attempt (run #3 / 45317582562) failed before mounting the image because the selected DISM image object did not expose a `Version` property. This does not change the component map or establish any binary incompatibility.
 
 The corrected experiment now verifies image identity from a copied offline SOFTWARE hive (CurrentBuild.UBR and EditionID), adds the previously omitted HAL/SleepStudyHelper/WDFLDR/ksecdd references, and in its latest revision includes the Win10 BtaMPM.sys companion when resolving BthA2dp imports. Runs #4 / 45325486392 and #5 / 45325586394 were still in progress at the last check. Exact PE, catalog and registry conclusions remain pending.
+
+## Server 2022 A2DP profile-binding gap — 2026-11-24
+
+The archived INF comparison now isolates a smaller package-level delta than the previous broad stack hypothesis:
+
+- Server 20348 `bth.inf` maps BTHENUM Audio Sink UUID 0x110B to `BthGenericService` with a `_GENERIC` hardware-ID suffix. The generic service section installs a null associated service and sets `GenericDriverInstalled`; it does not create the dedicated BthA2dp service.
+- Win10 `microsoft_bluetooth_a2dp_src.inf` matches the base remote A2DP Sink UUID 0x110B and chains through `microsoft_bluetooth_a2dp.inf` to `Common_BthA2dp_Install`.
+- The common INF copies BthA2dp.sys, installs the demand-start BthA2dp kernel service and registers KSCATEGORY_AUDIO source/sink interfaces, while reusing KS/WDMAUDIO/BtaMPM/MSSysFx registrations.
+
+This makes the Win10 source/common INF plus its exact binaries the first minimal adaptation candidate. It does **not** yet prove that the binary loads on Server 20348.5761 or that the package is signed/applicable. Exact PE exports/imports, CAT/CBS ownership, rank and disposable-VM staging are still required. Preserve Server's existing BthPort/BthEnum/radio core; no new Bluetooth driver is justified by this evidence.

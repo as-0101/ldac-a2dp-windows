@@ -284,3 +284,23 @@ Source: [Sony Support 00260277](https://www.sony.ru/electronics/support/articles
 
 The captured BtaMPM 10.0.19041.5848 imports 42 symbols (37 ntoskrnl, 1 cng/SystemPrng, 4 WppRecorder). That exact import-name set matches the later 19041.7660 candidate and all 42 are present in the available Server 20348.5866 exports. This is not yet proof for Server 20348.5761; exact target exports and BtaMPM exports still need the UUP image audit.
 
+## 2026-11-24 — exact Server/Win10 INF binding delta
+
+### Server 2022 generic fallback
+
+The archived Server 20348 `bth.inf` maps Audio Source UUID 0x110A and Audio Sink UUID 0x110B to `BthGenericService` entries whose hardware IDs end in `_GENERIC`. The generic section's Services entry is a null `AddService`; its AddProp section only sets `GenericDriverInstalled`. It does not add the dedicated `BthA2dp` kernel service or its KS audio interfaces.
+
+### Windows 10 dedicated A2DP source match
+
+The archived Win10 `microsoft_bluetooth_a2dp_src.inf` matches the base `BTHENUM\{0000110b-0000-1000-8000-00805f9b34fb}` ID and explicitly comments that it is the remote A2DP Sink GUID. Its install section includes `microsoft_bluetooth_a2dp.inf` and needs `Common_BthA2dp_Install`; the Services and Interfaces sections chain to the corresponding common sections.
+
+The common INF:
+- includes `ks.inf`, `wdmaudio.inf`, `BtaMpm.inf`;
+- needs `KS.Registration`, `WDMAUDIO.Registration`, `BtaMPM.CopyFilesOnly`, `mssysfx.CopyFilesAndRegister`;
+- copies `BthA2dp.sys`;
+- installs `BthA2dp` as a demand-start kernel service (`StartType=3`, `ServiceBinary=%12%\BthA2dp.sys`);
+- registers KSCATEGORY_AUDIO interfaces for A2DP source and sink endpoints.
+
+### Minimal adaptation candidate
+
+Keep Server's existing radio miniport, BthPort and BthEnum stack. The first package-level candidate is to make the existing Win10 source/common A2DP INF chain available for the remote 0x110B sink, together with the exact compatible profile files. Do not replace Server `bth.inf` wholesale; verify driver rank, INF ownership, CBS applicability and system catalog membership first. This is a static INF finding only; no staging, service start, endpoint, SBC negotiation or audio has been tested.

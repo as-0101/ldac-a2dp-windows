@@ -1,4 +1,4 @@
-# Immediate next actions — 2026-11-24 06:16 Europe/Kyiv
+# Immediate next actions — 2026-11-24 06:24 Europe/Kyiv
 
 This block supersedes older ACX-focused action lists below.
 
@@ -6,11 +6,12 @@ This block supersedes older ACX-focused action lists below.
 2. Confirm each mounted image from its offline SOFTWARE hive: exact CurrentBuild.UBR must be 19045.5917 / 20348.5761, and EditionID must be Professional / ServerDatacenter. Do not use Get-WindowsImage.Version; that property was absent from the DISM object in run #3.
 3. Compare extracted SHA-256 values against the captured identities: DriverStore BthA2dp 5FBA5EE606AAC39D9CBDA51C0A14DBABBB3A9B47BBD8AC5485ED137B4F354EC3; separate System32 BthA2dp 0442A18BBED4E323265C66561C8F8C171D8E934E9089C12B94D1DFDBB057B737; BtaMPM DA5CBBDCE6AC511EF8400E121DF6B6EACA7D05C0F40A01F7353CE9F220EB3DCD.
 4. For every exact or explicitly non-exact candidate, record PE architecture, timestamp, OS/image/subsystem versions, direct/delay imports, exports, API-set names, embedded signature state and static Server export resolution. Keep the two BthA2dp copies separate and resolve BthA2dp → matching Win10 BtaMPM as a companion dependency.
-5. Extend the offline audit to SYSTEM/SOFTWARE service, BTHENUM/class and MMDevices registrations plus system CatRoot catalog membership. Do not infer catalog membership from an embedded signature or package-local CAT absence.
-6. If 19045.5917 does not reproduce the captured hashes, audit 19045.4355 as a separate exact-version candidate. Do not replace the current run or use Winbindex timestamp/size collisions as exact binaries.
-7. Only after static, registry, CBS and catalog checks pass, stage the unmodified signed package in a disposable Server 2022 VM. Record service start → enumeration → driver load → endpoint → SBC negotiation → actual stereo audio separately.
-8. Physical Server 2022 remains read-only. No driver install, device restart, BCD/security/test-signing/certificate change, OS update/rollback or prepare/upgrade/install/rollback script. HFP/microphone remains out of scope.
-9. Code changes stay on the isolated experiment branch; documentation only on `docs/project-source-reorg`. Notion journal remains append-only.
+5. Treat the INF delta as the minimal package-level candidate: Server `bth.inf` uses a generic `_GENERIC` fallback for UUID 0x110B, while Win10 `microsoft_bluetooth_a2dp_src.inf` matches the base UUID and chains to the common A2DP install. Verify ranking, exact package ownership and CAT membership before staging; do not replace Server BthPort/BthEnum or the radio miniport.
+6. Complete offline SYSTEM/SOFTWARE service, BTHENUM/class and MMDevices registration plus system CatRoot catalog membership. Do not infer catalog membership from an embedded signature or package-local CAT absence.
+7. If 19045.5917 does not reproduce the captured hashes, audit 19045.4355 as a separate exact-version candidate. Do not use Winbindex timestamp/size collisions as exact binaries.
+8. Only after static, registry, CBS and catalog checks pass, stage the existing Win10 source/common INF and binaries in a disposable Server 2022 VM. Record service start → enumeration → driver load → endpoint → SBC negotiation → actual stereo audio separately.
+9. Physical Server 2022 remains read-only. No driver install, device restart, BCD/security/test-signing/certificate change, OS update/rollback or prepare/upgrade/install/rollback script. HFP/microphone remains out of scope.
+10. Code changes stay on the isolated experiment branch; documentation only on `docs/project-source-reorg`. Notion journal remains append-only.
 
 # Current continuation — 2026-11-24 02:19 (codec ownership and PE audit correction)
 

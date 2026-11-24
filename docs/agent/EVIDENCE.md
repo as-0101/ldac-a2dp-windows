@@ -686,3 +686,11 @@ Run [45317582562](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/4531
 - The same commit adds HAL.dll, SleepStudyHelper.sys, WDFLDR.SYS and ksecdd.sys to the Server export-reference set.
 - Commit `e947970356884ead996bcc7347fa0e5554aa770b` adds the Win10 image's DriverStore-preferred BtaMPM.sys as a companion export reference before auditing BthA2dp imports.
 - Verification runs: #4 `45325486392` (offline-hive + kernel-reference fix) and #5 `45325586394` (latest companion-BtaMPM fix). Both were in progress at evidence capture. No successful image identity, PE match, catalog membership or runtime result is claimed until their logs and metadata artifacts are inspected.
+
+## E-162 — Server generic A2DP UUID fallback versus Win10 dedicated source INF
+
+The archived INF comparison transcript `00-33.txt` shows Server 2022 `bth.inf` mapping BTHENUM Audio Sink UUID `{0000110b-0000-1000-8000-00805f9b34fb}` to `BthGenericService` with a hardware ID ending `_GENERIC`. The same INF's `BthGenericService.NT.Services` section has a null `AddService` and its AddProp section sets only `GenericDriverInstalled`; it does not register `BthA2dp`.
+
+The same transcript shows Win10 `microsoft_bluetooth_a2dp_src.inf` matching the base BTHENUM 0x110B UUID (comment: remote A2DP Sink GUID), then chaining its install, Services and Interfaces sections to `microsoft_bluetooth_a2dp.inf` / `Common_BthA2dp_Install`. Transcript `00-34.txt` shows the common INF including `ks.inf`, `wdmaudio.inf`, `BtaMpm.inf`; requiring KS/WDMAUDIO/BtaMPM/MSSysFx registrations; copying `BthA2dp.sys`; registering a demand-start BthA2dp kernel service; and exposing KSCATEGORY_AUDIO source/sink interfaces.
+
+This identifies a concrete, minimal **candidate**: add the existing Win10 A2DP source/common profile package on top of Server's existing Bluetooth core, rather than replacing BthPort/BthEnum/radio components or writing a new driver. It is not yet a runtime result: exact PE compatibility, package rank, CBS/system catalog membership, staging, service start, endpoint, SBC negotiation and audio remain unverified. No INF was staged or installed; physical Server 2022 remains untouched.

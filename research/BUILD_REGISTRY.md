@@ -107,3 +107,7 @@ CI #16 Library copies were independently re-materialized and matched against the
 | [#5 / 45325586394](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45325586394) | `e947970356884ead996bcc7347fa0e5554aa770b` | IN PROGRESS at update | Latest script; adds matching Win10 BtaMPM companion export reference |
 
 No run in this block has established PE compatibility, CAT membership, driver staging/load, A2DP endpoint, SBC negotiation or audio. Run #3 produced no artifact. Do not report it as a successful image audit.
+
+## 2026-11-24 — static INF binding delta (no build)
+
+The archived comparison transcripts `00-33.txt` and `00-34.txt` reveal the Server generic 0x110B fallback versus the Win10 dedicated A2DP source INF/common install chain (E-162). This was a read-only static review of existing Library artifacts; no build, package stage, CI run, driver installation or runtime test was performed. The UUP image runs #4/#5 remain the separate PE/CBS/catalog audit gate.

@@ -298,3 +298,13 @@ CI #463: [45311922753](https://github.com/as-0101/ldac-a2dp-windows/actions/runs
 | UUP audit #5 | Run `45325586394`, commit `e947970356884ead996bcc7347fa0e5554aa770b` | In progress at update; latest experiment revision. |
 
 The source Win10 package archives remain in Project Sources/Library and were not recollected or re-exported. Run #3 had no artifact; inspect #4/#5 artifacts only after completion. No Microsoft binary payload or image is committed to Git.
+
+## A2DP profile binding evidence — 2026-11-24
+
+| Artifact | Project Library identity | Evidence |
+|---|---|---|
+| `00-33.txt` | file `file_000000004d5882109961f477df8a1c48`; Library ID `libfile_652152c5c384819180d7047bc6f017d9`; 29,125 bytes | Archived Win10/Server INF comparison: Server `bth.inf` generic 0x110B fallback; Win10 `microsoft_bluetooth_a2dp_src.inf` base-UUID match and Include/Needs chain |
+| `00-34.txt` | file `file_000000004c208210bec65c68b97e9b69`; Library ID `libfile_c0db9e79a6d4819187b64773debbc45e`; 5,564 bytes | Archived common INF / KS / WDMAUDIO section comparison: BthA2dp service and KSCATEGORY_AUDIO interface registration |
+| E-162 | `docs/agent/EVIDENCE.md` | Static INF evidence only; no package staging, service start, endpoint, SBC negotiation or audio |
+
+These are existing Library artifacts. No new collection or materialization was required.

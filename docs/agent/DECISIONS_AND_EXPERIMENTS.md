@@ -326,3 +326,11 @@ Server 2022 has no inbox BtaMPM.sys in the audited package set. If the Win10 Bth
 - Commit 144d42105a26d5aa21f159ae068b17a047f724a9 added offline SOFTWARE-hive identity verification and HAL/SleepStudyHelper/WDFLDR/ksecdd references.
 - Commit e947970356884ead996bcc7347fa0e5554aa770b added the matching Win10 BtaMPM companion to the reference directory.
 - Runs #4 / 45325486392 and #5 / 45325586394 were in progress at this update. #5 is the latest experiment revision. No compatibility conclusion is accepted until exact image versions, hashes and reports are inspected.
+
+## D-050 — Preserve Server Bluetooth core; evaluate the existing Win10 A2DP source/common INF as the minimal profile-layer adaptation
+
+The archived Server 20348 `bth.inf` maps remote Audio Sink UUID 0x110B to a generic fallback hardware ID ending `_GENERIC`; its `BthGenericService.NT.Services` section installs a null associated service and its property section sets `GenericDriverInstalled`. It does not register the A2DP profile service.
+
+The archived Win10 `microsoft_bluetooth_a2dp_src.inf` matches the base BTHENUM UUID 0x110B (remote A2DP Sink), then delegates to `microsoft_bluetooth_a2dp.inf` / `Common_BthA2dp_Install`. The common INF copies BthA2dp.sys, installs the demand-start BthA2dp service and registers KSCATEGORY_AUDIO interfaces while including the existing KS, WDMAUDIO, BtaMPM and MSSysFx registrations.
+
+Therefore the first adaptation candidate is the existing Win10 A2DP source/common INF + its exact binaries, layered on Server's existing Bluetooth core. Do not replace BthPort/BthEnum or the radio miniport, and do not write a new driver unless later evidence proves a kernel blocker. This decision is limited to the static INF path; PE/CAT/CBS/rank compatibility and disposable-VM runtime remain gates.

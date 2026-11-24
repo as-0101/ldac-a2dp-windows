@@ -142,3 +142,5 @@ No service, device, profile-driver, endpoint, SBC negotiation, audio-stream, LDA
 | T-060 | UUP image identity/extraction for Win10 19045.5917 and Server 20348.5761 | Run #3 failed before mount because the DISM object lacked a `Version` property. | HARNESS FAILURE; corrected offline SOFTWARE-hive verification is being tested in runs #4/#5 |
 | T-061 | Complete static dependency closure for Win10 BthA2dp/BtaMPM against Server 20348.5761 | Run #5 adds HAL, SleepStudyHelper, WDFLDR, ksecdd and the Win10 BtaMPM companion reference. | IN PROGRESS; no PE/import/export result accepted yet |
 | T-062 | Offline service/class/MMDevices registrations and system CatRoot membership | Not completed by run #3; current UUP script still needs this extension. | NOT TESTED / NEXT IMPLEMENTATION STEP |
+
+| T-063 | Server 20348 vs Win10 19045 A2DP INF match/registration delta | Archived INF comparison: Server bth.inf maps 0x110B to BthGenericService via _GENERIC fallback and null service; Win10 source INF matches base UUID and chains to BthA2dp common install. | STATIC INF REVIEW COMPLETE; exact image/CAT/rank and disposable-VM stage/runtime pending |
