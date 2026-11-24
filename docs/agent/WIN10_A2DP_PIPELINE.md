@@ -218,3 +218,12 @@ The Library `pe_imports_a2dp.py` repeats the same import descriptor because it d
 Microsoft's previous-Windows support page states that all Windows Server SKUs lack in-box Bluetooth wireless technology support, but third-party IHV drivers may be available. It lists A2DP/AVDTP among Windows 10 in-box profiles, not Server profiles. The component-guidelines page separately lists Windows Server 2022 under Bluetooth Host Subsystem QD ID 130847. That is a qualification record, not an in-box A2DP driver.
 
 Therefore, the Server side must be analyzed as three distinct layers: vendor radio/transport + third-party host stack; Microsoft Bluetooth core/host-subsystem interfaces; and the A2DP profile/KS endpoint package. A functioning radio or BthPort-like core does not prove A2DP profile availability. The target remains to add only the minimum compatible A2DP profile package for SBC, not to replace the radio transport or build a new stack.
+
+
+## 2026-11-24 component-pipeline evidence
+
+The Microsoft Server 2022 KB5126655 package scan contains Bluetooth core packages but no Windows client A2DP profile INF/SYS or BtaMPM manifest references. The Windows 10 cumulative-update scan finds the A2DP and BtaMPM components, but their SYS payloads in the update CAB are PSF forward deltas rather than full PE files.
+
+Do not infer an LDAC user-mode codec DLL from the presence of A2DP transport. The Windows 10 A2DP profile path and the AOSP libldac encoder remain separate components. Exact Windows 10 PE imports/exports and Server 20348.5761 export compatibility are pending the full-image extraction workflow.
+
+The next experiment is WIN10_UUP_IMAGE_AUDIT.md, not ACX bind-probe.
