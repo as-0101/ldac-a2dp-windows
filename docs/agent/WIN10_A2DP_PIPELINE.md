@@ -427,3 +427,10 @@ The Win10 A2DP common INF's KS/WDMAUDIO/MSSysFx dependencies can use the existin
 
 Decision: do not transplant the Win10 KS/WDMAUDIO/MSSysFx components. The minimal candidate remains the A2DP Source/common INF and BtaMPM companion files, subject to the disposable staging test.
 
+
+### Microsoft implementation references
+
+- [INF Version section](https://learn.microsoft.com/en-us/windows-hardware/drivers/install/inf-version-section): system-supplied INF files omit CatalogFile because the OS validates them against system-supplied catalogs.
+- [Installing a catalog with SignTool](https://learn.microsoft.com/en-us/windows-hardware/drivers/install/installing-a-catalog-file-by-using-signtool): SignTool catdb adds/removes a catalog; by default it targets the system component and driver database.
+- [PnPUtil command syntax](https://learn.microsoft.com/en-us/windows-hardware/drivers/devtest/pnputil-command-syntax): /add-driver stages a package into DriverStore; /install is a separate flag that installs/updates matching devices. The stage-smoke harness deliberately omits /install.
+
