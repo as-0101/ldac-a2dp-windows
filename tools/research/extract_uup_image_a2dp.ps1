@@ -1207,6 +1207,7 @@ if ($StagePackageOnRunner) {
 }
 
 Remove-Item -LiteralPath $ServerReferenceDirectory -Recurse -Force -ErrorAction SilentlyContinue
+& (Join-Path $PSScriptRoot 'probe_exact_donor.ps1') -InputDirectory $Win10PackageFilesDirectory
 Remove-Item -LiteralPath $Win10PackageFilesDirectory -Recurse -Force -ErrorAction SilentlyContinue
 Write-Host "UUP image audit complete. Manifest: $(Join-Path $OutputDirectory 'manifest.json')"
 exit 0

@@ -1,0 +1,20 @@
+name: Exact donor INF lookup and uncommitted file queues
+on:
+  push:
+    branches: [experiment/native-donor-inf-20261124]
+    paths: ['tools/research/probe_exact_donor.ps1', '.github/workflows/exact-donor.yml']
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: windows-2022
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - run: python -m pip install pefile==2024.8.26
+      - name: Read verified original donors with native SetupAPI and discard queues
+        shell: pwsh
+        run: ./tools/research/extract_uup_image_a2dp.ps1 -OutputDirectory build/donor-audit -Win10Only
