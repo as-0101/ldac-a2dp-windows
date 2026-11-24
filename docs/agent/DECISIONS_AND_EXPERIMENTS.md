@@ -283,3 +283,20 @@ The three downloaded files retained timestamp/size but returned different file v
 ## D-2026-11-24-03 — Keep ACX bind-probe paused
 
 No evidence yet demonstrates that ACX binding is the blocker. The immediate task is exact Win10 component extraction, INF/CBS/registry mapping, and static Server export compatibility. CI #248 and #255 remain closed.
+
+## D-041 — Treat BtaMPM as a required package dependency, not a codec
+
+The Windows 10 common A2DP INF includes BtaMpm.inf and needs BtaMPM.CopyFilesOnly. Candidate BthA2dp imports 10 BtaMPM functions. BtaMPM.sys is profile/multiprofile management, not the SBC/LDAC encoder. A package adaptation must include the matching BtaMPM dependency and registration.
+
+## D-042 — Static export match is a gate, not a compatibility verdict
+
+The non-exact Win10 symbol-server candidate has 129/149 BthA2dp imports matched against the available later Server 20348.5866 reference set and companion BtaMPM exports. Twenty imports remain untested because HAL/SleepStudyHelper/WDFLDR/ksecdd references were omitted. Candidate hashes differ from the captured files and the Server build differs from target 20348.5761. Do not declare compatibility until exact images and the complete dependency closure are audited.
+
+## D-043 — Continue with existing Microsoft package before considering another transport
+
+The first implementation hypothesis is to reuse the Windows 10 source/common A2DP INF, BthA2dp.sys and BtaMPM package components with existing Server KS/WDMAUDIO/MSSysFx dependencies, if exact imports, catalog and registration checks pass. Do not modify the kernel driver or create a shim unless a specific unresolved import/interface is proven.
+
+## D-044 — Keep external LDAC projects as later alternatives only
+
+BlueCaster is a user-mode BTstack+WinUSB stack, not a codec DLL for Microsoft A2DP; it takes over a USB radio, has no Server 2022 support claim and carries a personal/non-commercial BTstack license. OpenA2DP is pre-alpha and its kernel drivers have not been built/run against hardware. Neither replaces the current Win10 package/SBC investigation.
+

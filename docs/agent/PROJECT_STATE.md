@@ -760,3 +760,16 @@ The Winbindex symbol-server download path returned files with matching PE timest
 A new isolated branch, experiment/win10-a2dp-uup-image-audit-20261124, now runs an offline UUP image audit for Win10 19045.5917 and Server 20348.5761. GitHub Actions run 45317582562 (workflow run #3) is in progress after a narrow Get-FileHash compatibility fix. No binary payloads are uploaded, and no physical host is touched.
 
 Current stage remains package/static research only. No A2DP endpoint, SBC negotiation, or actual audio has been demonstrated. See WIN10_UUP_IMAGE_AUDIT.md.
+
+## 2026-11-24 05:20 — static package compatibility lead; exact UUP audit pending
+
+- Re-read Project Source entry point, canonical docs and relevant repo tree. Existing Win10 package archives were not requested again.
+- Read-only branch check: `server-2022-oppo` remains `39eea45ab5d93c09836819db75f2a64177fbf09a`; no code changes there.
+- CI #463 (45311922753; commit `4459e152886cec3c2d4a2f0458a5467469c7b3dc`) succeeded. Catalog SYS payloads are PSF deltas, not complete PE files. Server KB5126655 has Bluetooth core but no A2DP/BtaMPM profile package references.
+- Non-exact symbol-server candidate BthA2dp 10.0.19041.6392 (SHA-256 `3d026ae46f46c2323e9e70b194f1fb5eb32974c42c4fd1f9a24e44214dafd4ec`) has 8 import descriptors / 149 symbols. Companion BtaMPM 10.0.19041.7660 (SHA-256 `7e9c0cfcf073d501fe4cbdf632fc9f3a22c088abaccc73f9735a603a4c9951dd`) exports all 10 symbols imported by BthA2dp from btampm.sys.
+- 129/149 BthA2dp imports matched the available later Server 20348.5866 reference set or companion BtaMPM exports. The remaining 20 imports are from HAL (1), SleepStudyHelper (8), WDFLDR (4), ksecdd (7); those Server reference files were omitted, so they are untested, not missing. This is not the captured 19041.4355 binary or target 20348.5761.
+- Found corrected `pe_imports_a2dp_fixed.py` in Library. Reports (2)/(3) are byte-identical and target the separate 279,040-byte System32 copy. The script only emits direct imports.
+- UUP audit #3 (45317582562; commit `e9900fc894772997526995feeaecfff4a9ec5ff0`) is still in progress for Win10 19045.5917 and Server 20348.5761.
+- Common INF includes ks.inf, wdmaudio.inf, BtaMpm.inf; Needs KS.Registration, WDMAUDIO.Registration, BtaMPM.CopyFilesOnly and mssysfx.CopyFilesAndRegister; AddService BthA2dp is demand-start and KSCATEGORY_AUDIO interfaces are registered. Existing Server comparison already has generic KS/WDMAUDIO/MSSysFx dependencies. Package-level adaptation remains the preferred hypothesis pending exact checks.
+- No driver/device/endpoint/audio runtime stage was tested; no physical-host query or mutation occurred.
+

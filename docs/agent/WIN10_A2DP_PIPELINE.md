@@ -227,3 +227,46 @@ The Microsoft Server 2022 KB5126655 package scan contains Bluetooth core package
 Do not infer an LDAC user-mode codec DLL from the presence of A2DP transport. The Windows 10 A2DP profile path and the AOSP libldac encoder remain separate components. Exact Windows 10 PE imports/exports and Server 20348.5761 export compatibility are pending the full-image extraction workflow.
 
 The next experiment is WIN10_UUP_IMAGE_AUDIT.md, not ACX bind-probe.
+
+## 2026-11-24 05:20 — explicit A2DP pipeline and LDAC boundary
+
+### Device enumeration and endpoint creation
+
+```text
+Bluetooth radio / vendor miniport
+  → BthPort.sys (HCI/L2CAP host core)
+  → BthEnum.sys / BTHENUM PnP device for remote service UUID 0x110B
+  → microsoft_bluetooth_a2dp_src.inf
+  → microsoft_bluetooth_a2dp.inf (common install)
+       → BthA2dp.sys (demand-start kernel A2DP/AVDTP profile driver)
+       → BtaMPM.sys (profile/multiprofile management dependency)
+       → KS audio interfaces (KSCATEGORY_AUDIO, A2DP source endpoint)
+  → AudioEndpointBuilder / MMDevices creates the render endpoint
+```
+
+### PCM-to-radio media path
+
+```text
+WASAPI application
+  → AudioSrv / Windows audio engine
+  → MSSysFx APO effects (when enabled)
+  → KS render endpoint exposed by BthA2dp.sys
+  → BthA2dp A2DP/AVDTP media path (SBC or another negotiated codec)
+  → BthPort / L2CAP
+  → remote A2DP Sink (OPPO Enco Buds2)
+```
+
+The source INF is the PC-to-headphones playback direction and matches remote A2DP Sink UUID 0x110B. The reverse-direction sink INF is not needed for the OPPO playback milestone. BthA2dp owns the A2DP/AVDTP profile and inbox codec path; it is not merely a generic transport shim. BtaMPM is profile management, not an LDAC encoder. BthPort is the Bluetooth host transport/core; the profile-driver relationship uses the Bluetooth driver interface/IRP path rather than a normal PE import.
+
+### INF registrations and dependencies
+
+The common INF uses `Include=ks.inf,wdmaudio.inf,BtaMpm.inf` and `Needs=KS.Registration,WDMAUDIO.Registration,BtaMPM.CopyFilesOnly,mssysfx.CopyFilesAndRegister`. It installs BthA2dp as a kernel driver with demand start (StartType 3) and `%12%\BthA2dp.sys` as ServiceBinary. It registers KSCATEGORY_AUDIO source/sink interfaces and endpoint properties under the MSEP property store. The archived Server comparison already contains ks.inf, wdmaudio.inf, WMALFXGFXDSP.dll and SysFxUI.dll; the exact Server UUP image must confirm versions/registrations. BtaMpm.inf/BtaMPM.sys remains a profile-specific dependency.
+
+### COM boundary
+
+No generic COM A2DP codec-provider contract or LDAC CLSID was found in the reviewed Microsoft INFs or project binaries. MSSysFx APOs are user-mode COM objects but process audio effects in the Windows audio engine; they are not A2DP codec negotiation providers. Registering an arbitrary LDAC DLL as an APO would not add LDAC to AVDTP negotiation.
+
+### LDAC boundary
+
+Microsoft's Windows 10 inbox A2DP codec list is SBC and aptX Classic; it contains no LDAC codec/provider DLL. The project's AOSP libldac is compiled as static encoder libraries and called by its own service; it is not a plug-in to BthA2dp.sys. A later LDAC milestone needs an A2DP transport that explicitly advertises LDAC and a sink that supports it. OPPO Enco Buds2 ETE41 is AAC/SBC only, so it can validate SBC but cannot validate LDAC.
+

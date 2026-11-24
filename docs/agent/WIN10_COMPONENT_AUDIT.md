@@ -251,3 +251,35 @@ CI #463 confirms that the A2DP component payloads in KB5036979 and KB5126657 are
 The Server 2022 KB5126655 scan found core Bluetooth packages but no A2DP INF/SYS or BtaMPM references. This makes the client A2DP profile package the concrete component gap to investigate; it does not justify a new driver or ACX experiment.
 
 Winbindex symbol-server downloads are rejected as exact targets because all three hashes differed from the captured archive and the returned file versions were 19041.6392 / 19041.1030 / 19041.7660 rather than 19041.4355 / 19041.1 / 19041.5848. See WIN10_UUP_IMAGE_AUDIT.md.
+
+## 2026-11-24 05:20 — corrected parser and static compatibility lead
+
+### Parser correction
+
+Library contains `pe_imports_a2dp_fixed.py` (file ID `file_000000006ac88210b1f6b3d695278455`). It advances IMAGE_IMPORT_DESCRIPTOR by 20 bytes. Reports (2)/(3) are byte-identical and analyze the 279,040-byte System32 BthA2dp copy (SHA-256 `0442A18BBED4E323265C66561C8F8C171D8E934E9089C12B94D1DFDBB057B737`), not the 282,624-byte DriverStore copy. The fixed script parses direct imports only. The repo `tools/research/audit_pe_binary.py` parses headers, VERSIONINFO, direct/delay imports, exports, API-set names and optional import-to-export comparison.
+
+### Candidate import closure from CI #463 — not exact target binaries
+
+| File | Candidate version | Candidate SHA-256 | Captured SHA-256 |
+|---|---|---|---|
+| DriverStore BthA2dp.sys | 10.0.19041.6392 | `3d026ae46f46c2323e9e70b194f1fb5eb32974c42c4fd1f9a24e44214dafd4ec` | `5FBA5EE606AAC39D9CBDA51C0A14DBABBB3A9B47BBD8AC5485ED137B4F354EC3` |
+| BtaMPM.sys | 10.0.19041.7660 | `7e9c0cfcf073d501fe4cbdf632fc9f3a22c088abaccc73f9735a603a4c9951dd` | `DA5CBBDCE6AC511EF8400E121DF6B6EACA7D05C0F40A01F7353CE9F220EB3DCD` |
+
+Candidate BthA2dp imports 75 symbols from ntoskrnl, 40 from ks, 10 from BtaMPM, 4 from WppRecorder, 1 from HAL, 8 from SleepStudyHelper, 4 from WDFLDR and 7 from ksecdd. Companion BtaMPM exports all 10 required symbols; its 42 imports (37 ntoskrnl, 1 cng, 4 WppRecorder) resolve against available later Server 20348.5866 exports.
+
+129/149 BthA2dp imports resolve against that later Server reference set plus companion BtaMPM. The remaining 20 are untested because HAL.dll, SleepStudyHelper.sys, WDFLDR.SYS and ksecdd.sys were omitted from the Server reference directory. They are not known missing. Server 20348.5866 is later than target 20348.5761, and the Win10 candidates do not match the captured versions. This is not a compatibility pass.
+
+### INF/package-level transplant hypothesis
+
+The common INF is Class=MEDIA, DriverVer 10.0.19041.4355:
+- `Include = ks.inf, wdmaudio.inf, BtaMpm.inf`
+- `Needs = KS.Registration, WDMAUDIO.Registration, BtaMPM.CopyFilesOnly, mssysfx.CopyFilesAndRegister`
+- `AddService = BthA2dp`: `ServiceType=1`, `StartType=3`, `ServiceBinary=%12%\BthA2dp.sys`
+- `AddInterface=KSCATEGORY_AUDIO` for A2DP source and sink interfaces.
+
+The archived Server comparison already contains ks.inf, wdmaudio.inf, WMALFXGFXDSP.dll and SysFxUI.dll. The likely missing profile-specific closure is the A2DP source/common INF plus BthA2dp.sys and BtaMPM/INF. This remains a package-level hypothesis pending exact UUP, registry and catalog checks.
+
+### Existing LDAC implementations checked
+
+BlueCaster is user-mode BTstack+WinUSB, takes over a USB radio and has no Server 2022 support claim; its BTstack license is personal/non-commercial. OpenA2DP is pre-alpha; its kernel drivers have not been built with WDK or run against a headset. The project's AOSP libldac remains a static encoder library in the existing service, not a Windows 10 A2DP provider DLL.
+

@@ -641,3 +641,24 @@ All 3 exact identities failed SHA-256 verification. The symbol server returned B
 Source: UUP image audit run #3, isolated branch experiment/win10-a2dp-uup-image-audit-20261124.
 
 The run targets Windows 10 19045.5917 x64 and Server 20348.5761 x64. It is in progress after adding a narrowly scoped SHA-256 fallback to the UUP downloader helper. No runtime installation or physical-host action is part of this run.
+
+## E-152 — Corrected PE parser recovered (2026-11-24)
+
+Library file `pe_imports_a2dp_fixed.py`, ID `file_000000006ac88210b1f6b3d695278455`, advances IMAGE_IMPORT_DESCRIPTOR by 20 bytes. Reports (2) and (3), IDs `file_0000000033e482109479f740ed5a8030` and `file_000000008d708210bada16b6cb44c429`, are byte-identical and analyze the 279,040-byte System32 BthA2dp copy (SHA-256 `0442A18BBED4E323265C66561C8F8C171D8E934E9089C12B94D1DFDBB057B737`), not the 282,624-byte DriverStore copy. The fixed parser does not capture exports, delay imports, API-set host mapping, PE OS-version fields or CAT membership. Repo `tools/research/audit_pe_binary.py` is the fuller parser.
+
+## E-153 — Non-exact Win10 candidate import comparison (CI #463)
+
+Candidate BthA2dp 10.0.19041.6392, 282,624 bytes, SHA-256 `3d026ae46f46c2323e9e70b194f1fb5eb32974c42c4fd1f9a24e44214dafd4ec`: 149 imports. Candidate BtaMPM 10.0.19041.7660, 43,008 bytes, SHA-256 `7e9c0cfcf073d501fe4cbdf632fc9f3a22c088abaccc73f9735a603a4c9951dd`: 14 named exports, including all 10 required by BthA2dp. BtaMPM's 42 imports resolve against available Server 20348.5866 exports. 129/149 BthA2dp imports matched that later Server reference set plus companion BtaMPM; 20 imports from HAL/SleepStudyHelper/WDFLDR/ksecdd were not compared because those references were omitted. These candidates do not match captured hashes and are not proof for Server 20348.5761.
+
+## E-154 — Existing LDAC implementations compared
+
+[BlueCaster](https://github.com/SeiyaFunaokaJP/BlueCaster) is user-mode BTstack+WinUSB, takes over a USB radio, has no Server 2022 support claim and includes BTstack under a personal/non-commercial license; not a codec DLL. [OpenA2DP](https://github.com/RafiMota/open-a2dp) is pre-alpha and its kernel drivers have not been built with WDK or run against a headset; not a ready binary. Neither is selected over the existing Microsoft package path.
+
+## E-155 — UUP image audit #3
+
+Run 45317582562, experiment branch `experiment/win10-a2dp-uup-image-audit-20261124`, commit `e9900fc894772997526995feeaecfff4a9ec5ff0`, targets Win10 19045.5917 and Server 20348.5761. In progress at this update; no package or image installation.
+
+## E-156 — Existing Project Source archives
+
+The Win10 A2DP package and DriverStore archives are already indexed. The Project file object did not expose an authorized raw-byte materialization path in this runtime; this is an access-path limitation, not a missing artifact. Continue with existing text reports and official UUP images; do not ask the user to resend files.
+

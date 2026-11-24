@@ -1,3 +1,15 @@
+# Immediate next actions — 2026-11-24 05:20 Europe/Kyiv
+
+This block supersedes older ACX-focused action lists below.
+
+1. Finish UUP audit #3; inspect exact Win10 19045.5917 and Server 20348.5761 file versions/hashes, PE imports/exports/delay imports/API sets, INF/CBS/WinSxS and CATs.
+2. Close the dependency graph: add Server `HAL.dll`, `SleepStudyHelper.sys`, `WDFLDR.SYS`, `ksecdd.sys`; resolve BthA2dp → companion BtaMPM exports and BtaMPM → Server exports.
+3. If 19045.5917 does not match captured hashes, audit the 19045.4355 UUP image as a candidate for captured BthA2dp 10.0.19041.4355. Keep the 279,040-byte System32 copy separate.
+4. Extract offline SYSTEM/SOFTWARE service/class registrations and identify system CatRoot catalog membership; package-local CAT search alone is insufficient.
+5. Only after exact static/CAT/registry checks pass, test unmodified package staging on a disposable Server 2022 CI/VM without test-signing, certificate, BCD or security changes. Record service → enumeration → driver → endpoint separately.
+6. Actual SBC stereo requires a disposable Server 2022 environment with a real Bluetooth radio and OPPO Enco Buds2. No physical-host action is authorized. OPPO ETE41 is AAC/SBC only; LDAC requires a different sink.
+7. Keep code changes on the isolated experiment branch; documentation only on `docs/project-source-reorg`. Notion journal remains append-only.
+
 # Current continuation — 2026-11-24 02:19 (codec ownership and PE audit correction)
 
 ## Immediate next actions — 2026-11-24

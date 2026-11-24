@@ -271,3 +271,19 @@ Winbindex README: https://github.com/m417z/winbindex. It states that full downlo
   - .github/workflows/uup-image-audit.yml — disposable Windows Server 2022 CI workflow; metadata-only artifacts.
 - CI #463 artifacts are attached to https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45311922753.
 - UUP image audit run #3: https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45317582562, in progress.
+
+## 2026-11-24 05:20 — CI #463 and parser artifacts
+
+| Artifact | Location / ID | Size | SHA-256 / identity | Purpose |
+|---|---|---:|---|---|
+| CI-463-microsoft-catalog-a2dp-audit.zip | Library `/LDAC Project/Incoming`; file ID `file_000000007e6c81f5a6fed066326780e7`; Library ID `libfile_4cce95d91fac8191894670146376ad23`; CI artifact ID `14883494285` | 20,705,628 | `2cd35a38abcdcde42fb0e175dfa042715aae8bb7e6eb2adf9c40c475886c9d38` | Catalog package discovery, PSF delta classification, Server 20348.5866 runtime PE references; metadata only |
+| CI-463-win10-a2dp-symbol-audit-metadata.zip | Library `/LDAC Project/Incoming`; file ID `file_00000000cb98821286ae83732b30ae46`; Library ID `libfile_6753685bdd608191ab683fd3427b1b98`; CI artifact ID `14882708862` | 23,803 | `2fd33c77ef3a8a6ad99201c2b66322a00c803c6b8fe4144128c33e0e738f3408` | Winbindex metadata and non-exact PE reports |
+| `pe_imports_a2dp_fixed.py` | Library file ID `file_000000006ac88210b1f6b3d695278455` | — | No script SHA-256 captured | Correct 20-byte descriptor stepping; direct imports only |
+| `a2dp_pe_imports_report(2).txt` | Library file ID `file_0000000033e482109479f740ed5a8030` | 8,098 | Byte-identical to report (3) | 279,040-byte System32 BthA2dp copy only |
+| `a2dp_pe_imports_report(3).txt` | Library file ID `file_000000008d708210bada16b6cb44c429` | 8,098 | Byte-identical to report (2) | Same System32 copy; not DriverStore BthA2dp |
+| `tools/research/audit_pe_binary.py` | Experiment branch blob `e6ae095e3b33e96dc19ca90c1f2b595a851ac285` | — | Git blob SHA, not file SHA-256 | Headers, direct/delay imports, exports, VERSIONINFO, API-set names and optional export comparison |
+| `tools/research/extract_uup_image_a2dp.ps1` | Experiment branch blob `91effff2d036a63caa0b130578fe3dcd538220ab` | — | Git blob SHA, not file SHA-256 | Offline UUP image extraction |
+| `.github/workflows/uup-image-audit.yml` | Experiment branch blob `dede61e2962691d9d4c3f1c0f7924d9265d10fb9` | — | Git blob SHA, not file SHA-256 | Disposable Server 2022 metadata-only audit workflow |
+
+CI #463: [45311922753](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45311922753). UUP audit #3: [45317582562](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45317582562), in progress.
+

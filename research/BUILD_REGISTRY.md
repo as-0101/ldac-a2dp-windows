@@ -90,3 +90,11 @@ CI #16 Library copies were independently re-materialized and matched against the
 - CI #463 — success: https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45311922753, branch experiment/win10-a2dp-symbol-audit-20261124, commit 4459e152886cec3c2d4a2f0458a5467469c7b3dc. Artifacts: win10-a2dp-symbol-audit-metadata.zip (14882708862) and microsoft-catalog-a2dp-audit.zip (14883494285). Package discovery succeeded; PSF payloads were not reconstructed; Winbindex exact hash identity was 0/3.
 - UUP image audit #3 — in progress: https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45317582562, branch experiment/win10-a2dp-uup-image-audit-20261124, commit e9900fc894772997526995feeaecfff4a9ec5ff0. Targets: Win10 19045.5917 and Server 20348.5761.
 - UUP audit attempts 1 and 2 (runs 45317386782 and 45317399103) failed during downloader bootstrap because the child helper did not expose Get-FileHash; the current attempt adds a local SHA-256 fallback and prioritizes Windows PowerShell 5.1.
+
+## 2026-11-24 05:20 — Win10 package audit runs
+
+- **CI #463:** success — [45311922753](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45311922753), branch `experiment/win10-a2dp-symbol-audit-20261124`, commit `4459e152886cec3c2d4a2f0458a5467469c7b3dc`. Catalog package extraction only; no driver installation/runtime test.
+- Artifacts: `microsoft-catalog-a2dp-audit.zip` ID `14883494285`; `win10-a2dp-symbol-audit-metadata.zip` ID `14882708862`. Metadata-only copies are stored in Library `/LDAC Project/Incoming`; see ARTIFACT_INDEX.
+- **UUP image audit #3:** in progress — [45317582562](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45317582562), branch `experiment/win10-a2dp-uup-image-audit-20261124`, commit `e9900fc894772997526995feeaecfff4a9ec5ff0`. Targets Win10 19045.5917 / Server 20348.5761.
+- Code branch `server-2022-oppo` remains `39eea45ab5d93c09836819db75f2a64177fbf09a`.
+

@@ -78,3 +78,28 @@ GitHub Actions run 45317582562 (workflow run number 3) is in progress. Runs 4531
 7. Static compatibility is not treated as proof of driver load or audio. Runtime sequence remains service start → device enumeration → driver load → A2DP endpoint → SBC negotiation → actual stereo audio.
 
 No ACX bind-probe is authorized by this result. No physical host action is authorized.
+
+## 2026-11-24 05:20 — CI #463 results and UUP audit gaps
+
+### CI #463 (run 45311922753, success)
+
+- KB5036979 carries A2DP component/INF version 10.0.19041.4355, but extracted `f/btha2dp.sys` is an 11,840-byte PSF forward-delta payload, not a PE.
+- KB5126657 carries A2DP 10.0.19041.7802 and BtaMPM 10.0.19041.7725; extracted SYS entries are also PSF forward deltas.
+- Server 2022 KB5126655 contains Bluetooth core packages but no A2DP source/common INF, BthA2dp.sys, BtaMPM.sys or matching A2DP/BtaMPM CBS manifest references.
+- Winbindex symbol-server downloads failed exact identity 0/3. Do not use their PE reports as exact 19041.4355/5848 evidence.
+
+### Static candidate comparison — provisional
+
+The 19041.6392 BthA2dp candidate has 149 imports across 8 descriptors. The 19041.7660 BtaMPM candidate exports all 10 functions imported by BthA2dp from BtaMPM and its 42 imports resolve against the available later Server 20348.5866 exports. 129/149 BthA2dp imports matched the available Server reference set plus companion BtaMPM; 20 imports from HAL/SleepStudyHelper/WDFLDR/ksecdd remain untested because those Server references were not collected. These are not exact captured binaries or the target Server build.
+
+### UUP script limitations to close in the next isolated experiment commit
+
+1. Add HAL.dll, SleepStudyHelper.sys, WDFLDR.SYS and ksecdd.sys to target and Server reference lists.
+2. Resolve BthA2dp's btampm.sys imports against companion Win10 BtaMPM exports; resolve BtaMPM imports against Server exports.
+3. Add offline SYSTEM/SOFTWARE hive extraction for Services, ControlSet, BTHENUM/class registrations and MMDevices; current script reads INF/CBS/WinSxS metadata only.
+4. Search system CatRoot catalogs and verify actual membership; current Get-CatalogSummary scans package-local CAT files only.
+5. Preserve the distinction between package-local CAT, system catalog membership, embedded Authenticode and CBS component ownership.
+6. If Win10 19045.5917 does not reproduce captured hashes, add a separate 19045.4355 UUP image candidate for captured BthA2dp 10.0.19041.4355.
+
+UUP run #3 (45317582562, commit `e9900fc894772997526995feeaecfff4a9ec5ff0`) remains in progress. No driver installation or physical-host access occurs in this workflow.
+

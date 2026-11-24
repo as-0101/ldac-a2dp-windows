@@ -122,3 +122,16 @@ No service, device, profile-driver, endpoint, SBC negotiation, audio-stream, LDA
 | CI #463 — Winbindex exact identity | SHA-256 equals captured archive | Failed 0/3; symbol-server collision |
 | UUP image audit #3 | Exact image version, captured hashes, PE import/export comparison | In progress |
 | Disposable Server 2022 runtime | Service → enumeration → driver → endpoint → SBC → audio | Not started; gated on static audit |
+
+## 2026-11-24 — package compatibility gates
+
+| ID | Test | Evidence / result | Status |
+|---|---|---|---|
+| T-051 | Win10 BthA2dp/BtaMPM candidate PE imports vs Server exports | Candidate BthA2dp 19041.6392: 149 imports; 129 matched against available later Server 20348.5866 exports plus companion BtaMPM. Remaining 20 imports from HAL/SleepStudyHelper/WDFLDR/ksecdd were not compared. Candidate hashes do not match captured files. | PARTIAL — NOT EXACT / NOT TARGET BUILD |
+| T-052 | Companion BtaMPM import/export closure | Candidate BtaMPM 19041.7660 exports all 10 symbols imported by candidate BthA2dp; its 42 imports resolve against available Server 20348.5866 references. | STATIC PASS FOR NON-EXACT CANDIDATE ONLY |
+| T-053 | INF dependency and endpoint registration | Common INF uses ks.inf, wdmaudio.inf, BtaMpm.inf; Needs KS.Registration, WDMAUDIO.Registration, BtaMPM.CopyFilesOnly, mssysfx.CopyFilesAndRegister; AddService BthA2dp demand-start; KSCATEGORY_AUDIO source/sink interfaces. | STATIC CONFIRMED |
+| T-054 | UUP exact image audit | Win10 19045.5917 and Server 20348.5761 offline extraction/PE comparison. | IN PROGRESS — RUN 45317582562 |
+| T-055 | Disposable Server 2022 package staging/service start | Not started; wait for exact static/CAT/registry evidence. | BLOCKED BY STATIC AUDIT |
+| T-056 | Device enumeration → driver load → A2DP endpoint → SBC negotiation → actual stereo audio | Requires a real Bluetooth radio and OPPO sink in a disposable Server 2022 VM. Hosted CI has no demonstrated radio/audio path. | NOT TESTED |
+| T-057 | LDAC negotiation and actual LDAC audio | OPPO Enco Buds2 ETE41 supports AAC/SBC only. | CANNOT TEST WITH OPPO; DIFFERENT LDAC SINK REQUIRED |
+

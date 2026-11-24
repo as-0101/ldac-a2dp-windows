@@ -1,3 +1,15 @@
+> **ACTIVE PROJECT OVERRIDE — 2026-11-24 05:20 Europe/Kyiv**
+>
+> Priority is the smallest Windows 10 A2DP package adaptation for Server 2022, starting with SBC stereo. Do not create a new Bluetooth/ACX driver and do not resume ACX bind-probe work; CI #248/#255 are closed.
+> - Existing Win10 source/common/sink INF, DriverStore and System32 artifacts are already in Project Sources/Library. Do not re-export or ask the user to resend them.
+> - CI #463 (run 45311922753) succeeded. Catalog packages contain PSF forward-delta SYS payloads; Winbindex returned 0/3 exact SHA identities. Metadata-only artifacts are stored in `/LDAC Project/Incoming`.
+> - Library contains `pe_imports_a2dp_fixed.py`. Reports (2)/(3) are byte-identical and describe the 279,040-byte System32 copy, not the 282,624-byte DriverStore copy. The old 1.3 MB report remains invalid.
+> - A nearby Win10 symbol-server candidate has a promising but incomplete static import match against a later Server 20348.5866 runtime. It is not the exact captured binary and does not establish compatibility with target 20348.5761.
+> - UUP audit run #3 (45317582562) is in progress against Win10 19045.5917 and Server 20348.5761. See `WIN10_UUP_IMAGE_AUDIT.md` for gaps.
+> - `server-2022-oppo` remains unchanged. No driver install or runtime test was performed on the physical host.
+>
+> The Library Project Source START_HERE snapshot is historical; use this repository copy and the canonical docs below.
+
 # LDAC A2DP — project entry
 
 ## Current priority — 2026-11-24
