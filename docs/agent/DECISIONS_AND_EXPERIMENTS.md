@@ -367,3 +367,10 @@ Keep the minimal Win10 A2DP source/common package as the SBC candidate, but do n
 ## D-054 — Exclude the reverse-direction A2DP sink INF from the SBC milestone
 
 The user’s target is PC → OPPO Enco Buds2 playback. The Win10 source INF matches the remote A2DP Sink UUID 0x110B; the separate `microsoft_bluetooth_a2dp_snk.inf` installs the reverse direction (Windows acting as A2DP sink). The minimal candidate is `microsoft_bluetooth_a2dp_src.inf` + `microsoft_bluetooth_a2dp.inf` + required BtaMPM/KS/WDMAUDIO/MSSysFx dependencies. Do not stage the sink INF or HFP components. This is a static INF scope decision only; no staging/runtime result.
+
+
+## D-055 — Keep third-party LDAC drivers as later-stage black-box candidates
+
+Alternative A2DP Driver 1.8.3 is a ready commercial per-device A2DP driver with LDAC/SBC/ABR, using the Windows 10/11 inbox Bluetooth stack. Its official support matrix does not include Server 2022; its proprietary EULA prohibits redistribution and restricts reverse engineering/disassembly. Do not inspect, patch, redistribute or bypass licensing. If needed after SBC, evaluate only via the official trial in a disposable Server 2022 VM, with explicit user approval before any license purchase or physical-device change.
+
+BlueCaster is an existing user-mode alternative using BTstack + WinUSB and a dedicated USB adapter. It takes the adapter away from Windows while active and its bundled BTstack is personal/non-commercial unless separately licensed. Keep it as a fallback, not the primary Microsoft-stack path.

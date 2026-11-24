@@ -730,3 +730,10 @@ For KB5126657, the MUM declares A2DP common 10.0.19041.7802 and BtaMPM 10.0.1904
 ## E-167 — Only the A2DP source INF is required for PC-to-OPPO playback
 
 The archived Win10 INF comparison and `WIN10_A2DP_PIPELINE.md` establish that `microsoft_bluetooth_a2dp_src.inf` matches the remote A2DP Sink UUID 0x110B and is the host-to-headphones playback direction. `microsoft_bluetooth_a2dp_snk.inf` is the reverse-direction profile (Windows as A2DP sink) and is not required for the OPPO playback milestone. The source INF chains to the common A2DP INF; the common INF requires BtaMPM, KS, WDMAUDIO and MSSysFx registration/copy sections. This narrows the candidate package set but does not prove staging or runtime. No INF was staged.
+
+
+## E-168 — Existing LDAC-capable A2DP implementations and their boundaries
+
+Official Alternative A2DP Driver version history lists v1.8.3 (2026-06-22) for x64 Windows 10 22H2 and Windows 11 21H2–25H2; no Server 2022 support is listed. Its FAQ says it uses the Windows 10/11 inbox Bluetooth stack, installs per-device as an A2DP driver, requires administrator privileges for package/device-driver changes, and its trial becomes silent after seven days. It supports LDAC and ABR (version history notes LDAC ABR fixes). The official EULA licenses proprietary object code, binds the license to hardware, prohibits redistribution and restricts reverse engineering/disassembly. No installer or binary was downloaded or analyzed; it is a black-box candidate only.
+
+BlueCaster's public README states Windows 10 22H2/Windows 11, user-mode BTstack over WinUSB, and exclusive takeover of the USB Bluetooth adapter while active (Windows loses use of that adapter). Source is Apache-2.0/MIT, but bundled BTstack is personal/non-commercial unless separately licensed. The `YoshKoz/LDACast` search result returned 404 on direct open and is not counted as a verified candidate.

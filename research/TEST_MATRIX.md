@@ -172,3 +172,11 @@ No service, device, profile-driver, endpoint, SBC negotiation, audio-stream, LDA
 |---|---|---|---|---|
 | T-069 | A2DP role/package scope | Confirm source vs sink INF direction for PC → OPPO | Source INF matches remote A2DP Sink UUID 0x110B; sink INF is reverse direction and unnecessary for playback to earbuds. Source INF chains to common INF + BtaMPM/KS/WDMAUDIO/MSSysFx. | CONFIRMED — STATIC_INF_REVIEW; package staging and runtime remain untested |
 
+
+
+## 2026-11-24 07:22 Europe/Kyiv — existing LDAC transport candidate screening
+
+| ID | Gate | Required proof | Actual result | Status / next |
+|---|---|---|---|---|
+| T-070 | Third-party LDAC path suitability | Verify supported OS, stack boundary, license and required hardware from official docs | Alternative A2DP Driver 1.8.3 supports Win10 22H2/Win11 only and replaces per-device A2DP driver over inbox stack; BlueCaster uses user-mode BTstack + WinUSB and takes over a USB adapter. Neither declares Server 2022 support. | CONFIRMED — DOCUMENTATION_REVIEW; no binary/runtime test |
+

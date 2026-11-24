@@ -135,3 +135,11 @@ The failures in #4/#5 are not binary or OS compatibility results. Do not use the
 - KB5126657 latest MUM declares A2DP common 10.0.19041.7802 and BtaMPM 10.0.19041.7725.
 - Server KB5126655 scan has no corresponding A2DP/BtaMPM MUM/manifest hits.
 - Status: STATICALLY_VERIFIED — CBS ownership only. Standalone DriverStore staging, exact CAT membership, Server INF applicability and runtime remain untested.
+
+
+## 2026-11-24 07:22 — third-party LDAC candidate screening
+
+No build or installation was performed. Public documentation screening only:
+- Alternative A2DP Driver 1.8.3: officially supports Win10 22H2 / Win11 21H2–25H2, not Server 2022; uses inbox Bluetooth stack and per-device kernel driver; supports LDAC/SBC/ABR; proprietary EULA, hardware-bound license, no redistribution/reverse-engineering.
+- BlueCaster: Win10 22H2/Win11; user-mode BTstack + WinUSB; dedicated USB adapter takeover; BTstack personal/non-commercial limitation unless separately licensed.
+- No third-party installer or binary was downloaded, staged, installed or patched.

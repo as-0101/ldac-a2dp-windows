@@ -845,3 +845,17 @@ This narrows the next question: can the dualModeDriver package be staged indepen
 ## 2026-11-24 07:20 Europe/Kyiv — scope reduced to the A2DP source direction
 
 The existing `WIN10_A2DP_PIPELINE.md` confirms that `microsoft_bluetooth_a2dp_src.inf` matches the remote A2DP Sink UUID 0x110B (the OPPO earbuds), while `microsoft_bluetooth_a2dp_snk.inf` is the reverse-direction Windows A2DP sink profile. For PC → OPPO stereo playback, the minimal candidate is therefore source INF + common INF + required BtaMPM/KS/WDMAUDIO/MSSysFx dependencies; do not stage the reverse-direction sink INF or HFP components. This is a scope decision based on the existing archived INF comparison, not a runtime result. No package was staged.
+
+
+## 2026-11-24 07:22 Europe/Kyiv — existing LDAC transport options compared
+
+- Existing LDAC-capable alternatives were checked from official/public docs: Alternative A2DP Driver 1.8.3 supports Windows 10 22H2 / Windows 11 21H2–25H2, uses the inbox Bluetooth stack and replaces the per-device A2DP driver; Server 2022 is not listed. It supports LDAC/SBC and ABR but is proprietary, hardware-bound licensed, requires admin for driver selection, and its EULA prohibits reverse engineering/disassembly and redistribution. Treat as a black-box later-stage candidate only; no installer/binary was downloaded or installed. BlueCaster is a user-mode BTstack + WinUSB option for Windows 10 22H2/11, requires a dedicated USB adapter (Windows loses that adapter while active), and bundled BTstack is personal/non-commercial unless separately licensed.
+
+Official sources:
+- Alternative A2DP Driver [version history](https://www.bluetoothgoodies.com/a2dp/version-history/) (1.8.3, 2026-06-22; Win10 22H2 / Win11 21H2–25H2).
+- [FAQ](https://www.bluetoothgoodies.com/a2dp/faq/) (inbox stack, per-device driver selection, admin requirements, 7-day trial, LDAC support).
+- [EULA](https://www.bluetoothgoodies.com/a2dp/eula/) (proprietary object-code license, hardware binding, reverse-engineering/disassembly restriction, no redistribution).
+- [BlueCaster README](https://github.com/SeiyaFunaokaJP/BlueCaster) (Win10 22H2/Win11, WinUSB adapter takeover, BTstack license).
+- The GitHub search result for `YoshKoz/LDACast` returned 404 when opened; do not treat it as a verified project or candidate.
+
+No third-party installer was downloaded, reverse-engineered, installed or patched. Alternative A2DP Driver remains a black-box candidate only; it is not officially supported on Server 2022. BlueCaster remains a fallback requiring a separate USB radio.

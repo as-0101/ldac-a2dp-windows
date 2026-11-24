@@ -351,3 +351,16 @@ No Microsoft binary payload or UUP image was committed. Existing Win10 source pa
 | KB5126657 MUM | `Microsoft-Windows-Client-Desktop-Required-Package~31bf3856ad364e35~amd64~~10.0.19041.7807.mum` | Later A2DP common 10.0.19041.7802 and BtaMPM 10.0.19041.7725 |
 | KB5126655 Server scan | CI #463 catalog package results | No matching A2DP/BtaMPM MUM/manifest references; not a full offline Server image inventory |
 
+
+
+## 2026-11-24 07:22 Europe/Kyiv — third-party LDAC implementation references
+
+| Source | Identity | Purpose / status |
+|---|---|---|
+| Alternative A2DP Driver version history | Official Luculent Systems page; v1.8.3, released 2026-06-22 | Win10 22H2 / Win11 21H2–25H2 support; LDAC/ABR fixes; Server 2022 not listed |
+| Alternative A2DP Driver FAQ | Official Luculent Systems page | Inbox-stack requirement, per-device driver selection, admin rights, 7-day trial, LDAC support |
+| Alternative A2DP Driver EULA | Official Luculent Systems page | Proprietary object code, hardware-bound license, reverse-engineering/disassembly restriction, no redistribution |
+| BlueCaster README | `SeiyaFunaokaJP/BlueCaster` | Win10 22H2/Win11 user-mode BTstack + WinUSB; adapter takeover; BTstack non-commercial limitation unless separately licensed |
+| `YoshKoz/LDACast` search result | Direct GitHub open returned 404 | Not verified; excluded from candidate list |
+
+No third-party binary was downloaded or stored.
