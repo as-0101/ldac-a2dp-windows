@@ -444,3 +444,15 @@ Microsoft references:
 
 ---
 9. Revalidate the exact captured DriverStore BthA2dp 10.0.19041.4355 and BtaMPM 10.0.19041.5848 separately. E-119 reports the package BthA2dp imports only ntoskrnl; the 19041.6392 symbol-server candidate has a different 8-descriptor import surface. Do not use the later candidate as a proxy.
+
+## Immediate actions after CI #11 — 2026-11-24
+
+1. Complete the isolated cross-SKU catalog audit on experiment/win10-a2dp-cross-sku-catalog-audit-20261124. It must verify the five exact Win10 A2DP package files against the Server 20348.5761 catalog set, not merely against Win10 catalogs.
+2. Require positive controls: Server BTHport.sys, BthEnum.sys, BTHUSB.sys and bth.inf must resolve against Server catalogs. This distinguishes a genuine no-match from a broken catalog scan.
+3. Record catalog signer/status and exact catalog SHA-256 for both image roles. If the Win10 package files do not match any Server catalog, do not edit the INF, fabricate a CAT, or weaken signature policy. Evaluate only on a disposable VM whether the original signed CBS catalog can be staged/registered through supported catalog APIs without certificate-store changes.
+4. If signature acceptance is established, stage the original unmodified A2DP Source package on disposable Server 2022. Record SetupAPI/PnP ranking and device match before any driver-load claim.
+5. Validate the sequence independently: BthA2dp service start → BTHENUM UUID 0x110B match/device enumeration → BthA2dp driver load → KS/MMDevices A2DP endpoint → SBC negotiation → sustained stereo media stream.
+6. Keep LDAC out of the SBC acceptance gate. After stable SBC, use a separate LDAC-capable receiver and prove AVDTP codec negotiation plus actual LDAC media frames.
+7. Investigate the Win10 UUP image identity discrepancy: WIM label/EditionID indicate Professional, while offline ProductName reads Windows 10 Enterprise. File hashes and CAT membership remain valid observations, but do not silently normalize this metadata mismatch.
+
+No physical-host actions. No ACX/WDK bind-probe unless a later runtime trace proves that exact layer is the blocker.
