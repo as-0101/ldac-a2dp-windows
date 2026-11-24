@@ -1,3 +1,7 @@
+## 2026-11-24 — VM_TEST / STATIC_ANALYSIS
+
+Native CI runs 45482378430 (failed control), 45482659386 (fixed control), 45482793915 (signature matrix) and 45482932167 (one-byte parseable mutation) reviewed. Last three succeeded on 20348.5870. Offline CTL, MUM, physical capture and staging-log comparisons passed. [Native INF preflight and signed-catalog evidence](/research/native-inf-preflight-20261124/README.md).
+
 # Test matrix
 
 Stages are cumulative but independently reported. Status values use CONFIRMED/SUPPORTED/HYPOTHESIS/REFUTED/UNTESTED/BLOCKED; environment tags are mandatory.

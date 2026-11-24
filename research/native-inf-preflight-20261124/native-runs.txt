@@ -1,0 +1,61 @@
+Run 45482378430
+2026-11-24T20:35:27.0549533Z OS=Microsoft Windows Server 2022 Datacenter BUILD=20348 UBR=5870
+2026-11-24T20:35:36.4171970Z SYSTEM name=ks.inf opened=False error_on_failure=-536870399
+2026-11-24T20:35:36.6283556Z ##[error]Process completed with exit code 1.
+
+Run 45482659386
+2026-11-24T20:37:05.8566731Z OS=Microsoft Windows Server 2022 Datacenter BUILD=20348 UBR=5870
+2026-11-24T20:37:09.2978433Z SYSTEM name=ks.inf opened=True error_on_failure=
+2026-11-24T20:37:09.3109264Z SYSTEM name=wdmaudio.inf opened=True error_on_failure=
+2026-11-24T20:37:09.3119164Z SYSTEM name=microsoft_bluetooth_a2dp_src.inf opened=False error_on_failure=2
+2026-11-24T20:37:09.3122164Z SYSTEM name=microsoft_bluetooth_a2dp.inf opened=False error_on_failure=2
+2026-11-24T20:37:09.3128635Z SYSTEM name=btampm.inf opened=False error_on_failure=2
+2026-11-24T20:37:09.3161437Z PROVIDER name=ks.inf section=KS.Registration lines=1
+2026-11-24T20:37:09.3176943Z PROVIDER name=wdmaudio.inf section=WDMAUDIO.Registration lines=2
+2026-11-24T20:37:09.3179002Z PROVIDER name=wdmaudio.inf section=MSSYSFX.CopyFilesAndRegister lines=2
+2026-11-24T20:37:09.3370824Z CONTROL mode=unappended append= error_on_failure= section_lines=-1
+2026-11-24T20:37:09.3413351Z CONTROL mode=missing append=False error_on_failure=2 section_lines=-1
+2026-11-24T20:37:09.3449700Z CONTROL mode=basename append=False error_on_failure=2 section_lines=-1
+2026-11-24T20:37:09.3463786Z CONTROL mode=absolute append=True error_on_failure= section_lines=1
+2026-11-24T20:37:12.6120180Z CAPABILITIES total=316 named_matches=0
+
+Run 45482793915
+2026-11-24T20:37:54.0814278Z OS=Microsoft Windows Server 2022 Datacenter BUILD=20348 UBR=5870
+2026-11-24T20:38:00.3544127Z SYSTEM name=ks.inf opened=True error_on_failure=
+2026-11-24T20:38:00.3749990Z SYSTEM name=wdmaudio.inf opened=True error_on_failure=
+2026-11-24T20:38:00.3758614Z SYSTEM name=microsoft_bluetooth_a2dp_src.inf opened=False error_on_failure=2
+2026-11-24T20:38:00.3762640Z SYSTEM name=microsoft_bluetooth_a2dp.inf opened=False error_on_failure=2
+2026-11-24T20:38:00.3769807Z SYSTEM name=btampm.inf opened=False error_on_failure=2
+2026-11-24T20:38:00.3807551Z PROVIDER name=ks.inf section=KS.Registration lines=1
+2026-11-24T20:38:00.3823859Z PROVIDER name=wdmaudio.inf section=WDMAUDIO.Registration lines=2
+2026-11-24T20:38:00.3826117Z PROVIDER name=wdmaudio.inf section=MSSYSFX.CopyFilesAndRegister lines=2
+2026-11-24T20:38:00.4079259Z CONTROL mode=unappended append= error_on_failure= section_lines=-1
+2026-11-24T20:38:00.4124567Z CONTROL mode=missing append=False error_on_failure=2 section_lines=-1
+2026-11-24T20:38:00.4163384Z CONTROL mode=basename append=False error_on_failure=2 section_lines=-1
+2026-11-24T20:38:00.4177719Z CONTROL mode=absolute append=True error_on_failure= section_lines=1
+2026-11-24T20:38:00.4905736Z VERIFY case=published ok=True error=0x00000000 catalog=microsoft-windows-desktop-shared-drivers-merged-package~31bf3856ad364e35~amd64~~10.0.20348.5866.cat
+2026-11-24T20:38:00.4936751Z VERIFY case=identical-copy ok=True error=0x00000000 catalog=microsoft-windows-desktop-shared-drivers-merged-package~31bf3856ad364e35~amd64~~10.0.20348.5866.cat
+2026-11-24T20:38:00.5243134Z VERIFY case=changed-copy ok=False error=0x00000057 catalog=
+2026-11-24T20:38:00.5249774Z VERIFY case=absent ok=False error=0x00000002 catalog=
+2026-11-24T20:38:04.5688766Z CAPABILITIES total=316 named_matches=0
+
+Run 45482932167
+2026-11-24T20:38:40.7713470Z OS=Microsoft Windows Server 2022 Datacenter BUILD=20348 UBR=5870
+2026-11-24T20:38:44.2593329Z SYSTEM name=ks.inf opened=True error_on_failure=
+2026-11-24T20:38:44.2727028Z SYSTEM name=wdmaudio.inf opened=True error_on_failure=
+2026-11-24T20:38:44.2732885Z SYSTEM name=microsoft_bluetooth_a2dp_src.inf opened=False error_on_failure=2
+2026-11-24T20:38:44.2735184Z SYSTEM name=microsoft_bluetooth_a2dp.inf opened=False error_on_failure=2
+2026-11-24T20:38:44.2745360Z SYSTEM name=btampm.inf opened=False error_on_failure=2
+2026-11-24T20:38:44.2786135Z PROVIDER name=ks.inf section=KS.Registration lines=1
+2026-11-24T20:38:44.2803214Z PROVIDER name=wdmaudio.inf section=WDMAUDIO.Registration lines=2
+2026-11-24T20:38:44.2806109Z PROVIDER name=wdmaudio.inf section=MSSYSFX.CopyFilesAndRegister lines=2
+2026-11-24T20:38:44.3028063Z CONTROL mode=unappended append= error_on_failure= section_lines=-1
+2026-11-24T20:38:44.3074293Z CONTROL mode=missing append=False error_on_failure=2 section_lines=-1
+2026-11-24T20:38:44.3129510Z CONTROL mode=basename append=False error_on_failure=2 section_lines=-1
+2026-11-24T20:38:44.3153817Z CONTROL mode=absolute append=True error_on_failure= section_lines=1
+2026-11-24T20:38:44.3849184Z VERIFY case=published ok=True error=0x00000000 catalog=microsoft-windows-desktop-shared-drivers-merged-package~31bf3856ad364e35~amd64~~10.0.20348.5866.cat
+2026-11-24T20:38:44.3875243Z VERIFY case=identical-copy ok=True error=0x00000000 catalog=microsoft-windows-desktop-shared-drivers-merged-package~31bf3856ad364e35~amd64~~10.0.20348.5866.cat
+2026-11-24T20:38:44.4140249Z MUTATION parsed=True registration_lines=2 length=26966
+2026-11-24T20:38:44.4220078Z VERIFY case=changed-copy ok=False error=0x00000057 catalog=
+2026-11-24T20:38:44.4230242Z VERIFY case=absent ok=False error=0x00000002 catalog=
+2026-11-24T20:38:46.1669811Z CAPABILITIES total=316 named_matches=0

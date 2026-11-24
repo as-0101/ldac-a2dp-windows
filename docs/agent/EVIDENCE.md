@@ -1,3 +1,7 @@
+## 2026-11-24 — Native Server preflight completed
+
+Hosted Server 20348.5870 opened KS and WDMAudio provider sections. All three donor profile INF names returned error 2. A detached, unchanged Server wdmaudio.inf verified under its Server catalog; a parseable one-byte comment change failed verification. CI #5 still has zero staged packages. The later physical capture on 20348.5761 shows OPPO 110B in class Bluetooth with CM_PROB_NONE following historical oem75.inf removal; earlier Code 37 is historical. SBC playback remains unverified. [Native INF preflight and signed-catalog evidence](/research/native-inf-preflight-20261124/README.md).
+
 # Evidence register
 
 Status labels: CONFIRMED = direct evidence; SUPPORTED = converging evidence, not conclusive; HYPOTHESIS = unproven; REFUTED = contradicted by a relevant test; UNTESTED = not checked; BLOCKED = needs external action.

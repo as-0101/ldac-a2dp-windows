@@ -1,3 +1,7 @@
+## 2026-11-24 — Next candidate gate
+
+Native read-only preflight is complete. Resume package staging only with an identified Server-applicable amd64 profile package or documented servicing component and resolvable dependencies. The inspected Intel radio package and CSR profile listing do not establish this. [Native INF preflight and signed-catalog evidence](/research/native-inf-preflight-20261124/README.md).
+
 ## Immediate next actions — 2026-11-24
 
 1. Review CI #5 [45393451133](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45393451133): confirm the PowerShell parser, catalog root inventory, common CAT identity, CAT signature, and all five member checks.

@@ -1,3 +1,7 @@
+## 2026-11-24 — Native INF evidence bundle
+
+[Native INF preflight and signed-catalog evidence](/research/native-inf-preflight-20261124/README.md). Archive at /LDAC Project/Artifacts/A2DP-native-preflight-20261124.zip, Library ID libfile_d374e12fea50819188d7b456b584f171, file ID file_00000000f4c081f4a311339ff9ee0b94, 8176 bytes, SHA-256 00a7aec6902c34571a6cc82c88687a96cfa5205d90a72b0209ea902452845fcf. Contains README.md, recheck.py, results.json, native-runs.txt. Four input ZIP names and hashes are in results.json. Original capture and CI inputs are retained separately.
+
 ## UUP image audit artifacts — 2026-11-24
 
 | Artifact | Exact identity | Durable location / status |

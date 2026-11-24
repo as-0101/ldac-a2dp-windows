@@ -1,3 +1,7 @@
+## 2026-11-24 — Native preflight decision
+
+Retire the unchanged client INF/CAT staging recipe. Full-path append is a parser control, not DriverStore publication. Preserve the client package as evidence. [Native INF preflight and signed-catalog evidence](/research/native-inf-preflight-20261124/README.md).
+
 ## Decisions added — 2026-11-24
 
 | ID | Decision | Rationale | State |

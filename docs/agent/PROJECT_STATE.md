@@ -1,3 +1,7 @@
+## 2026-11-24 — Native Server preflight completed
+
+Hosted Server 20348.5870 opened KS and WDMAudio provider sections. All three donor profile INF names returned error 2. A detached, unchanged Server wdmaudio.inf verified under its Server catalog; a parseable one-byte comment change failed verification. CI #5 still has zero staged packages. The later physical capture on 20348.5761 shows OPPO 110B in class Bluetooth with CM_PROB_NONE following historical oem75.inf removal; earlier Code 37 is historical. SBC playback remains unverified. [Native INF preflight and signed-catalog evidence](/research/native-inf-preflight-20261124/README.md).
+
 ## Active status — 2026-11-24 (CI #4 reviewed; CI #5 running)
 
 - Stage-smoke CI #4 [45381650079](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45381650079) ran on disposable Windows Server 2022 Datacenter **20348.5870** (not target UBR 5761). Win10 19045.5917 extraction and PE reports completed, but the stage path stopped before SignTool/PnPUtil because it required the historical CAT filename `Microsoft-Windows-Client-Desktop-Required-Package~31bf3856ad364e35~amd64~~10.0.19041.5917.cat` and did not find that exact name in the mounted image's catalog roots. This is a catalog-discovery/harness failure, **not** a Server trust rejection and not a driver-compatibility result.

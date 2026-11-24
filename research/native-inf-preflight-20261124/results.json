@@ -1,0 +1,43 @@
+{
+  "archive_sha256": {
+    "A2DP-Next-Win10-20261124-220021.zip": "b565ace7c6eacb8b494b712b36dec2182fcd22b316891cb4c9d5249fa6aa8c5b",
+    "A2DP-Next-Server2022-20261124-214448.zip": "e8e2efb6134bbef254c8ff790d0f1aa872a9df08431c36ffe37a57f4206a282e",
+    "A2DP-CBS.zip": "1e9663e32a6ed323a4e1de2077fde2bf5da08c030d115fd23a439f52674d361b",
+    "CI-5-stage-smoke-failure.zip": "1ce8342d84595c4066c763f1b5dff07cddf4247045846942b7189bbf24b27db7"
+  },
+  "cat_sha256": "bbc25ca00872388d9ba55cf0fcdcdafd92171cfa1e36638b987d22621c0b68cc",
+  "ci5_cat_sha256": "78772fa12959c072d687283f08d08367b8a8ef1a2f07d7b72f20bcafd12483bf",
+  "ctl_member_keys": 1136,
+  "lookup_rows": 24,
+  "unique_lookup_hashes": 12,
+  "neutral_mum_sha256": "2b42641acbd6cfd21432f40b614abd0f8a6ba818ef79687ff52ffd5a10705213",
+  "total_driver_declarations": 13,
+  "selected_driver_versions": {
+    "microsoft_bluetooth_a2dp.inf": "10.0.19041.4355",
+    "btampm.inf": "10.0.19041.5848",
+    "microsoft_bluetooth_a2dp_snk.inf": "10.0.19041.1",
+    "microsoft_bluetooth_a2dp_src.inf": "10.0.19041.1"
+  },
+  "signature_integrity": "original passes, one-bit CTL change fails; no chain validation",
+  "edited_inf": "appended byte absent from member keys",
+  "pnp": {
+    "win10": {
+      "Class": "MEDIA",
+      "FriendlyName": "OPPO Enco Buds2 Stereo",
+      "Problem": "CM_PROB_NONE"
+    },
+    "server": {
+      "Class": "Bluetooth",
+      "FriendlyName": "Служба приемника аудио",
+      "Problem": "CM_PROB_NONE"
+    }
+  },
+  "ci5_copy_sources_by_attempt": [
+    [
+      "microsoft_bluetooth_a2dp_src.inf"
+    ],
+    [
+      "microsoft_bluetooth_a2dp_src.inf"
+    ]
+  ]
+}
