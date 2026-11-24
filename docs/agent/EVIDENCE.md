@@ -873,3 +873,19 @@ CI #12 artifact inf-summary.txt confirms the Server 20348.5761 image already con
 
 The Server versions contain the required section names and corresponding registration/copy directives. This supports the minimal package boundary: keep Server ks.inf, wdmaudio.inf and MSSysFx components; transfer only the A2DP Source/common INF and BtaMPM companion files if the stage test proves they can be accepted. Static INF-section presence is not runtime endpoint proof.
 
+
+
+## E-178 — Stage-smoke runner identity and current execution state (2026-11-24 12:25 Europe/Kyiv)
+
+- Run [45371687882](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45371687882), job 138367259323, branch `experiment/win10-a2dp-stage-smoke-20261124`.
+- Workflow steps 1–6 passed; step 7 (UUP extraction, original CAT verification and DriverStore staging) remains in progress. No artifact is available yet.
+- Workflow commit: `692cb1a5e4df7de5ca0ebc72e61878c1c62df300`; script commit: `3305dddcb18f4e407e6b61762a2539a77412ea2d`.
+- The preflight checks Server 2022, CurrentBuild=20348 and InstallationType=Server, and records UBR, but does not require UBR=5761. Any result must be labelled with the exact recorded runner UBR; it is not automatically an exact 20348.5761 result.
+- Scope: explicit original-CAT verification and `pnputil /add-driver` without `/install`; no device binding, service start, driver load, endpoint or audio test. This is workflow/run-state evidence only, not package compatibility evidence.
+
+## E-179 — SignTool catdb operation semantics
+
+- Microsoft documents that `signtool catdb /v /u <CAT>` adds the catalog to the system component and driver catalog database by default when neither `/d` nor `/g` is supplied. `/u` requests a unique catalog filename to avoid overwriting a same-named catalog; it does not change certificates or trust policy.
+- The stage-smoke script uses this operation only on a disposable GitHub-hosted Server 2022 runner and records cleanup. This is distinct from modifying the certificate store or enabling test signing.
+- Source: [Microsoft SignTool documentation](https://learn.microsoft.com/en-us/windows/win32/seccrypto/signtool) and [Installing a Catalog File by using SignTool](https://learn.microsoft.com/en-us/windows-hardware/drivers/install/installing-a-catalog-file-by-using-signtool).
+- Status: CONFIRMED — DOCUMENTED_TOOL_SEMANTICS.
