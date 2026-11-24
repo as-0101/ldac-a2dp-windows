@@ -70,6 +70,7 @@ Do not run prepare-oppo-host.cmd, upgrade-oppo.cmd, install-oppo.cmd or rollback
 
 - [Windows 10 component audit](docs/agent/WIN10_COMPONENT_AUDIT.md)
 - [A2DP pipeline map](docs/agent/WIN10_A2DP_PIPELINE.md)
+- [UUP image audit](docs/agent/WIN10_UUP_IMAGE_AUDIT.md)
 - [Next actions](docs/agent/NEXT_ACTIONS.md)
 - [Project state](docs/agent/PROJECT_STATE.md)
 - [Evidence register](docs/agent/EVIDENCE.md)
