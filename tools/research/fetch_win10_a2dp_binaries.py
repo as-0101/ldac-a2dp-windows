@@ -177,12 +177,13 @@ def fetch_exact_win10(client: WinbindexClient, item: dict[str, Any], out_dir: Pa
         download["status"] == "downloaded"
         and download["downloaded_sha256"] == item["expected_sha256"]
         and download["size"] == item["expected_size"]
-        and indexed_version_matches
     )
-    if result["identity_verified"]:
+    if result["identity_verified"] and indexed_version_matches:
         result["status"] = "exact_hash_size_and_version_match"
+    elif result["identity_verified"]:
+        result["status"] = "exact_hash_and_size_match_version_label_differs"
     elif download["status"] == "downloaded":
-        result["status"] = "symbol_server_bytes_or_version_do_not_match_capture"
+        result["status"] = "symbol_server_bytes_do_not_match_capture"
     else:
         result["status"] = "symbol_server_download_unavailable"
     return result
@@ -191,6 +192,8 @@ def fetch_exact_win10(client: WinbindexClient, item: dict[str, Any], out_dir: Pa
 def server_candidates(entries: list[Any]) -> list[Any]:
     candidates: list[tuple[tuple[int, ...], str, Any]] = []
     for entry in entries:
+        if entry.file_info.machine_type != 0x8664:
+            continue
         version = tuple(entry.version_tuple or ())
         if len(version) < 4 or version[:3] != SERVER_BUILD or version[3] > SERVER_UBR_CEILING:
             continue
