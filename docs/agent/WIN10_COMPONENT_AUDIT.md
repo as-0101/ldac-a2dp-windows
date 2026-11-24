@@ -323,3 +323,11 @@ The practical split is now explicit:
 1. Win10 A2DP source/common INF + BthA2dp.sys is the minimal existing-package candidate for SBC.
 2. Existing libldac encoder source is already available; do not spend time searching for another encoder DLL.
 3. LDAC negotiation/audio requires a compatible A2DP source transport. Evaluate Incus Multicodec with a dedicated USB adapter after SBC is stable; keep custom ACX/KMDF path suspended unless a later measured blocker requires it.
+
+
+## 2026-11-24 07:13 — runs #4/#5 parser failure; #6 regression fix
+
+- UUP audit #4 [45325486392](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45325486392), job `138213952436`, and #5 [45325586394](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45325586394), job `138214282805`, both verified the offline Server image identity as Windows Server 2022 Datacenter 20348.5761 / ServerDatacenter. They then failed on a parser bug: a named delay-import entry in `AudioEndpointBuilder.dll` had `hint=None`, causing `int(None)`. The Win10 image was not reached and no PE/INF/CBS/CAT artifact was produced.
+- This is a tooling failure, not evidence of a missing import, unsupported API, or binary incompatibility.
+- Experiment commit [6778022](https://github.com/as-0101/ldac-a2dp-windows/commit/6778022b4453857e53acf8a18afe54bb7e46f5f5) preserves missing hints as null and adds three unit tests. CI #6 [45332165839](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45332165839), job `138235648697`, passed the regression-test step. The full offline UUP audit was still running at this update.
+- Exact target PE hashes/import closure, Win10 image identity, offline registry/CBS/CAT membership and disposable-VM staging remain unverified. No physical host access or modification occurred.
