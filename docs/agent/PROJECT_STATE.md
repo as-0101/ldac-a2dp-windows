@@ -1,3 +1,15 @@
+## CURRENT VERIFIED STATE — 2026-11-24 08:39 Europe/Kyiv
+
+- UUP audit #6 identity-checked Win10 Pro 19045.5917 x64 and Server 2022 Datacenter 20348.5761 x64.
+- Exact archived Win10 DriverStore BthA2dp.sys (10.0.19041.4355, SHA 5FBA5EE6...F354EC3) reproduced from the official-image payload. All 149 static imports across eight descriptors resolve by name/ordinal against Server 20348.5761 references plus exact Win10 BtaMPM.
+- Exact BtaMPM.sys 10.0.19041.5848 (SHA DA5CBBDC...20EB3DCD) has 42 imports and 14 exports; all 42 imports resolve against Server. BthA2dp imports 10 of its exports.
+- Separate System32 BthA2dp is older 10.0.19041.1 (279,040 bytes, SHA 0442A18B...B057B737, 144 imports); not the DriverStore package binary.
+- Static import closure only; kernel ABI/runtime, catalog membership, SetupAPI applicability, staging, PnP binding, driver load and audio are unproven.
+- BtaMpm.inf is CopyFilesOnly; no separate BtaMPM service. BtaMPM.sys is the companion module. The common INF installs demand-start BthA2dp.
+- Server 20348.5761 already has KS.Registration, WDMAUDIO.Registration and mssysfx.CopyFilesAndRegister in its own ks.inf/wdmaudio.inf. Reuse these; do not replace Server audio core.
+- UUP audit #7 [45342686564](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45342686564) adds offline catalog and SYSTEM service-registry checks.
+- Physical host not accessed this run. Last OPPO node data (custom oem75.inf, 0.2.325.1600, Code 37 / 0xC000000D) remains historical.
+
 # Current state — 2026-11-24 02:19 Europe/Kyiv
 
 **Priority:** prove the existing Microsoft Windows 10 A2DP package on Server 2022 for SBC stereo before any LDAC work. ACX/WDK bind-probe remains parked.

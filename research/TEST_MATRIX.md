@@ -180,3 +180,11 @@ No service, device, profile-driver, endpoint, SBC negotiation, audio-stream, LDA
 |---|---|---|---|---|
 | T-070 | Third-party LDAC path suitability | Verify supported OS, stack boundary, license and required hardware from official docs | Alternative A2DP Driver 1.8.3 supports Win10 22H2/Win11 only and replaces per-device A2DP driver over inbox stack; BlueCaster uses user-mode BTstack + WinUSB and takes over a USB adapter. Neither declares Server 2022 support. | CONFIRMED — DOCUMENTATION_REVIEW; no binary/runtime test |
 
+
+
+## 2026-11-24 08:39 Europe/Kyiv — exact static PE closure
+
+| ID | Gate | Required proof | Actual result | Status / next |
+|---|---|---|---|---|
+| T-071 | Win10 A2DP binary import closure on Server 20348.5761 | Exact archived DriverStore BthA2dp/BtaMPM binaries; PE imports/delay/API sets/exports; every import resolved against target exports | UUP #6 reproduced BthA2dp 10.0.19041.4355 SHA 5FBA...F354EC3 exactly. 149/149 imports resolve against Server 20348.5761 plus exact BtaMPM companion. BtaMPM 10.0.19041.5848 has 42 imports/14 exports; 42/42 resolve. No delay/API-set imports. | CONFIRMED — STATIC_PE_IMPORT_CLOSURE; catalog, INF applicability, staging, runtime load and audio pending |
+

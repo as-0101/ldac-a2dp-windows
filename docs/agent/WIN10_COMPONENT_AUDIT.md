@@ -374,3 +374,27 @@ BlueCaster is a user-mode BTstack + WinUSB A2DP source supporting LDAC/SBC and o
 ### Selection
 
 The primary SBC milestone remains the Microsoft Win10 A2DP source/common INF package on top of Server's existing Bluetooth core. Alternative A2DP Driver is the most direct ready LDAC driver if the inbox A2DP device can be enumerated, but it is unsupported on Server 2022 and proprietary. BlueCaster is the no-kernel-driver fallback but needs a dedicated USB radio. Neither is being installed or used on the physical host.
+
+
+## Exact Windows 10 A2DP binaries — UUP audit #6
+
+| File | Version | Size | SHA-256 | PE/role |
+|---|---:|---:|---|---|
+| DriverStore BthA2dp.sys | 10.0.19041.4355 | 282,624 | 5FBA5EE606AAC39D9CBDA51C0A14DBABBB3A9B47BBD8AC5485ED137B4F354EC3 | AMD64 WDM; 149 imports/8 descriptors; 0 delay; 0 exports; all imports resolve against Server + BtaMPM |
+| System32 BthA2dp.sys | 10.0.19041.1 | 279,040 | 0442A18BBED4E323265C66561C8F8C171D8E934E9089C12B94D1DFDBB057B737 | Separate older copy; 144 imports/8 descriptors |
+| BtaMPM.sys | 10.0.19041.5848 | 43,008 | DA5CBBDCE6AC511EF8400E121DF6B6EACA7D05C0F40A01F7353CE9F220EB3DCD | AMD64 companion; 42 imports/3 descriptors; 14 exports; all imports resolve against Server |
+
+BthA2dp imports by module: ntoskrnl 75; HAL 1; ks 40; btampm 10; WppRecorder 4; SleepStudyHelper 8; WDFLDR 4; ksecdd 7. Exact Server references expose every imported symbol. BtaMPM imports ntoskrnl 37, cng 1, WppRecorder 4; all 42 resolve.
+
+### INF identities
+
+| INF | Version | SHA-256 |
+|---|---:|---|
+| microsoft_bluetooth_a2dp_src.inf | 10.0.19041.1 | B97D1DD53BB6FD040CE5C2527015A09416C29FCBD6B528802D595CBDEEAD4A6A |
+| microsoft_bluetooth_a2dp.inf | 10.0.19041.4355 | 4F3B988B658E1E7F8B97E645C1C92BE0BA270D4DB76832DAB871516EEDCBCF0C |
+| btampm.inf | 10.0.19041.5848 | C657A6B32AC8CCFDEEF3C12630686B87C973DD114BEE73AEC288D86B989961EF |
+
+Correction: btampm.inf is CopyFilesOnly and does not create a BtaMPM service. The common INF creates demand-start BthA2dp. Previous E-119 text that treated DriverStore BthA2dp as ntoskrnl-only is superseded by the exact 149-import PE audit.
+
+Catalog membership and runtime compatibility remain unverified. SYS files have no embedded Authenticode signature; catalog verification is pending.
+

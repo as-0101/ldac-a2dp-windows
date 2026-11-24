@@ -1,3 +1,15 @@
+> **ACTIVE OVERRIDE — 2026-11-24 08:39 Europe/Kyiv**
+>
+> UUP audit #6 completed successfully: [run 45332165839](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45332165839), artifact ID 14895876155, SHA-256 c1792bd8e5bcdf2a583c3738eeb22bdf27a64ba6ad2701ad70aa8f879d045209.
+> - Exact Win10 19045.5917 x64 image reproduced the archived DriverStore BthA2dp.sys hash: version 10.0.19041.4355, 282,624 bytes, SHA-256 5FBA5EE606AAC39D9CBDA51C0A14DBABBB3A9B47BBD8AC5485ED137B4F354EC3. AMD64/PE32+, WDM driver, 149 imports in 8 descriptors, no delay/API-set imports or exports. All 149 imported names/ordinals are present in the exact Server 20348.5761 export-reference set plus exact Win10 BtaMPM.
+> - Exact BtaMPM.sys 10.0.19041.5848, 43,008 bytes, SHA-256 DA5CBBDCE6AC511EF8400E121DF6B6EACA7D05C0F40A01F7353CE9F220EB3DCD: AMD64, 42 imports, 14 exports, no delay/API-set imports. All 42 imports resolve against Server exports; BthA2dp consumes 10 of its exports.
+> - Separate 279,040-byte System32 BthA2dp.sys is version 10.0.19041.1, SHA-256 0442A18BBED4E323265C66561C8F8C171D8E934E9089C12B94D1DFDBB057B737, with 144 imports. Do not confuse it with the DriverStore package binary.
+> - Correction: earlier E-119 wording that exact DriverStore BthA2dp imports only ntoskrnl.exe is superseded by E-169. Full UUP PE audit shows eight import descriptors and 149 imports.
+> - BtaMpm.inf uses BtaMPM.CopyFilesOnly; it does not install a separate BtaMPM service. BtaMPM.sys is a copied companion module imported by BthA2dp.sys. Common A2DP INF installs demand-start BthA2dp.
+> - Static import closure is a strong compatibility result, not runtime proof. Catalog membership, INF applicability/staging, service start, PnP enumeration, driver load, endpoint, SBC negotiation and audio remain unverified.
+> - UUP audit #7 / [run 45342686564](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45342686564) checks offline catalog membership and SYSTEM-hive service registrations. No package install or driver load.
+> - Keep exact Win10 A2DP source/common package over Server Bluetooth core. No new Bluetooth/ACX driver; CI #248/#255 remain closed. server-2022-oppo unchanged. Physical Server 2022 not accessed or modified.
+>
 > **ACTIVE PROJECT OVERRIDE — 2026-11-24 07:22 Europe/Kyiv**
 >
 > Primary target remains the Microsoft Win10 A2DP source/common package for SBC stereo on Server 2022. No new Bluetooth/ACX driver; CI #248/#255 remain closed.

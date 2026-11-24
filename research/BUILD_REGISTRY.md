@@ -143,3 +143,15 @@ No build or installation was performed. Public documentation screening only:
 - Alternative A2DP Driver 1.8.3: officially supports Win10 22H2 / Win11 21H2–25H2, not Server 2022; uses inbox Bluetooth stack and per-device kernel driver; supports LDAC/SBC/ABR; proprietary EULA, hardware-bound license, no redistribution/reverse-engineering.
 - BlueCaster: Win10 22H2/Win11; user-mode BTstack + WinUSB; dedicated USB adapter takeover; BTstack personal/non-commercial limitation unless separately licensed.
 - No third-party installer or binary was downloaded, staged, installed or patched.
+
+
+## 2026-11-24 08:39 — exact Win10 A2DP PE audit (UUP audit #6)
+
+- Run [45332165839](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45332165839), job 138235648697, experiment commit 6778022b4453857e53acf8a18afe54bb7e46f5f5, conclusion success.
+- Artifact 14895876155, 328,218 bytes, SHA-256 c1792bd8e5bcdf2a583c3738eeb22bdf27a64ba6ad2701ad70aa8f879d045209.
+- Exact Win10 19045.5917 and Server 20348.5761 image identities verified from offline SOFTWARE hives.
+- Exact DriverStore BthA2dp 10.0.19041.4355 hash matched archived capture; all 149 imports resolve against Server 20348.5761 exports plus exact Win10 BtaMPM.
+- Exact BtaMPM 10.0.19041.5848 has 42 imports / 14 exports; all 42 imports resolve against Server exports.
+- No build, staging or runtime test. Artifact contains metadata/text PE reports only; no Microsoft SYS/DLL/ISO payloads.
+- UUP audit #7 [45342686564](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45342686564) is in progress for offline catalog membership and SYSTEM service registry inventory. Branch experiment/win10-a2dp-catalog-registry-audit-20261124, commit 5bdbc75d904beb8c5f84787cc592ae9134df40c6.
+

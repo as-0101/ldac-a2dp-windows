@@ -374,3 +374,13 @@ The user’s target is PC → OPPO Enco Buds2 playback. The Win10 source INF mat
 Alternative A2DP Driver 1.8.3 is a ready commercial per-device A2DP driver with LDAC/SBC/ABR, using the Windows 10/11 inbox Bluetooth stack. Its official support matrix does not include Server 2022; its proprietary EULA prohibits redistribution and restricts reverse engineering/disassembly. Do not inspect, patch, redistribute or bypass licensing. If needed after SBC, evaluate only via the official trial in a disposable Server 2022 VM, with explicit user approval before any license purchase or physical-device change.
 
 BlueCaster is an existing user-mode alternative using BTstack + WinUSB and a dedicated USB adapter. It takes the adapter away from Windows while active and its bundled BTstack is personal/non-commercial unless separately licensed. Keep it as a fallback, not the primary Microsoft-stack path.
+
+
+## D-056 — Accept the exact Win10 A2DP binary static import-closure pass; proceed to catalog and staging gates
+
+UUP audit #6 reproduced the exact archived Win10 DriverStore BthA2dp.sys 10.0.19041.4355 hash and showed all 149 static imports resolve against the exact Server 20348.5761 exports plus the matching Win10 BtaMPM.sys. Exact BtaMPM 10.0.19041.5848 has 42 imports/14 exports and all 42 imports resolve against Server. This removes a static import/export mismatch as the current blocker and supports testing the existing Win10 A2DP package without replacing Server's Bluetooth core.
+
+The earlier E-119 claim that the exact DriverStore BthA2dp imports only ntoskrnl is superseded by E-169. Do not use the older report. Also correct the component map: BtaMpm.inf is CopyFilesOnly and does not register a separate service; BtaMPM.sys is an imported companion module, while BthA2dp is the demand-start service installed by the common INF.
+
+This is not runtime compatibility proof. Catalog membership and SetupAPI applicability remain the immediate gates. Proceed only on a disposable Server 2022 CI/VM after the catalog audit; do not install or stage on the physical host. Keep server-2022-oppo and ACX work frozen.
+

@@ -364,3 +364,15 @@ No Microsoft binary payload or UUP image was committed. Existing Win10 source pa
 | `YoshKoz/LDACast` search result | Direct GitHub open returned 404 | Not verified; excluded from candidate list |
 
 No third-party binary was downloaded or stored.
+
+
+## 2026-11-24 08:39 Europe/Kyiv — UUP audit #6 exact PE metadata
+
+| Artifact | Location | Identity / hash | Purpose / status |
+|---|---|---|---|
+| UUP audit #6 metadata ZIP | [GitHub Actions artifact 14895876155](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45332165839/artifacts/14895876155) | uup-image-a2dp-audit-metadata.zip, 328,218 B, SHA-256 c1792bd8e5bcdf2a583c3738eeb22bdf27a64ba6ad2701ad70aa8f879d045209 | Exact Win10 19045.5917 / Server 20348.5761 PE/INF/CBS metadata; exact DriverStore BthA2dp hash match; 149-import static closure and BtaMPM 42-import closure |
+| UUP audit #6 manifest | Inside artifact | manifest.json, generated 2026-11-24T06:16:00Z | Exact image identity, binary versions, sizes, hashes and PE report references |
+| UUP audit #6 INF summary | Inside artifact | inf-summary.txt | Source/common/BtaMpm/Server bth/ks/wdmaudio INF sections and SHA-256 values |
+| UUP audit #6 PE reports | Inside artifact pe-audit/ | 47 JSON reports | Exact imports, delay imports, exports, API-set imports, target export-reference comparisons |
+| UUP audit #7 | [GitHub Actions run 45342686564](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45342686564) | branch experiment/win10-a2dp-catalog-registry-audit-20261124, commit 5bdbc75d904beb8c5f84787cc592ae9134df40c6 | In progress: offline catalog membership and SYSTEM service registrations; no staging/runtime |
+

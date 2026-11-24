@@ -169,3 +169,41 @@ CI #463 metadata artifact `microsoft-catalog-a2dp-audit.zip` (artifact ID `14883
 - For PC → OPPO playback, only `microsoft_bluetooth_a2dp_src.inf` is required: it matches the remote A2DP Sink UUID 0x110B. The separate `microsoft_bluetooth_a2dp_snk.inf` is the reverse direction (Windows as A2DP sink) and is excluded from this milestone. The source INF chains to the common INF and its BtaMPM/KS/WDMAUDIO/MSSysFx dependencies.
 
 This is CBS ownership and static INF direction evidence, not proof of standalone staging. Do not inject the entire Client-Desktop-Required package. Next: verify exact DriverStore/CAT membership, INF target decorations and OS applicability, then stage only the source/common dependency closure in a disposable Server 2022 VM. UUP audit #6 is still required for exact PE and offline registry/CAT data.
+
+
+## 2026-11-24 08:39 — UUP audit #6: exact package binary and Server import closure
+
+### Run and artifact
+
+UUP audit #6 [45332165839](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45332165839) completed successfully on experiment commit 6778022b4453857e53acf8a18afe54bb7e46f5f5. Artifact [14895876155](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45332165839/artifacts/14895876155) is uup-image-a2dp-audit-metadata.zip, 328,218 bytes, SHA-256 c1792bd8e5bcdf2a583c3738eeb22bdf27a64ba6ad2701ad70aa8f879d045209.
+
+Exact offline image identities:
+- Win10 Pro x64 19045.5917, UUP ID 598d27dc-ad81-41aa-8c83-42b88e60c823.
+- Server 2022 Datacenter Desktop Experience x64 20348.5761, UUP ID 008aacce-b0b7-4aeb-a3b2-43286434832c, EditionID ServerDatacenter, InstallationType Server.
+
+### Binary result
+
+The DriverStore BthA2dp binary is the exact archived file: version 10.0.19041.4355, 282,624 bytes, SHA-256 5FBA5EE606AAC39D9CBDA51C0A14DBABBB3A9B47BBD8AC5485ED137B4F354EC3. It is AMD64 PE32+, WDM_DRIVER, with 149 imports in eight descriptors, no delay imports, no API-set imports and no exports. All 149 imported symbols resolve against Server 20348.5761 export tables plus the exact Win10 BtaMPM companion.
+
+Exact BtaMPM 10.0.19041.5848 (43,008 bytes, SHA-256 DA5CBBDCE6AC511EF8400E121DF6B6EACA7D05C0F40A01F7353CE9F220EB3DCD) has 42 imports and 14 exports; all 42 imports resolve against Server 20348.5761. The DriverStore BthA2dp imports 10 BtaMPM exports.
+
+The separate System32 BthA2dp copy is older 10.0.19041.1, 279,040 bytes, SHA-256 0442A18BBED4E323265C66561C8F8C171D8E934E9089C12B94D1DFDBB057B737, 144 imports. Do not conflate it with the DriverStore package binary.
+
+### INF/service correction
+
+microsoft_bluetooth_a2dp_src.inf 10.0.19041.1 (SHA B97D1DD53BB6FD040CE5C2527015A09416C29FCBD6B528802D595CBDEEAD4A6A) matches remote A2DP Sink UUID 0x110B. It chains to common INF 10.0.19041.4355 (SHA 4F3B988B658E1E7F8B97E645C1C92BE0BA270D4DB76832DAB871516EEDCBCF0C). Common INF needs Server-available KS/WDMAUDIO/MSSysFx sections and BtaMPM.CopyFilesOnly, then copies BthA2dp.sys and installs demand-start BthA2dp.
+
+btampm.inf 10.0.19041.5848 (SHA C657A6B32AC8CCFDEEF3C12630686B87C973DD114BEE73AEC288D86B989961EF) only copies BtaMPM.sys to %12%; it has no AddService. BtaMPM is not a separate service.
+
+The exact Server INF set already contains KS.Registration, WDMAUDIO.Registration, and mssysfx.CopyFilesAndRegister. Server bth.inf still maps 0x110B to generic service with _GENERIC; the Win10 source INF matches the base UUID. This is the minimal binding gap to test.
+
+### Limits
+
+UUP #6 did not verify offline system catalog membership; Get-CatalogSummary only searched package-local DriverStore CAT files, and the INF has no CatalogFile directive. Get-AuthenticodeSignature returning NotSigned for SYS only means no embedded signature. No PnP staging, driver load, endpoint, SBC negotiation or audio test occurred.
+
+The previous E-119 statement that the exact DriverStore BthA2dp had only ntoskrnl imports is superseded by E-169; the exact file has eight import descriptors and 149 imports.
+
+### Next audit
+
+UUP audit #7 [45342686564](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45342686564), isolated experiment branch experiment/win10-a2dp-catalog-registry-audit-20261124, adds offline catalog membership and read-only SYSTEM-hive service registration inventory. No package installation or driver load is performed.
+

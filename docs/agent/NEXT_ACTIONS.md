@@ -1,3 +1,17 @@
+## ACTIVE NEXT ACTIONS — 2026-11-24 08:39 Europe/Kyiv
+
+1. Complete UUP audit #7 [45342686564](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45342686564): inspect offline Win10 catalogs for the exact A2DP source/common INF, BthA2dp.sys and BtaMPM.sys; capture offline SYSTEM service registrations for Win10 and Server 20348.5761.
+2. If catalog membership is proven and no INF applicability blocker appears, prepare a disposable Server 2022 CI/VM-only staging experiment. Do not stage/install on the physical host.
+3. Minimal candidate: microsoft_bluetooth_a2dp_src.inf + microsoft_bluetooth_a2dp.inf + btampm.inf/BtaMPM.sys, reusing Server ks.inf, wdmaudio.inf and MSSysFx. Do not copy Win10 bth.inf, bthport.sys, bthenum.sys, BTHUSB.sys, ks.sys, wdmaud.drv or reverse-direction A2DP sink INF.
+4. Test separately on disposable Server 2022: package staging → synthetic/real BTHENUM 0x110B enumeration → BthA2dp service start → driver load → KS/AudioEndpointBuilder render endpoint. Hosted CI without a Bluetooth radio cannot prove SBC negotiation/audio.
+5. With a real disposable radio/OPPO test path, prove SBC negotiation and continuous stereo playback. Physical server remains off-limits without explicit permission.
+6. Only after SBC, use an LDAC-capable sink for AVDTP LDAC negotiation and captured LDAC media frames. OPPO Enco Buds2 ETE41 is SBC/AAC only.
+7. Keep ACX bind-probe parked. Do not repeat CI #248/#255 or build a new driver unless later evidence proves a kernel-layer blocker.
+
+**Supersedes historical item 9 below:** E-169 is the exact PE audit. Earlier E-119 statement that DriverStore BthA2dp imported only ntoskrnl.exe is incorrect/incomplete.
+
+---
+
 # Immediate next actions — 2026-11-24 07:18 Europe/Kyiv
 
 This block supersedes older ACX-focused action lists below.

@@ -333,3 +333,44 @@ Incus Multicodec's `btmulticodec/ldac.py` uses ctypes to load `bin/ldac.dll`. It
 ### Consequence
 
 There is no evidence of a Microsoft inbox LDAC provider DLL that can be registered into `BthA2dp.sys`. The Windows 10 source/common INF is the primary SBC path. LDAC requires an A2DP source transport that advertises LDAC in AVDTP; an encoder DLL alone cannot create the endpoint or negotiate the codec. The least disruptive LDAC fallback to evaluate after SBC is a user-mode stack with a dedicated USB adapter, on a disposable Server 2022 VM. No physical-host changes.
+
+
+## Exact Win10 A2DP source package and kernel dependency map — UUP audit #6
+
+The exact DriverStore package from Win10 19045.5917 is now reproduced and its static import closure is compared against Server 20348.5761. This supersedes the older E-119 import summary.
+
+### PnP/INF path for PC → OPPO
+
+1. Bluetooth core and radio remain the Server 2022 components (BTHUSB/vendor miniport → BthPort → BthEnum).
+2. microsoft_bluetooth_a2dp_src.inf 10.0.19041.1 (SHA B97D1DD53BB6FD040CE5C2527015A09416C29FCBD6B528802D595CBDEEAD4A6A) matches BTHENUM\{0000110b-0000-1000-8000-00805f9b34fb} — the remote A2DP Sink, i.e. the earbuds.
+3. It chains to microsoft_bluetooth_a2dp.inf 10.0.19041.4355 (SHA 4F3B988B658E1E7F8B97E645C1C92BE0BA270D4DB76832DAB871516EEDCBCF0C).
+4. The common INF includes ks.inf, wdmaudio.inf, BtaMpm.inf; needs KS.Registration, WDMAUDIO.Registration, BtaMPM.CopyFilesOnly, mssysfx.CopyFilesAndRegister.
+5. It copies BthA2dp.sys, registers demand-start BthA2dp (StartType=3, %12%\BthA2dp.sys) and adds KSCATEGORY_AUDIO source/sink interfaces. The source path adds render SysFx properties.
+6. btampm.inf 10.0.19041.5848 (SHA C657A6B32AC8CCFDEEF3C12630686B87C973DD114BEE73AEC288D86B989961EF) only copies BtaMPM.sys to %12%. It does not install a separate service. BthA2dp imports 10 functions from BtaMPM; BtaMPM exports 14.
+
+### Exact PE dependency closure
+
+BthA2dp.sys 10.0.19041.4355, AMD64, 149 imports / 8 descriptors, no delay imports, no API-set imports, 0 exports. Imports: ntoskrnl 75, HAL 1, ks 40, btampm 10, WppRecorder 4, SleepStudyHelper 8, WDFLDR 4, ksecdd 7. All 149 names/ordinals exist in exact Server 20348.5761 exports plus exact Win10 BtaMPM.
+
+BtaMPM.sys 10.0.19041.5848, AMD64, 42 imports / 3 descriptors, 14 exports, no delay/API-set imports. Imports: ntoskrnl 37, cng 1 (SystemPrng), WppRecorder 4. All 42 exist in Server 20348.5761 exports.
+
+This removes missing static imports as the immediate blocker. It does not prove ABI/runtime compatibility, WDF version binding, undocumented Bluetooth BRB behavior, PnP rank, catalog trust, service start or audio.
+
+### Server components to reuse
+
+The exact Server 20348.5761 image already has:
+- ks.inf 10.0.20348.1, SHA 88EA223C8DB5F1DD17381F64BD264CCBFE946F1D1EF2DBA06A0992F60FF3ED94, with KS.Registration;
+- wdmaudio.inf 10.0.20348.5756, SHA 63BCE2D74EC4DCC08ACA21B2CDFC1E981906F3A48BEF61FB96D2446014C7B833, with WDMAUDIO.Registration and mssysfx.CopyFilesAndRegister;
+- ks.sys 10.0.20348.5756, SHA DF6F0CB329F7BE7857EC47A90DAC6896C74D85C20D5803C71A9B0CF829757A9B.
+
+Reuse these Server components; do not copy Win10 audio core binaries.
+
+Server bth.inf 10.0.20348.5756 (SHA 38302B73607B829CBD94D60D25320924B8727BF55CAD940052444FC22D475459) maps remote A2DP Sink UUID 0x110B to BthGenericService with _GENERIC suffix and a null associated-service install. Win10 source INF matches the base UUID. This is the exact PnP binding difference to test.
+
+### Role separation
+
+- Microsoft BthA2dp.sys is the A2DP/AVDTP profile transport and SBC/aptX implementation; not an LDAC provider.
+- BtaMPM.sys is profile-management support imported by BthA2dp, not a codec DLL or separate service.
+- ks.sys/WDMAUDIO/MSSysFx provide audio graph/effects registration, not LDAC negotiation.
+- The fork's AOSP libldac is an encoder library linked into the custom service; it is not registered with Microsoft BthA2dp and cannot add LDAC to its codec list.
+

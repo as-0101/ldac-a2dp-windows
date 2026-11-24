@@ -737,3 +737,43 @@ The archived Win10 INF comparison and `WIN10_A2DP_PIPELINE.md` establish that `m
 Official Alternative A2DP Driver version history lists v1.8.3 (2026-06-22) for x64 Windows 10 22H2 and Windows 11 21H2–25H2; no Server 2022 support is listed. Its FAQ says it uses the Windows 10/11 inbox Bluetooth stack, installs per-device as an A2DP driver, requires administrator privileges for package/device-driver changes, and its trial becomes silent after seven days. It supports LDAC and ABR (version history notes LDAC ABR fixes). The official EULA licenses proprietary object code, binds the license to hardware, prohibits redistribution and restricts reverse engineering/disassembly. No installer or binary was downloaded or analyzed; it is a black-box candidate only.
 
 BlueCaster's public README states Windows 10 22H2/Windows 11, user-mode BTstack over WinUSB, and exclusive takeover of the USB Bluetooth adapter while active (Windows loses use of that adapter). Source is Apache-2.0/MIT, but bundled BTstack is personal/non-commercial unless separately licensed. The `YoshKoz/LDACast` search result returned 404 on direct open and is not counted as a verified candidate.
+
+
+## E-169 — Exact Win10 A2DP PE closure against Server 20348.5761 (UUP audit #6)
+
+Run: [45332165839](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45332165839), commit 6778022b4453857e53acf8a18afe54bb7e46f5f5, job 138235648697.
+Artifact: ID 14895876155, 328,218 bytes, SHA-256 c1792bd8e5bcdf2a583c3738eeb22bdf27a64ba6ad2701ad70aa8f879d045209.
+
+Exact images: Win10 Pro 19045.5917 x64, UUP ID 598d27dc-ad81-41aa-8c83-42b88e60c823, ISO SHA 29485CBF6A9B33C47675521F999B17E46083A19517564DBAF33E028A2EFF6EF4; Server 2022 Datacenter 20348.5761 x64, UUP ID 008aacce-b0b7-4aeb-a3b2-43286434832c, ISO SHA 1FC3AFBBFC6AADF39B4F8A2B39DAEA64DE417C8B4B471880A5CE09244791B130. Server identity: EditionID ServerDatacenter, InstallationType Server.
+
+| Binary | Version / size | SHA-256 | PE |
+|---|---|---|---|
+| DriverStore BthA2dp.sys | 10.0.19041.4355 / 282,624 B | 5FBA5EE606AAC39D9CBDA51C0A14DBABBB3A9B47BBD8AC5485ED137B4F354EC3 | AMD64 PE32+, WDM_DRIVER, 149 imports/8 descriptors, no delay/API-set imports, no exports |
+| System32 BthA2dp.sys | 10.0.19041.1 / 279,040 B | 0442A18BBED4E323265C66561C8F8C171D8E934E9089C12B94D1DFDBB057B737 | Distinct older copy, 144 imports/8 descriptors |
+| BtaMPM.sys | 10.0.19041.5848 / 43,008 B | DA5CBBDCE6AC511EF8400E121DF6B6EACA7D05C0F40A01F7353CE9F220EB3DCD | AMD64, 42 imports/3 descriptors, 14 exports |
+
+BthA2dp imports: ntoskrnl 75; HAL 1; ks 40; btampm 10; WppRecorder 4; SleepStudyHelper 8; WDFLDR 4; ksecdd 7. All 149 imports resolve against exact Server 20348.5761 exports plus the exact Win10 BtaMPM companion. BtaMPM imports ntoskrnl 37, cng 1 (SystemPrng), WppRecorder 4; all 42 resolve against Server. BthA2dp consumes 10 BtaMPM exports.
+
+Server reference files:
+- ntoskrnl.exe 10.0.20348.5756 SHA 3C3D81A2B2AA910E6B4BA4845A7A65D77906A6D32A0811834143987FAA3EE68C
+- HAL.dll 10.0.20348.5499 SHA D05F979E55E2FF11FA3587D70987C8591E6DE520BD6960BE5A7C238DF936DD7D
+- ks.sys 10.0.20348.5756 SHA DF6F0CB329F7BE7857EC47A90DAC6896C74D85C20D5803C71A9B0CF829757A9B
+- WppRecorder.sys 10.0.20348.1 SHA 922A219688B60CCA5CC665FEE7A0751DCE1903F24BE7668704D8BF345EBF55C6
+- SleepStudyHelper.sys 10.0.20348.1 SHA 67C91B1753B4AD8C9DA3700E2A955E7FE77C66933AB3D50F21680A2D28772BE2
+- WdfLdr.sys 1.33.20348.2849 SHA E6C17ADE3876A6BFE25148878F65E7705BA51E77BE051E22C83800411C214FCD
+- ksecdd.sys 10.0.20348.5756 SHA EAA2257B3DCF02CA3EDE8226F1B6CE7ACFFF8B8EBA652242D7CEF34A9AD5A284
+- cng.sys 10.0.20348.5756 SHA F84E664B1674FC6B2712B3E649E304C0C6030470AC98D9B5B5A7AEB5F3565926
+
+INF identities:
+- microsoft_bluetooth_a2dp_src.inf 10.0.19041.1 SHA B97D1DD53BB6FD040CE5C2527015A09416C29FCBD6B528802D595CBDEEAD4A6A
+- microsoft_bluetooth_a2dp.inf 10.0.19041.4355 SHA 4F3B988B658E1E7F8B97E645C1C92BE0BA270D4DB76832DAB871516EEDCBCF0C
+- btampm.inf 10.0.19041.5848 SHA C657A6B32AC8CCFDEEF3C12630686B87C973DD114BEE73AEC288D86B989961EF
+
+The source INF matches remote A2DP Sink UUID 0x110B. Common INF includes ks.inf, wdmaudio.inf and BtaMpm.inf; needs KS.Registration, WDMAUDIO.Registration, BtaMPM.CopyFilesOnly and mssysfx.CopyFilesAndRegister; copies BthA2dp.sys; installs demand-start BthA2dp (StartType=3); creates KSCATEGORY_AUDIO source/sink interfaces. BtaMpm.inf is Class SYSTEM and CopyFilesOnly to %12%; no AddService. BtaMPM.sys is a companion module imported by BthA2dp, not a separate service.
+
+Server 20348.5761 has its own ks.inf 10.0.20348.1 SHA 88EA223C8DB5F1DD17381F64BD264CCBFE946F1D1EF2DBA06A0992F60FF3ED94 and wdmaudio.inf 10.0.20348.5756 SHA 63BCE2D74EC4DCC08ACA21B2CDFC1E981906F3A48BEF61FB96D2446014C7B833; both contain the required registration sections. Server bth.inf 10.0.20348.5756 SHA 38302B73607B829CBD94D60D25320924B8727BF55CAD940052444FC22D475459 maps UUID 0x110B to BthGenericService with _GENERIC suffix and a null associated-service install.
+
+Correction: earlier E-119 claim that exact DriverStore BthA2dp imported only ntoskrnl is superseded; exact UUP file has 149 imports. Get-AuthenticodeSignature NotSigned on SYS means no embedded signature, not absence of catalog signature. UUP #6 did not inspect WinSxS/CatRoot/servicing catalogs; membership remains unknown. Static imports do not prove ABI/runtime, WDF bind, BRB behavior, PnP rank, service start or audio. No package staging, driver load, endpoint, SBC negotiation, audio or physical-host access occurred.
+
+UUP audit #7 [45342686564](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45342686564), isolated branch experiment/win10-a2dp-catalog-registry-audit-20261124, adds offline catalog membership and read-only SYSTEM service inventory.
+
