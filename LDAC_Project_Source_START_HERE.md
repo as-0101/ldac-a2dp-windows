@@ -102,3 +102,14 @@ Do not run prepare-oppo-host.cmd, upgrade-oppo.cmd, install-oppo.cmd or rollback
 - [Build registry](research/BUILD_REGISTRY.md)
 - [Test matrix](research/TEST_MATRIX.md)
 - [Artifact index](research/ARTIFACT_INDEX.md)
+
+## Latest verified state — 2026-11-24 (CI #11)
+
+- CI #11 (45347639357) completed offline extraction for Win10 19045.5917 and Server 20348.5761 and uploaded metadata artifact uup-image-a2dp-audit-metadata (artifact 14901033654, SHA-256 277ed892887f10383e34bb9f3c3690a0ebdf290d32cb9f4899d6016e78fbadff, 331,349 bytes).
+- SignTool verified all five Win10 A2DP package files against one Win10 servicing catalog: Microsoft-Windows-Client-Desktop-Required-Package~31bf3856ad364e35~amd64~~10.0.19041.5917.cat, SHA-256 78772FA12959C072D687283F08D08367B8A8EF1A2F07D7B72F20BCAFD12483BF.
+- The Win10 CBS MUM identifies microsoft_bluetooth_a2dp.inf 10.0.19041.4355, microsoft_bluetooth_a2dp_src.inf 10.0.19041.1, and btampm.inf 10.0.19041.5848 as dualModeDriver components owned by Client-Desktop-Required-Package 10.0.19041.5917.
+- Server 20348.5761 has BthPort/BthEnum/BTHUSB and audio services, but no BthA2dp service registration or BtaMPM component registration. BtaMPM is not a service in either image.
+- Critical open question: CI #11 checked the package against Win10 catalogs only. It did not check whether the same Win10 files are members of Server 2022's system catalog set. Do not infer cross-SKU package acceptance from the Win10 result.
+- A focused follow-up exists on experiment/win10-a2dp-cross-sku-catalog-audit-20261124 (script commit 05555dc8fac8b2f551826b71cba40084defe9a46, workflow commit 08663c4ca7d1536b96c554fd5e484382262b1250). It checks the exact Win10 files against Server catalogs and uses Server Bluetooth core files as positive controls.
+
+Next gate: finish cross-SKU catalog verification, then test original-package staging on a disposable Server 2022 VM. No physical-host changes; no ACX bind-probe.
