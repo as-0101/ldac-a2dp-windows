@@ -113,3 +113,7 @@ Do not run prepare-oppo-host.cmd, upgrade-oppo.cmd, install-oppo.cmd or rollback
 - A focused follow-up exists on experiment/win10-a2dp-cross-sku-catalog-audit-20261124 (script commit 05555dc8fac8b2f551826b71cba40084defe9a46, workflow commit 08663c4ca7d1536b96c554fd5e484382262b1250). It checks the exact Win10 files against Server catalogs and uses Server Bluetooth core files as positive controls.
 
 Next gate: finish cross-SKU catalog verification, then test original-package staging on a disposable Server 2022 VM. No physical-host changes; no ACX bind-probe.
+
+## Cross-SKU audit implementation update — 2026-11-24
+
+The isolated cross-SKU audit script was extended to record the matched CAT's embedded Authenticode signer/status in addition to SignTool membership and catalog SHA-256. Latest script commit: 11f0c4776b3d1ed6c79f5dca75634dda40c19ba9. The follow-up CI result has not yet been verified.
