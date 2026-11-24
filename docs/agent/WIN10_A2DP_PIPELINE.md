@@ -158,7 +158,7 @@ The broader Win10 collector with `-IncludeDriverPackages` and the Win10/Server c
 - Common INF: Class=MEDIA, DriverVer 10.0.19041.4355; Include ks.inf, wdmaudio.inf, BtaMpm.inf; Needs KS.Registration, WDMAUDIO.Registration, BtaMPM.CopyFilesOnly and mssysfx.CopyFilesAndRegister; installs BthA2dp as a demand-start kernel service and registers KSCATEGORY_AUDIO interfaces.
 - btampm.inf: Class=SYSTEM, DriverVer 10.0.19041.5848; CopyFilesOnly dependency for BtaMPM.sys.
 - DriverStore BthA2dp.sys: 282,624 bytes, SHA-256 5FBA..., version 10.0.19041.4355; PE32+ x64, native kernel, no delay-import directory, direct imports from ntoskrnl.exe only in E-119.
-- A separate System32 BthA2dp.sys is 279,040 bytes, SHA-256 0442..., with 8 import descriptors / 144 imported functions. It is a different file and its imports must not be applied to the DriverStore package copy.
+- A separate System32 BthA2dp.sys is 279,040 bytes, SHA-256 0442..., with 8 import descriptors / 144 imported functions. Secondary public inventories list a 279,040-byte BthA2dp.sys as 10.0.19041.1, but do not publish the hash; the mapping remains provisional. It is a different file and its imports must not be applied to the DriverStore package copy. Prioritize the 10.0.19041.4355 DriverStore copy for compatibility analysis.
 - BtaMPM.sys: 43,008 bytes, SHA-256 DA5C..., version 10.0.19041.5848; imports ntoskrnl.exe, cng.sys and WppRecorder.sys. It is profile/multiprofile management, not an LDAC codec.
 - WMALFXGFXDSP.dll and SysFxUI.dll are system audio-effect/APO support from the MSSysFx path; they are not LDAC encoder DLLs.
 - Microsoft Windows 10 Classic Audio lists SBC and aptX Classic, not LDAC or AAC. OPPO Enco Buds2 lists AAC/SBC only. The common codec for this pair is SBC.
