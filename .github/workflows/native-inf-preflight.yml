@@ -223,3 +223,39 @@ jobs:
               "MEMBER $($node.GetAttribute('name')) $($node.GetAttribute('version'))"
             }
           }
+      - name: Inspect payload names in Bluetooth deployment dependency manifests
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location $env:RUNNER_TEMP
+          $root = Join-Path $env:windir 'WinSxS/Manifests'
+          $deployment = [xml](Get-Content -Raw -Encoding UTF8 deployment.xml)
+          $children = @($deployment.SelectNodes("//*[local-name()='dependency']//*[local-name()='assemblyIdentity']"))
+          $read = 0
+          $missing = 0
+          $hits = 0
+          foreach ($child in $children) {
+            $name = $child.GetAttribute('name')
+            $version = $child.GetAttribute('version')
+            $suffix = if ($name.Length -gt 40) { $name.Substring(0,19) + '..' + $name.Substring($name.Length-19) } else { $name }
+            $candidates = @(Get-ChildItem $root -File -Filter "*_${suffix}_*_${version}_*.manifest")
+            $found = $false
+            foreach ($file in $candidates) {
+              if (Test-Path child.xml) { Remove-Item child.xml }
+              python -X utf8 decode-dcm-manifest.py -d resource_614.bin -o child.xml $file.FullName
+              if ($LASTEXITCODE -ne 0 -or !(Test-Path child.xml)) { continue }
+              $doc = [Xml.XmlDocument]::new()
+              $doc.XmlResolver = $null
+              $doc.Load((Join-Path $env:RUNNER_TEMP 'child.xml'))
+              $id = $doc.DocumentElement.SelectSingleNode("./*[local-name()='assemblyIdentity']")
+              if ($id.GetAttribute('name') -ne $name) { continue }
+              $found = $true
+              $read++
+              $payload = @($doc.SelectNodes("//*[local-name()='file']/@name") | ForEach-Object Value)
+              $profile = @($payload | Where-Object { $_ -match 'a2dp|btampm' })
+              $hits += $profile.Count
+              "CHILD $name files=$($payload -join ',') profile=$($profile.Count)"
+            }
+            if (!$found) { $missing++; "CHILD_UNRESOLVED $name $version candidates=$($candidates.Count)" }
+          }
+          "COVERAGE dependencies=$($children.Count) manifests=$read unresolved=$missing profile_files=$hits"
