@@ -413,3 +413,11 @@ No third-party binary was downloaded or stored.
 - Run #3: [45371687882](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45371687882), in progress at 12:10 Kyiv.
 - Scope is limited to original CAT verification and DriverStore staging without /install on a disposable Server 2022 runner. No binary payloads are uploaded.
 
+
+
+## Stage-smoke run #3 status review — 2026-11-24 12:25 Europe/Kyiv
+
+- Run [45371687882](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45371687882), job 138367259323; no artifact is available while step 7 remains in progress.
+- Branch: `experiment/win10-a2dp-stage-smoke-20261124`; script commit `3305dddcb18f4e407e6b61762a2539a77412ea2d`; workflow commit `692cb1a5e4df7de5ca0ebc72e61878c1c62df300`.
+- Workflow records runner UBR but only enforces build 20348 / InstallationType=Server. Treat any eventual result as specific to the recorded UBR, not automatically to 20348.5761.
+- Artifact policy: metadata/text reports only; temporary Microsoft SYS/INF/CAT/ISO/WIM payloads are removed before upload.
