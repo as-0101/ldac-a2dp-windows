@@ -1,3 +1,34 @@
+# Current state — 2026-11-24 02:19 Europe/Kyiv
+
+**Priority:** prove the existing Microsoft Windows 10 A2DP package on Server 2022 for SBC stereo before any LDAC work. ACX/WDK bind-probe remains parked.
+
+## Confirmed strategy correction
+
+- Windows 10 inbox A2DP documents SBC and aptX Classic only; no LDAC or AAC. There is no Microsoft inbox LDAC DLL/provider to transplant.
+- The captured common/source INF path installs `BthA2dp.sys` as a kernel A2DP profile driver; `BtaMPM.sys` is profile management. MSSysFx/APO DLLs are audio effects, not LDAC encoders.
+- The Microsoft Bluetooth stack's documented extension point is a PnP-loaded profile driver communicating with `BthPort.sys` through WDM IRPs/BRBs; no supported user-mode LDAC codec plug-in contract was found in the reviewed docs/INFs.
+- Older public BthA2dp symbols show internal `A2dpSbcCodec` and `AptXCodec` classes and AVDTP code; this is secondary evidence from 10.0.17763.168, not the captured 10.0.19041.4355 binary.
+- The repository already vendors AOSP `external/libldac` at `eeee1a3f`, builds it as static `ldacBT_enc`/`ldacBT_abr` libraries, and calls it from `service/encoder.cpp`. It is not a Windows 10 DLL.
+- OPPO ETE41 supports AAC/SBC only; it is suitable for SBC, not LDAC.
+- The legacy PE import script lacks the 20-byte descriptor increment; its 1.3 MB report is invalid. Reports (2)/(3) need a retained parser/source and independent verification.
+- BlueCaster v3.0.4 is a ready user-mode A2DP/LDAC alternative using BTstack+WinUSB, but it requires a USB adapter, takes it over from Windows, does not list Server 2022 support, and bundles BTstack with a personal/non-commercial license.
+
+## Remaining blockers
+
+1. Exact source system catalog and CBS/component ownership of the Win10 source/common A2DP and btampm packages.
+2. Complete PE exports/imports/delay/API-set and dynamic dependency analysis of the exact DriverStore package binaries.
+3. Symbol resolution against the exact Server 2022 20348.5761 kernel and dependency exports.
+4. Disposable-VM validation of service start → enumeration → driver load → A2DP endpoint → SBC negotiation → actual stereo audio.
+5. A separate LDAC-capable sink and a legally supportable transport path for the later LDAC milestone.
+
+## This research pass
+
+No source code or driver package was changed; no build, CI run, runtime test or fresh physical-host query was performed. The physical host remains read-only. No BCD/security/test-signing/certificate/OS changes and no install/restart scripts were executed. The 2026-11-19 Server and latest PnP records remain historical snapshots, not current-state claims.
+
+See [WIN10_COMPONENT_AUDIT.md](WIN10_COMPONENT_AUDIT.md), [WIN10_A2DP_PIPELINE.md](WIN10_A2DP_PIPELINE.md), [NEXT_ACTIONS.md](NEXT_ACTIONS.md), and E-136–E-142 in [EVIDENCE.md](EVIDENCE.md).
+
+---
+
 
 
 ## Investigation update — 2026-11-24 (A2DP INF dependency audit)

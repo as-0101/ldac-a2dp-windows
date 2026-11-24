@@ -1,35 +1,35 @@
-# Current continuation — 2026-11-24 01:42 (Win10 A2DP component audit)
+# Current continuation — 2026-11-24 02:19 (codec ownership and PE audit correction)
 
 ## Established facts
 
-1. The 2026-11-23 23:49 Win10 19045 package archive already contains the common A2DP INF, source/sink INFs, btampm.inf, BthA2dp.sys and BtaMPM.sys. Do not rerun the exporter and do not ask for the same archive.
-2. The common INF is Class=MEDIA, DriverVer 10.0.19041.4355. It includes ks.inf, wdmaudio.inf and BtaMpm.inf; Needs KS.Registration, WDMAUDIO.Registration, BtaMPM.CopyFilesOnly and mssysfx.CopyFilesAndRegister. It installs BthA2dp as a demand-start kernel service and registers KSCATEGORY_AUDIO interfaces.
-3. btampm.inf is Class=SYSTEM, DriverVer 10.0.19041.5848; BtaMPM.CopyFilesOnly supplies BtaMPM.sys.
-4. No package-local .cat was exported, but the captured system-supplied INFs have no CatalogFile directive. Microsoft documents that system-supplied INFs are validated through system catalogs. Do not call the archive unsigned. The exact source system catalog and CBS/component owner still need to be identified for Server staging.
-5. Two BthA2dp.sys copies have different sizes/hashes and different import reports. DriverStore package copy: 282,624 bytes / SHA-256 5FBA... / version 10.0.19041.4355 / direct imports from ntoskrnl only in E-119. Separate System32 copy: 279,040 bytes / SHA-256 0442... / 8 import descriptors / 144 functions; secondary public inventories list the same size as version 10.0.19041.1, but do not publish the hash, so that version mapping is provisional. Do not merge these reports. Prioritize the 10.0.19041.4355 DriverStore package copy for Server compatibility analysis because its direct import report is smaller (ntoskrnl only), while retaining INF/dynamic dependencies as open. BtaMPM.sys is 43,008 bytes / SHA-256 DA5C... / version 10.0.19041.5848.
-6. The Microsoft Windows 10 Classic Audio list is SBC and aptX Classic; it does not list LDAC or AAC. OPPO Enco Buds2 ETE41 is AAC/SBC only. SBC is the only common codec; LDAC cannot be negotiated with these earbuds.
-7. Alternative A2DP Driver advertises LDAC, but its EULA restricts reverse engineering, modification and transfer; its published support matrix is Windows 10 22H2 / Windows 11 21H2–25H2, not Server 2022. Do not transplant or inspect its proprietary binaries.
-8. The as-0101 repository is a fork of yariktop133/ldac-a2dp-windows, a separate replacement-driver project, not a Windows 10 codec DLL package. The ACX/WDK path remains parked.
-9. The Server DriverStore contains an rtka2dp.inf folder, but the actual INF bytes/version were not captured and it targets Realtek local radios (LOCALMFG&005D), not this host's Intel local radio (LOCALMFG&0002). The latest OPPO node is bound to the custom oem75.inf, not rtka2dp; do not pursue the Realtek residue.
+1. The existing Win10 19045 package archive is already captured; it contains the source/common/sink A2DP INFs, `btampm.inf`, `BthA2dp.sys` and `BtaMPM.sys`. Do not recollect or request that archive.
+2. Microsoft documents Windows 10 A2DP codecs as SBC and aptX Classic. It does not list LDAC or AAC for Windows 10. No Microsoft inbox LDAC codec DLL/provider was found.
+3. The common INF (10.0.19041.4355) installs `BthA2dp.sys` as a demand-start kernel A2DP profile driver, includes KS/WDMAudio/BtaMPM/MSSysFx registrations, and registers audio interfaces. `BtaMPM.sys` (10.0.19041.5848) is profile management, not the LDAC encoder.
+4. Microsoft's documented Bluetooth stack loads profile drivers through PnP/INF and uses WDM IRPs / BRBs to communicate with `BthPort.sys`; it is not a documented user-mode codec-DLL plug-in model.
+5. Public PDB symbols for the older BthA2dp 10.0.17763.168 show internal SBC and aptX codec classes and AVDTP; this is secondary evidence, not a symbol map for the captured 10.0.19041.4355 binary.
+6. The repository already contains AOSP `external/libldac` at upstream commit `eeee1a3f`, compiled as static libraries into the project's service. It is not a Windows 10 DLL and cannot be dropped into the Microsoft A2DP path as a provider.
+7. OPPO Enco Buds2 ETE41 advertises AAC/SBC only. SBC is the only common codec; use a different LDAC-capable sink for the later LDAC milestone.
+8. `pe_imports_a2dp.py` does not advance the import-descriptor pointer by 20 bytes. Its 1.3 MB report repeats the first descriptor and is invalid. Reports (2)/(3) lack a retained corrected parser source and must be independently re-run.
+9. BlueCaster v3.0.4 is an existing user-mode BTstack/WinUSB A2DP transmitter advertising LDAC, but it takes over a USB adapter, lists Windows 10 22H2/Windows 11 (not Server 2022), and includes BTstack with a personal/non-commercial license. It is a later alternative, not a Microsoft-stack plug-in.
+10. The AOSP libldac NOTICE calls out certification for product use; Sony's AOSP page exposes a licensing inquiry. Local lab feasibility and product distribution rights are separate questions.
 
-## Next research gate
+## Next actions — ordered
 
-1. Obtain original Windows 10 22H2 and Server 2022 install.wim/install.esd metadata or mounted component stores. No ISO/WIM/ESD/CAB/MSU media was found in the current Library inventory.
-2. Resolve CBS package/component identities, MUMs, manifests, system catalogs, architecture and applicability for microsoft_bluetooth_a2dp_src.inf, microsoft_bluetooth_a2dp.inf and btampm.inf. Determine whether the A2DP components are client-only or simply absent from the Server image.
-3. Reconcile the DriverStore and System32 BthA2dp.sys copies by exact path/version/hash. Complete PE exports, delay-import and API-set analysis on the exact package binaries.
-4. Compare every imported function with exports from the exact Server 2022 20348.5761 ntoskrnl, HAL, KS, CNG, WPP, WDF and security components.
-5. Only if the original package and dependencies are compatible, stage the unmodified inbox package in a disposable Server 2022 VM.
-6. Runtime gates remain separate: service start → BTHENUM enumeration → profile-driver load → A2DP endpoint → SBC negotiation → actual stereo audio. LDAC negotiation and real LDAC audio require a different LDAC-capable sink.
+1. Finish the exact Win10 package binary audit with a retained Dependencies/PEInspector/pefile workflow: file version, architecture, imports, forwarded/delay imports, exports, API-set resolution, dynamic-load clues, catalog membership and SHA-256. Never merge the DriverStore and System32 BthA2dp copies.
+2. Independently obtain official Windows 10 22H2 and Server 2022 20348.5761 WIM/ESD or servicing-package metadata. Identify CBS package/component identities, MUMs, manifests, system catalogs and applicability. Do not ask the user to resend the already captured ZIP.
+3. Resolve every imported symbol against the exact Server 20348.5761 kernel/HAL/KS/CNG/WPP/WDF/security exports. Keep static compatibility distinct from INF/CBS applicability.
+4. If those checks pass, test the unmodified Microsoft package only in a disposable Server 2022 VM. Separate service start, device enumeration, driver load, endpoint creation, SBC negotiation and actual audio.
+5. After SBC works, choose a genuine LDAC-capable sink and evaluate a supported transport path. BlueCaster is a candidate only after Server compatibility, USB/WinUSB and BTstack licensing are resolved; otherwise assess the existing custom stack without repeating closed ACX experiments.
 
-## Explicit blockers and safety
+## Safety and scope
 
-- WIM/ESD component metadata is the remaining input blocker; do not request another copy of the already captured Win10 ZIP.
-- No fresh physical-host query was performed in this run. The last recorded OPPO A2DP node was present/enumerated on the local Intel Bluetooth radio (LOCALMFG&0002) and bound to the project's own oem75.inf (provider LDAC A2DP Project, service LdacA2dp, version 0.2.325.1600); Code 37 / 0xC000000D occurred at custom driver start. This is not a test of the Microsoft Win10 package. The record remains historical.
-- No physical Server changes, driver installation, service/device restart, BCD/security/test-signing or certificate changes, OS update/rollback, or prepare/upgrade/install/rollback script execution.
-- No new ACX bind-probe. CI #248 and #255 remain closed historical evidence.
-- No HFP/microphone work.
+- Physical Server 2022 remains read-only. No driver install, service/device restart, BCD/security/test-signing/certificate change, OS update/rollback or prepare/upgrade/install/rollback script.
+- No code changes in this pass. Documentation only on `docs/project-source-reorg`.
+- No build, CI run, runtime test or fresh physical-host query was performed.
+- CI #248 and #255 remain closed historical ACX evidence; no ACX bind-probe is the next step.
+- HFP/microphone remains out of scope.
 
-Detailed audit: [WIN10_COMPONENT_AUDIT.md](WIN10_COMPONENT_AUDIT.md). Evidence: E-114–E-128 in [EVIDENCE.md](EVIDENCE.md).
+Detailed file map: [WIN10_COMPONENT_AUDIT.md](WIN10_COMPONENT_AUDIT.md). Pipeline: [WIN10_A2DP_PIPELINE.md](WIN10_A2DP_PIPELINE.md). Evidence: E-136–E-142 in [EVIDENCE.md](EVIDENCE.md).
 
 ---
 

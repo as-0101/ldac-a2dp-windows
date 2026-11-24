@@ -66,3 +66,13 @@ CI #16 Library copies were independently re-materialized and matched against the
 - Runtime: no service/device/driver/endpoint/audio test performed.
 - Physical host: no live query or mutation performed. No driver install, device restart, BCD/security/test-signing, certificate or OS changes.
 - Decision: next gate is Win10/Server WIM component ownership and exact PE import/export compatibility. CI #248 and #255 remain closed; no ACX bind-probe.
+
+
+## 2026-11-24 02:19 — codec/component research only
+
+- No code, driver, service or package build was run.
+- No CI workflow was started; no CI run ID or build artifact was created.
+- No binary was downloaded, installed or modified.
+- Only documentation on `docs/project-source-reorg` was updated.
+- No runtime stage was tested; no fresh physical-host query or mutation occurred.
+- The next build/runtime gate remains blocked on exact package catalog/CBS ownership and PE/API compatibility. CI #248/#255 remain closed historical ACX evidence.
