@@ -26,6 +26,13 @@ $ExpectedWin10CatalogSha256 = "78772FA12959C072D687283F08D08367B8A8EF1A2F07D7B72
 $script:Win10CatalogTargetFiles = @()
 $script:StagePackageFiles = @()
 $script:StagePackageCatalogPath = $null
+$script:StagePackageCatalogName = $null
+$script:StagePackageCatalogSha256 = $null
+$script:StagePackageCatalogReady = $false
+$script:StagePackageCatalogReason = "Catalog membership has not been evaluated."
+$script:StageCatalogMatches = @{}
+$script:StageCatalogInventory = @()
+$script:StageCatalogScanMode = $null
 $script:StageTestResult = $null
 New-Item -ItemType Directory -Path $OutputDirectory -Force | Out-Null
 New-Item -ItemType Directory -Path $PeDirectory -Force | Out-Null
@@ -545,16 +552,43 @@ function Get-TargetCatalogMembership {
         (Join-Path $MountDirectory "Windows\System32\CatRoot2"),
         $driverStore
     )
+    $catalogInventory = @()
     $catalogFiles = foreach ($root in $catalogRoots) {
         if (Test-Path -LiteralPath $root) {
-            Get-ChildItem -LiteralPath $root -Filter "*.cat" -File -Recurse -ErrorAction SilentlyContinue
+            # Servicing CATs may carry Hidden/System attributes in an offline image.
+            $found = @(Get-ChildItem -LiteralPath $root -Filter "*.cat" -File -Recurse -Force -ErrorAction SilentlyContinue)
+            $catalogInventory += [pscustomobject]@{
+                root=$root.Substring($MountDirectory.Length).TrimStart("\\")
+                exists=$true
+                catalogCount=$found.Count
+                hiddenOrSystemCount=@($found | Where-Object { ($_.Attributes -band [IO.FileAttributes]::Hidden) -ne 0 -or ($_.Attributes -band [IO.FileAttributes]::System) -ne 0 }).Count
+            }
+            $found
+        } else {
+            $catalogInventory += [pscustomobject]@{
+                root=$root.Substring($MountDirectory.Length).TrimStart("\\")
+                exists=$false
+                catalogCount=0
+                hiddenOrSystemCount=0
+            }
         }
     }
     $catalogFiles = @($catalogFiles | Sort-Object FullName -Unique)
+    $script:StageCatalogInventory = $catalogInventory
+    $script:StageCatalogScanMode = "all-catalog-roots"
     if ($Role -eq "win10" -and $StagePackageOnRunner) {
-        $knownCatalogs = @($catalogFiles | Where-Object { $_.Name -ieq $ExpectedWin10CatalogName })
-        if ($knownCatalogs.Count -ne 1) { throw "Expected exact Win10 servicing CAT was not found: $ExpectedWin10CatalogName" }
-        $catalogFiles = $knownCatalogs
+        $historicalCatalogs = @($catalogFiles | Where-Object { $_.Name -ieq $ExpectedWin10CatalogName })
+        $ownerCatalogs = @($catalogFiles | Where-Object { $_.Name -like "Microsoft-Windows-Client-Desktop-Required-Package~*.cat" })
+        if ($historicalCatalogs.Count -gt 0) {
+            $catalogFiles = $historicalCatalogs
+            $script:StageCatalogScanMode = "historical-exact-catalog"
+        } elseif ($ownerCatalogs.Count -gt 0) {
+            $catalogFiles = $ownerCatalogs
+            $script:StageCatalogScanMode = "client-desktop-owner-catalogs"
+        } else {
+            $script:StageCatalogScanMode = "all-catalogs-fallback"
+        }
+        Write-Host "[CATALOG] roots=$($catalogInventory.Count); discovered=$(@($catalogFiles).Count); mode=$($script:StageCatalogScanMode); historicalNamePresent=$($historicalCatalogs.Count -gt 0); ownerCatalogs=$($ownerCatalogs.Count)"
     }
 
     $signToolPath = $null
@@ -590,6 +624,8 @@ function Get-TargetCatalogMembership {
             catalogSignature=$null
             catalogsScanned=0
             catalogCount=$catalogFiles.Count
+            catalogScanMode=$script:StageCatalogScanMode
+            catalogRootInventory=$catalogInventory
             verificationPolicy=$target.policy
             signtool=$signToolPath
             output=$null
@@ -627,15 +663,32 @@ function Get-TargetCatalogMembership {
         $base.catalogSha256 = if ($match) { (Get-FileHash -LiteralPath $match.FullName -Algorithm SHA256).Hash.ToUpperInvariant() } else { $null }
         $base.catalogSignature = if ($match) { Get-SignatureRecord -Path $match.FullName } else { $null }
         if ($Role -eq "win10" -and $StagePackageOnRunner -and $match) {
-            if ($match.Name -ine $ExpectedWin10CatalogName -or $base.catalogSha256 -ne $ExpectedWin10CatalogSha256) {
-                throw "Unexpected Win10 A2DP CAT identity: $($match.Name) / $($base.catalogSha256)"
+            $script:StageCatalogMatches[$target.name] = [pscustomobject]@{
+                catalogName=$match.Name
+                catalogFullPath=$match.FullName
+                catalogSha256=$base.catalogSha256
+                matchesHistoricalReference=($match.Name -ieq $ExpectedWin10CatalogName -and $base.catalogSha256 -eq $ExpectedWin10CatalogSha256)
             }
-            $catalogCopyPath = Join-Path $StagePackageDirectory $match.Name
-            if (-not (Test-Path -LiteralPath $catalogCopyPath)) { Copy-Item -LiteralPath $match.FullName -Destination $catalogCopyPath -Force }
-            $script:StagePackageCatalogPath = $catalogCopyPath
         }
         $base.output = $lastOutput
         [pscustomobject]$base
+    }
+    if ($Role -eq "win10" -and $StagePackageOnRunner) {
+        $requiredNames = @("BthA2dp.sys", "BtaMPM.sys", "microsoft_bluetooth_a2dp.inf", "microsoft_bluetooth_a2dp_src.inf", "btampm.inf")
+        $matched = @($requiredNames | Where-Object { $script:StageCatalogMatches.ContainsKey($_) } | ForEach-Object { $script:StageCatalogMatches[$_] })
+        $uniqueHashes = @($matched | Select-Object -ExpandProperty catalogSha256 -Unique)
+        if ($matched.Count -eq $requiredNames.Count -and $uniqueHashes.Count -eq 1) {
+            $script:StagePackageCatalogName = $matched[0].catalogName
+            $script:StagePackageCatalogSha256 = $uniqueHashes[0]
+            $script:StagePackageCatalogPath = Join-Path $StagePackageDirectory $script:StagePackageCatalogName
+            Copy-Item -LiteralPath $matched[0].catalogFullPath -Destination $script:StagePackageCatalogPath -Force
+            $script:StagePackageCatalogReady = $true
+            $script:StagePackageCatalogReason = "All five exact package files resolve to one common catalog."
+        } else {
+            $script:StagePackageCatalogReady = $false
+            $script:StagePackageCatalogReason = "A single common catalog was not verified for all five exact package files. matched=$($matched.Count)/$($requiredNames.Count); uniqueCatalogHashes=$($uniqueHashes.Count)."
+        }
+        Write-Host "[CATALOG] commonPackageCatalogReady=$($script:StagePackageCatalogReady); $($script:StagePackageCatalogReason)"
     }
     return $results
 }
@@ -691,6 +744,7 @@ function Invoke-StagePackageSmokeTest {
         runner=$null
         package=$null
         signatureChecks=@()
+        catalogSignatureVerification=$null
         preCatalogStage=$null
         catalogDbRegistration=$null
         postCatalogStage=$null
@@ -724,8 +778,13 @@ function Invoke-StagePackageSmokeTest {
             throw "Runner is not Windows Server 2022 build 20348; refusing package staging."
         }
 
-        $catalog = Get-ChildItem -LiteralPath $StagePackageDirectory -Filter "*.cat" -File | Select-Object -First 1
-        if (-not $catalog) { throw "The exact Win10 servicing CAT was not copied to the stage directory." }
+        if (-not $script:StagePackageCatalogReady -or -not $script:StagePackageCatalogPath) {
+            throw "Original package catalog prerequisite is not satisfied: $($script:StagePackageCatalogReason)"
+        }
+        if (-not (Test-Path -LiteralPath $script:StagePackageCatalogPath)) {
+            throw "Verified package CAT copy is missing: $($script:StagePackageCatalogPath)"
+        }
+        $catalog = Get-Item -LiteralPath $script:StagePackageCatalogPath
         $expected = [ordered]@{
             "BthA2dp.sys"="5FBA5EE606AAC39D9CBDA51C0A14DBABBB3A9B47BBD8AC5485ED137B4F354EC3"
             "BtaMPM.sys"="DA5CBBDCE6AC511EF8400E121DF6B6EACA7D05C0F40A01F7353CE9F220EB3DCD"
@@ -742,13 +801,15 @@ function Invoke-StagePackageSmokeTest {
             $packageFiles += [pscustomobject]@{ name=$name; sizeBytes=(Get-Item -LiteralPath $path).Length; sha256=$hash }
         }
         $catalogHash = (Get-FileHash -LiteralPath $catalog.FullName -Algorithm SHA256).Hash.ToUpperInvariant()
-        if ($catalog.Name -ine $ExpectedWin10CatalogName -or $catalogHash -ne $ExpectedWin10CatalogSha256) {
-            throw "CAT identity mismatch: $($catalog.Name) / $catalogHash"
+        if ($catalog.Name -ine $script:StagePackageCatalogName -or $catalogHash -ne $script:StagePackageCatalogSha256) {
+            throw "Verified CAT copy identity mismatch: $($catalog.Name) / $catalogHash; expected $($script:StagePackageCatalogName) / $($script:StagePackageCatalogSha256)"
         }
         $result.package = [ordered]@{
             catalogName=$catalog.Name
             catalogSha256=$catalogHash
             catalogSizeBytes=$catalog.Length
+            catalogSourceImagePath=if ($script:StageCatalogMatches.Count -gt 0) { (@($script:StageCatalogMatches.Values)[0]).catalogFullPath } else { $null }
+            matchesHistoricalCatalogReference=($catalog.Name -ieq $ExpectedWin10CatalogName -and $catalogHash -eq $ExpectedWin10CatalogSha256)
             files=$packageFiles
             originalInfHasCatalogFile=$false
             sourceInf="microsoft_bluetooth_a2dp_src.inf"
@@ -762,6 +823,14 @@ function Invoke-StagePackageSmokeTest {
             Select-Object -First 1
         if (-not $signTool) { throw "Windows SDK x64 SignTool not found on Server 2022 runner." }
         $signToolPath = $signTool.FullName
+        $catalogVerifyOutput = & $signToolPath verify /pa /v $catalog.FullName 2>&1
+        $catalogVerifyExit = $LASTEXITCODE
+        $result.catalogSignatureVerification = [ordered]@{
+            exitCode=$catalogVerifyExit
+            status=if ($catalogVerifyExit -eq 0) { "CATALOG_SIGNATURE_VALID" } else { "CATALOG_SIGNATURE_FAILED" }
+            output=($catalogVerifyOutput | Out-String).Trim()
+        }
+        if ($catalogVerifyExit -ne 0) { throw "SignTool could not validate the original package catalog signature." }
         $checks = @(
             @{ name="BthA2dp.sys"; policy="/kp" },
             @{ name="BtaMPM.sys"; policy="/kp" },
@@ -1058,8 +1127,9 @@ function Save-AuditReports {
 - Win10 package file copies are temporary and removed before the workflow uploads metadata.
 - No Microsoft binary payloads or ISO files are uploaded by this workflow; only metadata and text reports are retained.
 - Static export presence does not prove driver load or runtime compatibility.
-- When -StagePackageOnRunner is used, the exact original Win10 CAT is verified and the unmodified A2DP Source INF is staged only into the disposable GitHub-hosted Server 2022 DriverStore. The command never uses /install and never binds or starts a device.
-- The stage smoke test records its runner build/UBR, SignTool verification, catalog-database add/remove, PnPUtil result, SetupAPI log tail and cleanup. It does not prove device enumeration, BthA2dp service start, driver load, endpoint creation, SBC negotiation or audio.
+- When -StagePackageOnRunner is used, the audit searches offline Win10 catalog roots (including hidden/system files) for one catalog that verifies all five exact package files. The previously observed 10.0.19041.5917 CAT is a reference identity, not a hard-coded requirement; another servicing CAT is acceptable only if SignTool verifies the exact SYS/INF members and the CAT signature.
+- If no single common catalog is established, staging is skipped and the artifact records per-root inventory and membership results. If it is established, the unmodified A2DP Source INF is staged only into the disposable GitHub-hosted Server 2022 DriverStore. The command never uses /install and never binds or starts a device.
+- The stage smoke test records its runner build/UBR, catalog signature and member verification, catalog-database add/remove, PnPUtil result, SetupAPI log tail and cleanup. It does not prove device enumeration, BthA2dp service start, driver load, endpoint creation, SBC negotiation or audio.
 - Per-image status is recorded in manifest.json; completed image results are checkpointed before the next image starts.
 "@ | Set-Content -LiteralPath (Join-Path $OutputDirectory "README.md") -Encoding utf8
 }
@@ -1112,10 +1182,21 @@ if ($hadFailures) {
 }
 
 if ($StagePackageOnRunner) {
-    try {
-        $script:StageTestResult = Invoke-StagePackageSmokeTest
-    } catch {
-        $script:StageTestResult = [pscustomobject]@{ status="FAILED"; error=$_.Exception.Message; scope="Disposable GitHub-hosted Server 2022 runner only; no physical-host access." }
+    if (-not $script:StagePackageCatalogReady) {
+        $script:StageTestResult = [pscustomobject]@{
+            status="BLOCKED_NO_COMMON_CATALOG"
+            error=$script:StagePackageCatalogReason
+            catalogScanMode=$script:StageCatalogScanMode
+            catalogInventory=$script:StageCatalogInventory
+            matchedFiles=$script:StageCatalogMatches
+            scope="Disposable GitHub-hosted Server 2022 runner only; staging was skipped because one common catalog covering all five exact package files was not established."
+        }
+    } else {
+        try {
+            $script:StageTestResult = Invoke-StagePackageSmokeTest
+        } catch {
+            $script:StageTestResult = [pscustomobject]@{ status="FAILED"; error=$_.Exception.Message; scope="Disposable GitHub-hosted Server 2022 runner only; no physical-host access." }
+        }
     }
     $script:StageTestResult | ConvertTo-Json -Depth 24 | Set-Content -LiteralPath $StageTestReportPath -Encoding utf8
     Save-AuditReports -Results $results
