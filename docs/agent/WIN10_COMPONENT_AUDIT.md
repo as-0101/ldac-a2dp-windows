@@ -460,3 +460,8 @@ The exact Server 20348.5761 INF inventory shows that the A2DP common install's e
 
 The Win10 counterparts have different versions/hashes. Keep the Server versions; do not transplant KS/WDMAUDIO or MSSysFx unless a runtime trace proves a specific incompatibility.
 
+
+
+## 2026-11-24 — Package catalog discovery correction
+
+The five pinned Windows 10 A2DP package files remain unchanged. CI #4 failed before staging because the script hard-required the historical 19041.5917 CAT filename. The corrected experiment searches hidden/system CAT files and CBS owner-package candidates, then requires one common catalog to verify all five exact file hashes and the catalog signature. If no common catalog is found, the report is retained and staging is skipped. This avoids confusing a missing catalog filename with a Windows trust failure.

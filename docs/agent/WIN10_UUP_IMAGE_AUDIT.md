@@ -282,3 +282,12 @@ Artifact 14910689667 (152,010 bytes, SHA-256 `431f94d613a177c2d78735fad72844aab1
 Experimental script commit [4d5734fb](https://github.com/as-0101/ldac-a2dp-windows/commit/4d5734fb19929dc332dfb572e9824151c470b62b) safely captures optional exception metadata and logs each offline audit subroutine. This is diagnostic hardening only; it does not establish the root cause. CI #4 [45381650079](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45381650079) is the diagnostic rerun; step 7 was active and no artifact was available at the last check.
 
 The runner's UBR 5870 is not the target UBR 5761. Even a successful CI #4 result must be labelled with the actual runner UBR and cannot be called exact-5761 proof.
+
+
+## CI #4 — stage-smoke catalog discovery failure and correction (2026-11-24)
+
+Run [45381650079](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45381650079), job 138401917017, used Server 2022 Datacenter 20348.5870 and Win10 image 19045.5917. The offline image identity and PE audit completed. The script then failed at `Get-TargetCatalogMembership` line 556 because the exact historical CAT filename was not present in the enumerated catalog roots. The stage-smoke function was not reached; there is no Server-side SignTool member check, PnPUtil stage, catdb operation or compatibility result. CI #12 previously found that historical CAT and verified all five files, so the discrepancy remains a catalog-discovery/image-layout issue, not a trust rejection.
+
+Artifact 14918010587: 154,452 bytes; SHA-256 `b3f8f459cf468a44a7191554a95a0b43cec72c7c0c2650a687f1c4fab7dcf274`; Library `/LDAC Project/Incoming/CI-4-stage-smoke-failure.zip`, ID `libfile_f37d34e806088191b2e1d8d2a04bc8e3`.
+
+Corrective script commit [de392442](https://github.com/as-0101/ldac-a2dp-windows/commit/de3924424779a44b7d0d66ce2065c7f8dbae6655) no longer hard-requires the historical filename. It includes Hidden/System CATs, prefers the historical CAT if present, then CBS owner-package candidates, then all catalogs; it records per-root inventory, requires one common catalog for all five pinned files, verifies the CAT signature, and skips staging with a preserved blocked report if that condition is not met. CI #5 [45393451133](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45393451133) is the corrected rerun.

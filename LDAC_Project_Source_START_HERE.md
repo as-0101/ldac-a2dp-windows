@@ -1,3 +1,12 @@
+## Active status — 2026-11-24 (CI #4 reviewed; CI #5 running)
+
+- CI #4 [45381650079](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45381650079) ran on disposable Server 2022 Datacenter 20348.5870. Win10 19045.5917 extraction completed, but the test stopped before SignTool/PnPUtil because the stage script hard-required one historical CAT filename that was not found in the mounted image's catalog roots. This is a harness/catalog-discovery failure, not a Server trust rejection or driver compatibility result.
+- CI #4 artifact 14918010587, 154,452 bytes, SHA-256 `b3f8f459cf468a44a7191554a95a0b43cec72c7c0c2650a687f1c4fab7dcf274`, saved to Library `/LDAC Project/Incoming/CI-4-stage-smoke-failure.zip`, ID `libfile_f37d34e806088191b2e1d8d2a04bc8e3`.
+- Corrective script commit [de392442](https://github.com/as-0101/ldac-a2dp-windows/commit/de3924424779a44b7d0d66ce2065c7f8dbae6655): include Hidden/System CATs, search historical then CBS owner-package catalogs then all catalogs, require one common CAT for all five pinned files, verify CAT signature, and preserve an explicit blocked report if no common CAT exists.
+- CI #5 [45393451133](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45393451133) is running the corrected stage-only test. No result yet.
+- The test still does not install/bind a device, start BthA2dp, load a driver, create an endpoint or test SBC/audio. Runner UBR must be recorded; 20348.5870 is not target 20348.5761.
+- Physical Server 2022 untouched; `server-2022-oppo` frozen; ACX bind-probe parked.
+
 ## ACTIVE REVIEW — stage-smoke #3 tooling failure; #4 diagnostic rerun
 
 - CI #3 [45371687882](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45371687882), job 138367259323, completed with `failure`. Runner: Windows Server 2022 Datacenter build 20348, **UBR 5870**; preflight steps 1–6 passed.

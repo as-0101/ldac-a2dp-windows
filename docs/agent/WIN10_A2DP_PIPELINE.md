@@ -434,3 +434,8 @@ Decision: do not transplant the Win10 KS/WDMAUDIO/MSSysFx components. The minima
 - [Installing a catalog with SignTool](https://learn.microsoft.com/en-us/windows-hardware/drivers/install/installing-a-catalog-file-by-using-signtool): SignTool catdb adds/removes a catalog; by default it targets the system component and driver database.
 - [PnPUtil command syntax](https://learn.microsoft.com/en-us/windows-hardware/drivers/devtest/pnputil-command-syntax): /add-driver stages a package into DriverStore; /install is a separate flag that installs/updates matching devices. The stage-smoke harness deliberately omits /install.
 
+
+
+## 2026-11-24 — Stage-smoke status
+
+CI #4 [45381650079](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45381650079) did not reach DriverStore staging. It failed on a hard-coded historical CAT filename lookup, despite CI #12 having previously found that CAT and verified the five exact package files. Treat this as an unresolved catalog discovery inconsistency, not a compatibility failure. The corrected CI #5 [45393451133](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45393451133) is running. No endpoint, service start, driver load, SBC or audio proof exists yet.
