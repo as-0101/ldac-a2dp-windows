@@ -568,7 +568,7 @@ Physical Server 2022 remains untouched: no driver install, certificate change, B
 - OPPO Enco Buds2 has a healthy Stereo endpoint and Hands-Free endpoints; all AudioEndpoint instances report `CM_PROB_NONE`.
 - The classic A2DP profile devnode is `BTHENUM\{0000110B-0000-1000-8000-00805F9B34FB}_LOCALMFG&0002\...`, bound to `microsoft_bluetooth_a2dp_src.inf` as Microsoft Bluetooth A2dp Source.
 - `BthA2dp.sys` is running, version 10.0.19041.4355, SHA-256 `5FBA5EE606AAC39D9CBDA51C0A14DBABBB3A9B47BBD8AC5485ED137B4F354EC3`.
-- HFP components `BthHFEnum`/`BthHFAud` and AVRCP transport are also running. BTAGService, BthAvctpSvc, bthserv, Audiosrv and AudioEndpointBuilder are running.
+- An earlier snapshot showed HFP/AVRCP components and BTAGService/BthAvctpSvc present. The later 2026-11-19 Server environment report (E-133) shows BTAGService/BthAvctpSvc not installed, while bthserv, Audiosrv and AudioEndpointBuilder are running.
 - Microsoft documents classic A2DP as a Windows profile driver communicating with BthPort through WDM/IRPs. ACX is used in the documented Bluetooth LE Audio VSAP architecture, not as the classic A2DP profile-driver model.
 - Microsoft states Windows Server SKUs do not include in-box Bluetooth support. Therefore the leading investigation is missing classic Bluetooth/profile package support and INF/service binding on Server, not an isolated missing DLL.
 - Collector limitation: optional PnpDevice module localization errors produced an empty Relevant-PnP-Devices.csv; signed-driver inventory and endpoint dump remain valid. The actual A2DP INF and DriverStore package were not captured.
@@ -592,7 +592,7 @@ The re-uploaded archive is byte-identical to the first reference archive (SHA-25
 - Profile INF: `microsoft_bluetooth_a2dp_src.inf`; BTHENUM service GUID `0000110B-0000-1000-8000-00805F9B34FB`; class MEDIA, section `BthA2dpSrc`.
 - MEDIA class registration lists `KS=1` and IncludedInfs `ks.inf`, `wdmaudio.inf`, `BtaMpm.inf`.
 - A2DP service registry key has Start=3 and Owners=`microsoft_bluetooth_a2dp_src.inf`; its Enum child contains the OPPO A2DP profile devnode.
-- HFP components BthHFEnum/BthHFAud and AVRCP transport are also running; BTAGService, BthAvctpSvc, bthserv, Audiosrv and AudioEndpointBuilder are running.
+- Earlier service snapshot only: HFP/AVRCP components and BTAGService/BthAvctpSvc were reported present. The later 2026-11-19 environment report (E-133) records BTAGService/BthAvctpSvc absent and bthserv/Audiosrv/AudioEndpointBuilder running.
 - The PnP inventory CSV is empty because the initial collector's PnpDevice module call failed; signed-driver CSV and registry/endpoint exports are still useful. The A2DP INF/DriverStore package itself was not captured.
 
 ### Critical architecture correction
