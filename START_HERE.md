@@ -1,5 +1,18 @@
 # LDAC A2DP — project entry
 
+## Current priority — 2026-11-24
+
+The active path is exact Windows 10 / Server 2022 component extraction and static compatibility analysis. Do not return to ACX/WDK bind-probe work.
+
+- CI #463 completed package discovery: Windows 10 A2DP SYS entries in cumulative-update CABs are PSF forward-delta payloads, not full PE files.
+- The Server 2022 KB5126655 package contains Bluetooth core packages but no A2DP INF/SYS or BtaMPM references.
+- Winbindex symbol-server retrieval is not exact for the captured files: same timestamp/size collisions returned different file versions and SHA-256 values.
+- Exact full UUP images are now being extracted: Windows 10 19045.5917 and Server 2022 20348.5761. UUP image audit run #3 is in progress.
+- No SBC negotiation, A2DP endpoint, or actual audio success is claimed yet. No physical server actions have been taken.
+
+See WIN10_UUP_IMAGE_AUDIT.md for evidence, run IDs, hashes, and acceptance criteria.
+
+
 **Code branch:** [server-2022-oppo](https://github.com/as-0101/ldac-a2dp-windows/tree/server-2022-oppo)  
 **Documentation branch:** [docs/project-source-reorg](https://github.com/as-0101/ldac-a2dp-windows/tree/docs/project-source-reorg)  
 **Current direction:** 2026-11-24 02:19 Europe/Kyiv
