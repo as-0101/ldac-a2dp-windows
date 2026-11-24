@@ -861,3 +861,15 @@ Decision: no new LDAC encoder/decoder work is needed. Keep the existing AOSP enc
 - Interpretation: the Server image does not pre-register a system catalog containing the Win10 A2DP file hashes. This is not proof that the original CAT cannot be validated or added to the target's catalog database. The artifact's catalogSignature field is null, so signer subject/thumbprint were not captured.
 - No package staging, driver load, device enumeration, endpoint, SBC or audio test occurred in CI #12. No physical-host access.
 
+
+## E-177 — Server KS/WDMAUDIO INF dependency closure (2026-11-24)
+
+CI #12 artifact inf-summary.txt confirms the Server 20348.5761 image already contains the INF sections consumed by the Win10 A2DP common install. These Server INFs are different binaries from Win10 but expose the required registration sections; do not transplant the Win10 copies.
+
+| INF | Win10 version / SHA-256 | Server version / SHA-256 | Required sections |
+|---|---|---|---|
+| ks.inf | 10.0.19041.1 / 40BCDDCC32E331D1290C0EE1DD1115FC53736308E160B9C2151F83E4A7A4AAD9 | 10.0.20348.1 / 88EA223C8DB5F1DD17381F64BD264CCBFE946F1D1EF2DBA06A0992F60FF3ED94 | KS.Registration |
+| wdmaudio.inf | 10.0.19041.5072 / C03AE27DCC719043344DAAF9A933F54A1522F7FA6974A69249376FCAA54B7CC1 | 10.0.20348.5756 / 63BCE2D74EC4DCC08ACA21B2CDFC1E981906F3A48BEF61FB96D2446014C7B833 | WDMAUDIO.Registration; mssysfx.CopyFilesAndRegister |
+
+The Server versions contain the required section names and corresponding registration/copy directives. This supports the minimal package boundary: keep Server ks.inf, wdmaudio.inf and MSSysFx components; transfer only the A2DP Source/common INF and BtaMPM companion files if the stage test proves they can be accepted. Static INF-section presence is not runtime endpoint proof.
+
