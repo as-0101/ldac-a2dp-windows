@@ -251,3 +251,13 @@ Winbindex README: https://github.com/m417z/winbindex. It states that full downlo
 |---|---|---|---|
 | Bluetooth version/profile support in previous Windows versions | https://learn.microsoft.com/en-us/windows-hardware/drivers/bluetooth/bluetooth-support-in-previous-windows-versions | All Windows Server SKUs lack in-box Bluetooth wireless support; third-party IHV drivers may be available. The A2DP/AVDTP profile list is for Windows 10. | Does not say that no third-party Bluetooth stack can run on Server. |
 | Bluetooth component guidelines | https://learn.microsoft.com/en-us/windows-hardware/design/component-guidelines/bluetooth | QD ID 130847 lists Windows Server 2022 as a Bluetooth Host Subsystem qualification. | Host-subsystem qualification is not proof of an in-box A2DP profile or codec. |
+
+
+## 2026-11-24 new artifacts
+
+- docs/agent/WIN10_UUP_IMAGE_AUDIT.md — PSF delta finding, Winbindex collision evidence, exact UUP image IDs, acceptance criteria.
+- Experimental branch experiment/win10-a2dp-uup-image-audit-20261124:
+  - tools/research/extract_uup_image_a2dp.ps1 — offline UUP image extraction and PE metadata comparison.
+  - .github/workflows/uup-image-audit.yml — disposable Windows Server 2022 CI workflow; metadata-only artifacts.
+- CI #463 artifacts are attached to https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45311922753.
+- UUP image audit run #3: https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45317582562, in progress.
