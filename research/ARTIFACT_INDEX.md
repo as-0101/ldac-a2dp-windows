@@ -182,7 +182,7 @@ The 23:49 archive is the current package source. It supersedes the earlier 20:49
 | File | Version | Size | SHA-256 | Notes |
 |---|---|---:|---|---|
 | DriverStore BthA2dp.sys | 10.0.19041.4355 | 282,624 | 5FBA5EE606AAC39D9CBDA51C0A14DBABBB3A9B47BBD8AC5485ED137B4F354EC3 | Package copy; PE32+ x64; E-119 reports direct imports from ntoskrnl.exe only; no delay-import directory |
-| System32 BthA2dp.sys | Not recorded | 279,040 | 0442A18BBED4E323265C66561C8F8C171D8E934E9089C12B94D1DFDBB057B737 | Different copy; 8 import descriptors / 144 functions; do not merge with package-copy report |
+| System32 BthA2dp.sys | 10.0.19041.1 (secondary public corroboration; hash not matched) | 279,040 | 0442A18BBED4E323265C66561C8F8C171D8E934E9089C12B94D1DFDBB057B737 | Different older copy; 8 import descriptors / 144 functions; do not merge with package-copy report |
 | BtaMPM.sys | 10.0.19041.5848 | 43,008 | DA5CBBDCE6AC511EF8400E121DF6B6EACA7D05C0F40A01F7353CE9F220EB3DCD | Imports ntoskrnl.exe, cng.sys and WppRecorder.sys |
 | btampm.inf | 10.0.19041.5848 | — | c657a6b32ac8ccfdeef3c12630686b87c973dd114bee73aec288d86b989961ef | Class=SYSTEM, CopyFilesOnly for BtaMPM.sys |
 | microsoft_bluetooth_a2dp.inf | 10.0.19041.4355 | — | 4f3b988b658e1e7f8b97e645c1c92be0ba270d4db76832dab871516eedcbcf0c | Class=MEDIA; Include/Needs closure and BthA2dp service registration captured |
