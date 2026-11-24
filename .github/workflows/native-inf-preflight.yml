@@ -193,3 +193,35 @@ jobs:
           }
           "CBS_SCAN total=$($files.Count) parsed=$ok unreadable=$bad profile_packages=$matchesFound bluetooth_identity_controls=$positive synthetic_hits=$($synthetic.Count)"
           if ($ok -eq 0 -or $positive -eq 0) { throw 'CBS coverage control failed' }
+      - name: Resolve Bluetooth deployment component and enumerate its dependencies
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $base = Join-Path $env:windir 'WinSxS/Manifests'
+          $owners = @(Get-ChildItem (Join-Path $env:windir 'servicing/Packages') -Filter 'Microsoft-OneCore-Bluetooth-Package~*.mum')
+          $deploy = foreach ($o in $owners) {
+            $d = [xml](Get-Content -Raw -LiteralPath $o.FullName)
+            foreach ($n in $d.SelectNodes("//*[local-name()='assemblyIdentity']")) {
+              if ($n.name -like '*Bluetooth*Deployment*') { "OWNER_DEP $($n.OuterXml)" | Write-Host; $n.name }
+            }
+          }
+          if (!$deploy) { throw 'No deployment identity in owner MUM' }
+          $files = @(Get-ChildItem $base -Filter '*blu*' -File | Where-Object { $_.Name -match 'deployment|deploy|bluetooth|bthport' })
+          foreach ($f in $files) {
+            $b = [IO.File]::ReadAllBytes($f.FullName)
+            $magic = [BitConverter]::ToString($b,0,[Math]::Min(12,$b.Length))
+            "MANIFEST $($f.Name) prefix=$magic"
+          }
+          $all = @(Get-ChildItem $base -Filter '*.manifest' -File)
+          foreach ($name in @($deploy | Sort-Object -Unique)) {
+            $candidates = @($all | Where-Object { $_.Name -like "*_${name}_*" -or ($_.Name -match 'blu.*deploy|micro.*blu.*ment_|micro.*onecore.*\.\..*deployment') })
+            "DEPLOY_CANDIDATES identity=$name count=$($candidates.Count)"
+            foreach ($f in $candidates) {
+              $doc = [Xml.XmlDocument]::new()
+              try { $doc.Load($f.FullName) } catch { "PACKED file=$($f.Name) prefix=$([BitConverter]::ToString([IO.File]::ReadAllBytes($f.FullName),0,12))"; continue }
+              $id = $doc.DocumentElement.SelectSingleNode("./*[local-name()='assemblyIdentity']")
+              if ($id.name -ne $name) { continue }
+              "DEPLOY_READ $($f.Name)"
+              foreach ($dep in $doc.SelectNodes("//*[local-name()='dependency']//*[local-name()='assemblyIdentity'] | //*[local-name()='file']")) { "MEMBER $($dep.GetAttribute('name'))" }
+            }
+          }
