@@ -73,8 +73,10 @@ The separate btampm.inf is Class=SYSTEM, DriverVer 10.0.19041.5848, x64-only. It
 | File/copy | Version | Size | SHA-256 | PE / imports | Status |
 | --- | --- | ---: | --- | --- | --- |
 | DriverStore BthA2dp.sys | 10.0.19041.4355 | 282,624 | 5FBA5EE606AAC39D9CBDA51C0A14DBABBB3A9B47BBD8AC5485ED137B4F354EC3 | PE32+ x64, native kernel; direct imports reported from ntoskrnl.exe only; no delay-import directory in E-119 | Package copy; export table not captured |
-| System32 BthA2dp.sys | Not recorded | 279,040 | 0442A18BBED4E323265C66561C8F8C171D8E934E9089C12B94D1DFDBB057B737 | PE32+ x64; 8 import descriptors / 144 imported functions | Different binary; do not merge with DriverStore report |
+| System32 BthA2dp.sys | 10.0.19041.1 (secondary public corroboration; exact hash match not proven) | 279,040 | 0442A18BBED4E323265C66561C8F8C171D8E934E9089C12B94D1DFDBB057B737 | PE32+ x64; 8 import descriptors / 144 imported functions | Different, older binary; do not merge with DriverStore report |
 | BtaMPM.sys | 10.0.19041.5848 | 43,008 | DA5CBBDCE6AC511EF8400E121DF6B6EACA7D05C0F40A01F7353CE9F220EB3DCD | PE32+ x64; imports ntoskrnl.exe, cng.sys and WppRecorder.sys; no delay-import directory in E-120 | Multi-profile management dependency, not codec |
+
+Secondary public Windows 10 driver inventories list a 279,040-byte BthA2dp.sys as version 10.0.19041.1, dated 2019-12-06/07. This matches the System32 copy's size, but those sources do not publish the 0442... SHA-256; therefore the hash-to-version mapping remains provisional. A separate Windows 10 DriverStore inventory corroborates btampm.inf 10.0.19041.5848, microsoft_bluetooth_a2dp.inf 10.0.19041.4355 and the source/sink INFs 10.0.19041.1.
 
 The System32 BthA2dp copy imports from:
 - ntoskrnl.exe — 70 functions
@@ -86,7 +88,7 @@ The System32 BthA2dp copy imports from:
 - WDFLDR.SYS — 4
 - ksecdd.sys — 7
 
-That report is explicitly for C:\\A2DP-Research\\Win10\\Windows\\System32\\drivers\\BthA2dp.sys. It is not the 282,624-byte DriverStore copy. The package copy's E-119 import report and the System32 copy's 8-descriptor report must remain separate until the exact source paths and file versions are reconciled.
+That report is explicitly for C:\\A2DP-Research\\Win10\\Windows\\System32\\drivers\\BthA2dp.sys. It is not the 282,624-byte DriverStore copy. The package copy's E-119 import report and the System32 copy's 8-descriptor report must remain separate until the exact source paths, VERSIONINFO and catalog membership are reconciled. The package copy's much smaller direct import closure (ntoskrnl only) is a promising compatibility lead, but does not rule out dynamic dependencies or INF/KS/MSSysFx requirements.
 
 The System32 BthA2dp copy imports BtaMpm functions such as GetRemoteDeviceProfileVersionAndAttribute, UpdatePlayStatus, Register/Unregister, UpdateSuspendStatus, RegisterPnp/UnregisterPnp and UpdateConnectionStatus. These are profile/control-management operations, not codec encode/decode entry points.
 
