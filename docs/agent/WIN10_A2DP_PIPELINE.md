@@ -166,3 +166,13 @@ The broader Win10 collector with `-IncludeDriverPackages` and the Win10/Server c
 
 Full file/PE map and source links: [WIN10_COMPONENT_AUDIT.md](WIN10_COMPONENT_AUDIT.md).
 
+
+
+> PnP correction: the last recorded OPPO BTHENUM 0x110B node is bound to the project's custom oem75.inf / LdacA2dp service, not Microsoft or Realtek. The node is present; Code 37 is a custom-driver start failure, not a Microsoft package test. See WIN10_COMPONENT_AUDIT.md.
+
+
+### Server services and residual Realtek package
+
+The archived Server 2022 environment report records bthserv, Audiosrv and AudioEndpointBuilder running; BTAGService and BthAvctpSvc not installed. BTAGService is HFP/audio-gateway (out of scope); BthAvctpSvc is AVCTP/AVRCP control and is not a prerequisite for the core A2DP audio stream. The core bthport.sys, bthusb.sys, bthenum.sys and bthmini.sys files are present, while btha2dp.sys is absent from System32\\drivers.
+
+A DriverStore folder named rtka2dp.inf_amd64_0fd0faf5e73b2466 is present, but the captured A2DP INF investigation did not export its INF bytes or version. Public Realtek driver catalogs associate legacy rtka2dp.inf packages with LOCALMFG&005D IDs; the OPPO node uses LOCALMFG&0002 and is actually bound to the custom oem75.inf. Do not treat rtka2dp.inf as the active OPPO driver or as an LDAC candidate.
