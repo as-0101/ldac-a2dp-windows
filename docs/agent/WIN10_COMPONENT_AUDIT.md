@@ -450,3 +450,13 @@ CI #12 [45354874225](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/4
 
 This means the Server image does not already contain the Win10 A2DP package catalog membership. It does not prove the CAT signature chain is rejected by Server. The dedicated stage-smoke branch tests explicit SignTool verification and PnPUtil staging without /install on a disposable Server 2022 runner. Do not alter the physical server or certificate stores.
 
+
+## Server KS/WDMAUDIO closure
+
+The exact Server 20348.5761 INF inventory shows that the A2DP common install's existing audio dependencies are present locally:
+
+- Server ks.inf 10.0.20348.1, SHA-256 88EA223C8DB5F1DD17381F64BD264CCBFE946F1D1EF2DBA06A0992F60FF3ED94; section KS.Registration exists.
+- Server wdmaudio.inf 10.0.20348.5756, SHA-256 63BCE2D74EC4DCC08ACA21B2CDFC1E981906F3A48BEF61FB96D2446014C7B833; sections WDMAUDIO.Registration and mssysfx.CopyFilesAndRegister exist.
+
+The Win10 counterparts have different versions/hashes. Keep the Server versions; do not transplant KS/WDMAUDIO or MSSysFx unless a runtime trace proves a specific incompatibility.
+
