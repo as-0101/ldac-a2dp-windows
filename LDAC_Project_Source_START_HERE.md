@@ -1,3 +1,11 @@
+## ACTIVE REVIEW — 2026-11-24 12:25 Europe/Kyiv
+
+- Stage-smoke run [45371687882](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45371687882) is still in progress at step 7 (UUP extraction, original-CAT verification and DriverStore staging). Preflight steps 1–6 passed; no artifact has been published yet.
+- The workflow verifies Windows Server 2022, build 20348 and InstallationType=Server, and records the runner UBR, but it does **not** enforce UBR 5761. Interpret its eventual result against the exact `runner.ubr` recorded in `stage-test.json`; do not label it an exact 20348.5761 test unless that value is 5761.
+- The test is limited to explicit verification of the five original Win10 package files and `pnputil /add-driver` without `/install`. It does not bind a device, start BthA2dp, load the driver, create an endpoint or test audio.
+- If required, `signtool catdb /v /u` adds the original CAT to the system component and driver catalog database by default; `/u` only requests a unique catalog filename. This is a catalog-database operation, not a certificate-store or trust-policy change. The script attempts catalog and DriverStore cleanup on the disposable runner. [Microsoft SignTool documentation](https://learn.microsoft.com/en-us/windows/win32/seccrypto/signtool).
+- Physical Server 2022 remains untouched. `server-2022-oppo` remains frozen; ACX bind-probe remains parked.
+
 > **LDAC encoder provenance — 2026-11-24**
 >
 > The existing project already contains the AOSP Sony LDAC encoder from upstream commit eeee1a3f (imported in repository commit 95bb92866b0d77de20ee94694eb4be2979635947). CMake builds ldacBT_enc and ldacBT_abr as STATIC libraries; service/encoder.cpp calls ldacBT_get_handle, ldacBT_init_handle_encode, ldacBT_encode and ldac_ABR_Proc, then frames output with the project's AVDTP code. There is no prebuilt Windows LDAC DLL in this repository. The vendored METADATA does not declare a semantic version, so do not label it 2.0.2 without separate provenance.
