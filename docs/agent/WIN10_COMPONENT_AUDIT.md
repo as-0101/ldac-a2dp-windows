@@ -331,3 +331,16 @@ The practical split is now explicit:
 - This is a tooling failure, not evidence of a missing import, unsupported API, or binary incompatibility.
 - Experiment commit [6778022](https://github.com/as-0101/ldac-a2dp-windows/commit/6778022b4453857e53acf8a18afe54bb7e46f5f5) preserves missing hints as null and adds three unit tests. CI #6 [45332165839](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45332165839), job `138235648697`, passed the regression-test step. The full offline UUP audit was still running at this update.
 - Exact target PE hashes/import closure, Win10 image identity, offline registry/CBS/CAT membership and disposable-VM staging remain unverified. No physical host access or modification occurred.
+
+
+## 2026-11-24 07:18 — A2DP CBS ownership and exact package-version mapping
+
+CI #463's metadata artifact (workflow artifact ID `14883494285`, ZIP SHA-256 `2cd35a38abcdcde42fb0e175dfa042715aae8bb7e6eb2adf9c40c475886c9d38`) contains MUM search evidence for the A2DP package owner:
+
+- KB5036979 MUM `Microsoft-Windows-Client-Desktop-Required-Package~31bf3856ad364e35~amd64~~10.0.19041.4355.mum` declares `microsoft_bluetooth_a2dp.inf` as `Product-onecore__dual_microsoft_bluetooth_a2dp.inf`, version 10.0.19041.4355, type `dualModeDriver`. The same MUM declares `btampm.inf`, `microsoft_bluetooth_a2dp_snk.inf` and `microsoft_bluetooth_a2dp_src.inf` as driver entries.
+- KB5126657 MUM `Microsoft-Windows-Client-Desktop-Required-Package~31bf3856ad364e35~amd64~~10.0.19041.7807.mum` declares A2DP common assembly 10.0.19041.7802 and BtaMPM assembly 10.0.19041.7725; source/sink assembly identities remain 10.0.19041.1.
+- Server KB5126655 scan has no matching A2DP/BtaMPM MUM/manifest hits.
+
+This is direct evidence that Windows 10's A2DP profile package is CBS-owned by the client desktop required package. It does not prove that PnPUtil/SetupAPI cannot stage the complete signed dualModeDriver package independently on Server. Do not inject the whole Client-Desktop-Required package. The next check is exact WIM DriverStore/CAT membership, INF target decorations and OS applicability. The 74-byte/71-byte INF files in expanded update payloads are PSF delta artifacts/placeholders, not complete INF files.
+
+UUP audit #4/#5 parser failure and #6 regression fix are documented above. CI #6 still needs its final metadata artifact and both image identities before any PE/CAT compatibility result is accepted.
