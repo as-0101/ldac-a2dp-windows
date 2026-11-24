@@ -412,3 +412,14 @@ Decision:
 - Only if catalog acceptance is still unresolved, test supported catalog registration/staging behavior in a disposable Server 2022 VM, without certificate-store changes.
 
 The cross-SKU audit is implemented on experiment/win10-a2dp-cross-sku-catalog-audit-20261124; result pending.
+
+## 2026-11-24 — cross-SKU catalog decision
+
+**Decision:** Do not interpret the Server catalog no-match as proof that the original Win10 Microsoft CAT is untrusted. CI #12 proves only that the exact Win10 A2DP hashes are absent from the Server image's pre-registered system catalog set; it also proves the Server scan is valid via four Server Bluetooth positive controls.
+
+**Next discriminating experiment:** On a disposable GitHub-hosted Server 2022 runner, explicitly verify the original Win10 CAT and its five members with SignTool. Then try PnPUtil staging of the original A2DP Source INF without /install. If the catalog is not discoverable, add the original CAT to the system component/driver catalog database using the documented SignTool catdb mechanism and retry; remove both the staged package and temporary catalog registration afterwards. This is a catalog-database experiment, not a certificate-store change. It is not authorized on the physical host.
+
+The original INF/SYS/CAT bytes must remain unchanged. Do not add a CatalogFile line, fabricate a CAT, alter trust stores, enable test signing, or install/bind a device on the physical server.
+
+Stage-smoke harness commits: 5b6ccfaed40ae75669ef74aad1e8de0d5284a0ef, 32fe8206781cdf41955348a18bf3671c998e71bb, 3305dddcb18f4e407e6b61762a2539a77412ea2d; workflow 692cb1a5e4df7de5ca0ebc72e61878c1c62df300. Run #1/#2 parser failures are harness-only; run #3 is in progress.
+
