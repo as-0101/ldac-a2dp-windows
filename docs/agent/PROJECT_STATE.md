@@ -566,7 +566,7 @@ Physical Server 2022 remains untouched: no driver install, certificate change, B
 
 - Reference machine AS-KRM-WIN10: Windows 10 Enterprise x64 build 19045.
 - OPPO Enco Buds2 has a healthy Stereo endpoint and Hands-Free endpoints; all AudioEndpoint instances report `CM_PROB_NONE`.
-- The classic A2DP profile devnode is `BTHENUM\{0000110B-0000-1000-8000-00805F9B34FB}_LOCALMFG&0002\...`, bound to `microsoft_bluetooth_a2dp_src.inf` as Microsoft Bluetooth A2dp Source.
+- Earlier historical snapshot (E-030) recorded the classic A2DP profile devnode on microsoft_bluetooth_a2dp_src.inf. The later 2026-11-23 PnP record (E-132) supersedes it: the present/enumerated A2DP node is bound to the project's custom oem75.inf / LdacA2dp driver and fails at driver start with Code 37.
 - `BthA2dp.sys` is running, version 10.0.19041.4355, SHA-256 `5FBA5EE606AAC39D9CBDA51C0A14DBABBB3A9B47BBD8AC5485ED137B4F354EC3`.
 - An earlier snapshot showed HFP/AVRCP components and BTAGService/BthAvctpSvc present. The later 2026-11-19 Server environment report (E-133) shows BTAGService/BthAvctpSvc not installed, while bthserv, Audiosrv and AudioEndpointBuilder are running.
 - Microsoft documents classic A2DP as a Windows profile driver communicating with BthPort through WDM/IRPs. ACX is used in the documented Bluetooth LE Audio VSAP architecture, not as the classic A2DP profile-driver model.
