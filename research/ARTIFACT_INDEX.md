@@ -394,3 +394,22 @@ No third-party binary was downloaded or stored.
 - Local analysis copy was /mnt/data/uup-image-a2dp-audit-metadata-ci11.zip; local SHA-256 matches the GitHub artifact digest.
 - Follow-up cross-SKU audit branch: experiment/win10-a2dp-cross-sku-catalog-audit-20261124 (workflow commit 08663c4ca7d1536b96c554fd5e484382262b1250).
 - Preserved copy in ChatGPT Library: /LDAC Project/Incoming/CI-11-UUP-A2DP-Catalog-Service-Audit.zip (Library file ID libfile_33cc484cab548191be214f6afd0eb8bf). Its SHA-256 matches the GitHub artifact digest above.
+
+## 2026-11-24 — CI #12 cross-SKU catalog evidence
+
+| Artifact | Location / identity | Purpose / status |
+|---|---|---|
+| CI #12 metadata ZIP | GitHub artifact 14907426966; run 45354874225; local ZIP SHA-256 655d93a43fc599c393988cec830e1914639fd1560ff957cea488295077bf7e8a, 326,479 B | Exact Win10 19045.5917 vs Server 20348.5761 cross-SKU catalog membership and positive controls |
+| CI #12 Library copy | /LDAC Project/Incoming/CI-12-cross-sku-a2dp-audit.zip; Library ID libfile_08ac72cb1a688191b6940ec4cb82716e | Preserved metadata artifact |
+| CI #12 summary | /LDAC Project/Incoming/CI-12-cross-sku-a2dp-audit-summary.md; Library ID libfile_9d20fd91acdc8191bf556453ba6d746c; SHA-256 dde07c18a762e63f773552336a9e8f1bd934538a613d10091d3279d760fb19a6 | Human-readable result and limitations |
+| Win10 servicing CAT | Microsoft-Windows-Client-Desktop-Required-Package~...~10.0.19041.5917.cat; SHA-256 78772FA12959C072D687283F08D08367B8A8EF1A2F07D7B72F20BCAFD12483BF | Contains all five exact A2DP package files on Win10; absent from Server's matching catalog set |
+| Server OneCore Bluetooth CAT | Microsoft-OneCore-Bluetooth-Package~...~10.0.20348.5756.cat; SHA-256 B0A59B9C3B6E528487BB273332015C8CC3A65A5E60F33BF8AA263E41F6D59AA6 | Positive control: BthPort/BthEnum/BTHUSB/bth.inf 4/4 |
+
+## Stage-smoke experiment
+
+- Branch: experiment/win10-a2dp-stage-smoke-20261124.
+- Script head: 3305dddcb18f4e407e6b61762a2539a77412ea2d.
+- Workflow: 692cb1a5e4df7de5ca0ebc72e61878c1c62df300.
+- Run #3: [45371687882](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45371687882), in progress at 12:10 Kyiv.
+- Scope is limited to original CAT verification and DriverStore staging without /install on a disposable Server 2022 runner. No binary payloads are uploaded.
+
