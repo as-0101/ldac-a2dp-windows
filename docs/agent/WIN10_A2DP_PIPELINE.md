@@ -411,3 +411,12 @@ Thus no new LDAC codec implementation is needed. Microsoft Win10 BthA2dp remains
 | AudioEndpointBuilder | Present; Type 32, Start 2 | Present; Type 32, Start 3 | Demand-start configuration on Server; validate at runtime |
 
 The Win10 A2DP Source/common/BtaMPM package files are verified against the Win10 Client-Desktop-Required-Package catalog. Cross-SKU validation against Server catalogs remains pending; do not treat service absence alone as proof that the package cannot be staged.
+
+## 2026-11-24 — cross-SKU signature/catalog boundary
+
+CI #12 [45354874225](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45354874225) confirms the exact Win10 A2DP Source/common/BtaMPM files are all members of one Win10 servicing CAT (SHA-256 78772FA12959C072D687283F08D08367B8A8EF1A2F07D7B72F20BCAFD12483BF). None of the five exact file hashes appears in any of the 8,325 Server 20348.5761 catalog files. Server Bluetooth core positive controls pass 4/4 against the Server OneCore Bluetooth CAT.
+
+Therefore the Win10 A2DP package is not pre-registered as an in-box system package on Server 2022. This does not establish that the original Microsoft CAT is untrusted or cannot be added to the target's catalog database. The next test is explicit SignTool verification and PnPUtil DriverStore staging without /install on a disposable Server 2022 runner, with a reversible SignTool catdb add/remove only if needed. The physical server remains read-only.
+
+The package dependency closure remains: source INF → common A2DP INF → BtaMpm.inf CopyFilesOnly + Server ks.inf / wdmaudio.inf sections; BthA2dp.sys is the profile/AVDTP kernel component. Do not transplant the reverse-direction sink INF, HFP, or Server KS/WDMAUDIO components without evidence.
+
