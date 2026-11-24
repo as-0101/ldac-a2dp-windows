@@ -243,3 +243,11 @@ The legacy 1.3 MB report is not a trustworthy multi-descriptor import report. It
 | `BtaMPM.sys` (43,008 bytes; inventory version 10.0.19041.5848) | `DA5CBBDCE6AC511EF8400E121DF6B6EACA7D05C0F40A01F7353CE9F220EB3DCD` | https://winbindex.m417z.com/hashes/da.html | Exact hash is indexed under `btampm.sys`; no version/OS/update/CAT metadata on the simplified page. |
 
 Winbindex README: https://github.com/m417z/winbindex. It states that full download links are generated for Microsoft's public symbol server (msdl.microsoft.com). The current tool path exposed only the hash-only pages; PE timestamp/virtual size, exact symbol-server URL, version mapping and catalog membership remain unverified. No binary was downloaded.
+
+
+## Server 2022 support-scope references — 2026-11-24 02:48
+
+| Reference | URL | What it establishes | Limitation |
+|---|---|---|---|
+| Bluetooth version/profile support in previous Windows versions | https://learn.microsoft.com/en-us/windows-hardware/drivers/bluetooth/bluetooth-support-in-previous-windows-versions | All Windows Server SKUs lack in-box Bluetooth wireless support; third-party IHV drivers may be available. The A2DP/AVDTP profile list is for Windows 10. | Does not say that no third-party Bluetooth stack can run on Server. |
+| Bluetooth component guidelines | https://learn.microsoft.com/en-us/windows-hardware/design/component-guidelines/bluetooth | QD ID 130847 lists Windows Server 2022 as a Bluetooth Host Subsystem qualification. | Host-subsystem qualification is not proof of an in-box A2DP profile or codec. |

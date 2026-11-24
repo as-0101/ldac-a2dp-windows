@@ -5,6 +5,7 @@
 ## Confirmed strategy correction
 
 - Windows 10 inbox A2DP documents SBC and aptX Classic only; no LDAC or AAC. There is no Microsoft inbox LDAC DLL/provider to transplant.
+- Microsoft explicitly says all Windows Server SKUs lack in-box Bluetooth wireless support, while third-party IHV drivers may be available. A separate component-guidelines page lists QD ID 130847 for Windows Server 2022 as a Host Subsystem qualification. That is not an in-box A2DP profile; keep vendor radio/host stack, core host subsystem and A2DP profile as separate layers (E-146/E-147).
 - The captured common/source INF path installs `BthA2dp.sys` as a kernel A2DP profile driver; `BtaMPM.sys` is profile management. MSSysFx/APO DLLs are audio effects, not LDAC encoders.
 - The Microsoft Bluetooth stack's documented extension point is a PnP-loaded profile driver communicating with `BthPort.sys` through WDM IRPs/BRBs; no supported user-mode LDAC codec plug-in contract was found in the reviewed docs/INFs.
 - Older public BthA2dp symbols show internal `A2dpSbcCodec` and `AptXCodec` classes and AVDTP code; this is secondary evidence from 10.0.17763.168, not the captured 10.0.19041.4355 binary.

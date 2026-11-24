@@ -12,6 +12,7 @@
 8. `pe_imports_a2dp.py` does not advance the import-descriptor pointer by 20 bytes. Its 1.3 MB report repeats the first descriptor and is invalid. Reports (2)/(3) lack a retained corrected parser source and must be independently re-run.
 9. BlueCaster v3.0.4 is an existing user-mode BTstack/WinUSB A2DP transmitter advertising LDAC, but it takes over a USB adapter, lists Windows 10 22H2/Windows 11 (not Server 2022), and includes BTstack with a personal/non-commercial license. It is a later alternative, not a Microsoft-stack plug-in.
 10. The AOSP libldac NOTICE calls out certification for product use; Sony's AOSP page exposes a licensing inquiry. Local lab feasibility and product distribution rights are separate questions.
+11. Microsoft explicitly says all Windows Server SKUs lack in-box Bluetooth wireless support, while third-party IHV drivers may be available. A separate component-guidelines page lists QD ID 130847 for Windows Server 2022 as a Host Subsystem qualification. That is not an in-box A2DP profile; keep vendor radio/host stack, core host subsystem and A2DP profile as separate layers (E-146/E-147).
 11. Winbindex's x64 hash-only index now confirms the exact SHA-256 values for the 282,624-byte DriverStore BthA2dp.sys, the separate 279,040-byte System32 copy, and BtaMPM.sys. This confirms hash presence in the Microsoft public-symbol index, but does not supply PE timestamp/virtual size, OS/update mapping or catalog membership; see E-143–E-145.
 
 ## Next actions — ordered

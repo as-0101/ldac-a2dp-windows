@@ -219,3 +219,17 @@ Winbindex's x64 hash-only pages independently list all three exact hashes alread
 - `BtaMPM.sys`, 43,008 bytes, version 10.0.19041.5848, SHA-256 `DA5CBBDCE6AC511EF8400E121DF6B6EACA7D05C0F40A01F7353CE9F220EB3DCD`: [hash page da](https://winbindex.m417z.com/hashes/da.html).
 
 Winbindex's [README](https://github.com/m417z/winbindex) says its full download links target Microsoft's public symbol server (msdl.microsoft.com). The simplified pages establish hash presence only; they do not expose file version, PE timestamp/virtual size, OS/update identity or catalog membership. The full metadata/download URL is still needed before a reproducible public-symbol retrieval can replace the inaccessible Project Source archive bytes.
+
+
+### 8.7 Server 2022 Bluetooth support-scope nuance
+
+Do not overread the phrase "no in-box Bluetooth". Microsoft's [previous-Windows support page](https://learn.microsoft.com/en-us/windows-hardware/drivers/bluetooth/bluetooth-support-in-previous-windows-versions) explicitly says all Windows Server SKUs lack in-box Bluetooth wireless technology support, while third-party IHV Bluetooth drivers may be available. The same page lists A2DP 1.3.2 and AVDTP 1.3 as Windows 10 in-box profiles; it does not list Server profiles.
+
+Separately, Microsoft's [Bluetooth component guidelines](https://learn.microsoft.com/en-us/windows-hardware/design/component-guidelines/bluetooth) list QD ID 130847 for Windows Server 2022 as a **Host Subsystem** qualification (the same QD ID is listed for Windows 10 22H2). This is not evidence that the Server SKU ships the Bluetooth host stack or A2DP profile in-box, so it does not contradict the previous-Windows support page.
+
+For this project, keep the Server layers separate:
+1. Vendor radio/transport driver and any third-party host stack installed on the machine.
+2. Microsoft Bluetooth core/host-subsystem interfaces (`BthPort`, HCI/L2CAP/SDP/BRBs) that a profile driver may communicate with.
+3. The A2DP profile package (`BthA2dp.sys` plus its INF/management/audio registrations), which is the specific missing in-box feature being investigated.
+
+A radio enumerating or a host-subsystem qualification existing does not prove that an A2DP render endpoint or SBC codec is installed. Use the archived read-only host inventory for context; do not mutate the physical Server.

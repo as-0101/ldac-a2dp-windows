@@ -577,3 +577,13 @@ PE headers and import names establish architecture and static dependencies only.
 | E-145 | Winbindex's x64 hash-only index lists the exact `BtaMPM.sys` SHA-256 `DA5CBBDCE6AC511EF8400E121DF6B6EACA7D05C0F40A01F7353CE9F220EB3DCD` under `btampm.sys`. This confirms the captured BtaMPM binary hash is indexed. | CONFIRMED — HASH INDEX ONLY | https://winbindex.m417z.com/hashes/da.html |
 
 Winbindex's README states that its generated binary download links point to Microsoft's public symbol server (msdl.microsoft.com); Winbindex indexes the metadata needed to construct those links. The hash-only pages above confirm exact SHA-256 presence but do not expose the PE timestamp/virtual size or full per-build metadata. The actual binaries were not downloaded in this pass. Source: https://github.com/m417z/winbindex
+
+
+## Evidence additions — 2026-11-24 02:48 (Server 2022 Bluetooth support nuance)
+
+| ID | Claim / observation | Status | Source |
+|---|---|---|---|
+| E-146 | Microsoft explicitly states that all Windows Server SKUs do not have in-box Bluetooth wireless technology support, while third-party Bluetooth drivers may be available from IHVs. The same page lists A2DP 1.3.2 and AVDTP 1.3 among Windows 10 in-box profiles, not Server profiles. | CONFIRMED — OFFICIAL MICROSOFT DOCUMENTATION | https://learn.microsoft.com/en-us/windows-hardware/drivers/bluetooth/bluetooth-support-in-previous-windows-versions |
+| E-147 | Microsoft's Bluetooth component guidelines list QD ID 130847 for Windows Server 2022 as a Host Subsystem qualification, the same QD ID used for Windows 10 22H2. This is evidence of a qualified host-subsystem target, not proof that Windows Server 2022 ships the Bluetooth stack or A2DP profile in-box. It does not contradict E-146. | CONFIRMED — OFFICIAL MICROSOFT DOCUMENTATION; SCOPE DISTINCTION | https://learn.microsoft.com/en-us/windows-hardware/design/component-guidelines/bluetooth |
+
+Operational implication: keep three layers separate in the Server analysis: (1) the radio/vendor transport and third-party host stack that may exist on the machine, (2) the Microsoft Bluetooth core/host subsystem interfaces, and (3) the missing in-box A2DP profile package. Presence of a Bluetooth radio or a certified host-subsystem target does not prove that an A2DP endpoint/codec driver is installed.
