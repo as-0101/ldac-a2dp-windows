@@ -234,9 +234,9 @@ T-073 update: run #3 [45371687882](https://github.com/as-0101/ldac-a2dp-windows/
 
 | ID | Test | Environment | Result | Interpretation / next action |
 |---|---|---|---|---|
-| T-022 | Original Win10 CAT verification + DriverStore-only staging smoke, CI #3 / 45371687882 | Disposable Server 2022 build 20348.5870 | **HARNESS FAILURE before stage-smoke** | Offline image audit failed with a missing `Name` property after Win10 image identity and BtaMPM companion discovery. No target-side CAT verification or PnPUtil staging result. Not a compatibility failure. |
-| T-023 | Diagnostic rerun, CI #4 / 45381650079 | Disposable Server 2022 build 20348; exact UBR pending | **IN PROGRESS** | Script now records optional exception metadata safely and emits per-subroutine markers. Inspect completed artifact before any compatibility conclusion. |
+| T-077 | Original Win10 CAT verification + DriverStore-only staging smoke, CI #3 / 45371687882 | Disposable Server 2022 build 20348.5870 | **HARNESS FAILURE before stage-smoke** | Offline image audit failed with a missing `Name` property after Win10 image identity and BtaMPM companion discovery. No target-side CAT verification or PnPUtil staging result. Not a compatibility failure. |
+| T-078 | Diagnostic rerun, CI #4 / 45381650079 | Disposable Server 2022 build 20348; exact UBR pending | **IN PROGRESS** | Script now records optional exception metadata safely and emits per-subroutine markers. Inspect completed artifact before any compatibility conclusion. |
 
-Artifact T-022: GitHub artifact 14910689667, 152,010 bytes, SHA-256 `431f94d613a177c2d78735fad72844aab1b9fd04782641e5e39532525ee65c08`; Library ID `libfile_87489e2386f48191a54635114c06391a`.
+Artifact T-077: GitHub artifact 14910689667, 152,010 bytes, SHA-256 `431f94d613a177c2d78735fad72844aab1b9fd04782641e5e39532525ee65c08`; Library ID `libfile_87489e2386f48191a54635114c06391a`.
 
 All package staging remains restricted to disposable hosted/VM environments. No physical Server 2022 action is authorized. UBR 5870 is not the physical target's UBR 5761.
