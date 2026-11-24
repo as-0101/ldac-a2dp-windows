@@ -232,3 +232,10 @@ The mssysfx path registers Windows audio-effect APOs (user-mode COM DSP objects)
 
 ### D-033 — Prioritize the updated DriverStore BthA2dp package copy
 The 282,624-byte DriverStore copy (version 10.0.19041.4355, SHA 5FBA...) has a direct import report from ntoskrnl.exe only. The separate 279,040-byte System32 copy (likely 10.0.19041.1 by secondary size/version corroboration; SHA 0442...) has 8 import descriptors / 144 functions. Treat them as different servicing generations and use the DriverStore package copy as the primary Server compatibility candidate. Do not infer that its smaller import table eliminates dynamic or INF-level dependencies.
+
+
+### D-034 — Interpret LOCALMFG as the local radio, not the remote OPPO device
+Microsoft's Bluetooth PnP documentation defines LOCALMFG as the manufacturer of the local Bluetooth radio. Bluetooth SIG company ID 0x0002 is Intel and 0x005D is Realtek. Therefore the recorded BTHENUM 0x110B node's LOCALMFG&0002 identifies the host Intel radio; it does not identify OPPO. Do not infer remote-device vendor from this suffix.
+
+### D-035 — Do not use the residual Realtek rtka2dp package for the current host
+A rtka2dp.inf DriverStore folder exists, but its INF bytes/version were not captured and it is not the current oem75 binding. Public Realtek IDs use LOCALMFG&005D, while this host's local radio is LOCALMFG&0002 (Intel). Keep it as an unverified residue/reference only; do not install or adapt it for the OPPO path.
