@@ -183,3 +183,12 @@ No build or installation was performed. Public documentation screening only:
 
 Stage-smoke scope: disposable GitHub-hosted Windows Server 2022 runner; explicit CAT verification; PnPUtil DriverStore staging without /install; optional SignTool catdb add/remove; cleanup. It does not bind a device or prove service start, driver load or audio. No physical host or production code branch is touched.
 
+
+
+## Stage-smoke run #3 — current execution review (2026-11-24 12:25 Europe/Kyiv)
+
+- Run [45371687882](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45371687882), job 138367259323; branch `experiment/win10-a2dp-stage-smoke-20261124`.
+- Script commit `3305dddcb18f4e407e6b61762a2539a77412ea2d`; workflow commit `692cb1a5e4df7de5ca0ebc72e61878c1c62df300`.
+- Steps 1–6 passed; step 7 is still in progress. No artifact/result is available yet.
+- Runner preflight enforces Server 2022 build 20348 / InstallationType=Server and records UBR, but does not pin UBR 5761. Interpret the eventual result only at the recorded UBR. If different from 5761, a separate exact-UBR disposable VM test is required before making a 20348.5761-specific claim.
+- Test scope remains CAT verification and DriverStore staging without `/install`; no device binding or driver load.
