@@ -273,3 +273,12 @@ CI #13 [45355817586](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/4
 
 Stage-smoke run #3 [45371687882](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45371687882) passed PowerShell parser preflight and is performing the disposable Server 2022 stage test. No device install or physical-host action.
 
+## Stage-smoke recovery — CI #3 failure and CI #4 diagnostic rerun (2026-11-24)
+
+CI #3 [45371687882](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45371687882) completed with a tooling failure. Runner identity: Windows Server 2022 Datacenter, build 20348.5870. Win10 19045.5917 was mounted read-only, its offline identity was checked, and the exact BtaMPM companion was found. The script then threw `The property 'Name' cannot be found on this object.` during offline audit collection. The stage-smoke function was not reached; no target-side SignTool member verification or PnPUtil staging result exists. Cleanup succeeded.
+
+Artifact 14910689667 (152,010 bytes, SHA-256 `431f94d613a177c2d78735fad72844aab1b9fd04782641e5e39532525ee65c08`) contains only 23 PE JSON reports, not `manifest.json` or `stage-test.json`. It is preserved in Library at `/LDAC Project/Incoming/CI-3-stage-smoke-failure.zip`, Library ID `libfile_87489e2386f48191a54635114c06391a`.
+
+Experimental script commit [4d5734fb](https://github.com/as-0101/ldac-a2dp-windows/commit/4d5734fb19929dc332dfb572e9824151c470b62b) safely captures optional exception metadata and logs each offline audit subroutine. This is diagnostic hardening only; it does not establish the root cause. CI #4 [45381650079](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45381650079) is the diagnostic rerun; step 7 was active and no artifact was available at the last check.
+
+The runner's UBR 5870 is not the target UBR 5761. Even a successful CI #4 result must be labelled with the actual runner UBR and cannot be called exact-5761 proof.

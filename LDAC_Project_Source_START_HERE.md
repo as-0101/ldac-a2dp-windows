@@ -1,3 +1,23 @@
+## ACTIVE REVIEW — stage-smoke #3 tooling failure; #4 diagnostic rerun
+
+- CI #3 [45371687882](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45371687882), job 138367259323, completed with `failure`. Runner: Windows Server 2022 Datacenter build 20348, **UBR 5870**; preflight steps 1–6 passed.
+- Win10 19045.5917 mounted read-only; offline image identity verified; exact BtaMPM companion found. The script then failed during offline audit with `The property 'Name' cannot be found on this object.`
+- Failure occurred before `Invoke-StagePackageSmokeTest`: no target-side CAT/member verification, no `pnputil /add-driver`, no `catdb` operation, no DriverStore staging result. No `manifest.json` or `stage-test.json` was generated.
+- Cleanup succeeded. Artifact [14910689667](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45371687882/artifacts/14910689667) is 152,010 bytes, SHA-256 `431f94d613a177c2d78735fad72844aab1b9fd04782641e5e39532525ee65c08`; it contains 23 PE JSON reports only. Preserved in Library: `/LDAC Project/Incoming/CI-3-stage-smoke-failure.zip`, ID `libfile_87489e2386f48191a54635114c06391a`.
+- The outer catch's direct `$_.InvocationInfo.MyCommand.Name` access could mask the originating error when invocation metadata is incomplete. This is a diagnostic-risk hypothesis, not a proven root cause. Commit [4d5734fb](https://github.com/as-0101/ldac-a2dp-windows/commit/4d5734fb19929dc332dfb572e9824151c470b62b) now captures optional error fields safely and logs each offline audit subroutine.
+- CI #4 [45381650079](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45381650079), head `4d5734fb19929dc332dfb572e9824151c470b62b`, is in progress; steps 1–6 passed, step 7 active at last check, no artifact yet.
+- UBR 5870 is not target UBR 5761. Even a successful hosted result must be labelled with its exact runner UBR.
+- No package staging, device enumeration, service start, driver load, A2DP endpoint, SBC negotiation or audio is proven. Physical Server 2022 untouched; `server-2022-oppo` unchanged; ACX parked.
+
+## ACTIVE NEXT ACTIONS — stage-smoke diagnostic recovery
+
+1. Inspect CI #4 after step 7 completes. Use the new `[AUDIT]` markers and captured error position/stack trace to identify the exact failing subroutine.
+2. If offline audit completes, inspect original CAT verification and then the unmodified source INF DriverStore staging result. Use `pnputil /add-driver` without `/install`; any temporary CAT database registration remains disposable-only and must be removed.
+3. Record actual runner build/UBR. A 20348.5870 result is not exact 20348.5761 proof.
+4. If staging succeeds, next gates remain PnP match/ranking → BthA2dp service start → driver load → KS render endpoint. Real SBC negotiation/audio requires a Bluetooth radio/USB passthrough.
+5. Keep the minimal Win10 A2DP Source/common + BtaMPM package; reuse Server KS/WDMAUDIO. Do not replace BthPort/BthEnum/BTHUSB, Server audio core or Server bth.inf.
+6. Do not modify `server-2022-oppo`, touch the physical host, or resume ACX bind-probe. CI #248/#255 remain closed.
+
 ## ACTIVE REVIEW — 2026-11-24 12:25 Europe/Kyiv
 
 - Stage-smoke run [45371687882](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45371687882) is still in progress at step 7 (UUP extraction, original-CAT verification and DriverStore staging). Preflight steps 1–6 passed; no artifact has been published yet.

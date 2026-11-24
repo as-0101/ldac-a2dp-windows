@@ -229,3 +229,14 @@ Status: STATIC INF CLOSURE CONFIRMED. Do not replace Server KS/WDMAUDIO INF or A
 | T-076 | Stage-smoke runner UBR fidelity | Record exact Server 2022 UBR; require 5761 before treating staging result as exact-target evidence | Workflow checks build 20348 and InstallationType=Server, records UBR, but does not enforce 5761. Run #3 remains in step 7; no result yet. | CONFIRMED — WORKFLOW_SCOPE_LIMIT; if runner UBR differs from 5761, repeat staging on an exact-UBR disposable VM before claiming target-specific acceptance |
 
 T-073 update: run #3 [45371687882](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45371687882) was still in step 7 at 12:25 Kyiv. No staging conclusion or artifact exists yet.
+
+## A2DP stage-smoke test records — 2026-11-24
+
+| ID | Test | Environment | Result | Interpretation / next action |
+|---|---|---|---|---|
+| T-022 | Original Win10 CAT verification + DriverStore-only staging smoke, CI #3 / 45371687882 | Disposable Server 2022 build 20348.5870 | **HARNESS FAILURE before stage-smoke** | Offline image audit failed with a missing `Name` property after Win10 image identity and BtaMPM companion discovery. No target-side CAT verification or PnPUtil staging result. Not a compatibility failure. |
+| T-023 | Diagnostic rerun, CI #4 / 45381650079 | Disposable Server 2022 build 20348; exact UBR pending | **IN PROGRESS** | Script now records optional exception metadata safely and emits per-subroutine markers. Inspect completed artifact before any compatibility conclusion. |
+
+Artifact T-022: GitHub artifact 14910689667, 152,010 bytes, SHA-256 `431f94d613a177c2d78735fad72844aab1b9fd04782641e5e39532525ee65c08`; Library ID `libfile_87489e2386f48191a54635114c06391a`.
+
+All package staging remains restricted to disposable hosted/VM environments. No physical Server 2022 action is authorized. UBR 5870 is not the physical target's UBR 5761.

@@ -450,3 +450,13 @@ Microsoft documents that when neither `/d` nor `/g` is supplied, `signtool catdb
 ## EXP-009 — Stage-smoke run #3 status review
 
 Run [45371687882](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45371687882), job 138367259323. Steps 1–6 passed; step 7 remains in progress. No package staging result or artifact is available yet. The experiment remains limited to original-CAT verification and DriverStore staging without `/install`; it does not test device binding, service start, driver load, endpoint or audio.
+
+## D-175 — Treat stage-smoke #3 as a tooling failure, not a compatibility result
+
+CI #3 [45371687882](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45371687882) failed during offline image-audit collection with `The property 'Name' cannot be found on this object.` It mounted Win10 19045.5917 read-only, verified offline image identity and located the exact BtaMPM companion, but did not reach the stage-smoke function. There is no target-side CAT verification or PnPUtil staging result. Do not classify this as rejection of the Microsoft A2DP package.
+
+The outer catch had an unguarded `InvocationInfo.MyCommand.Name` access that could mask the originating error. Commit 4d5734fb adds safe error-field reads and per-subroutine markers. The exact failing subroutine remains unknown until CI #4's artifact/log is inspected.
+
+## D-176 — Preserve the UBR boundary
+
+The disposable CI #3 runner was 20348.5870, while the physical target is recorded as 20348.5761. A successful hosted staging result is evidence for its recorded UBR only. Do not claim exact 5761 acceptance without a disposable target matching that UBR. No OS update or physical-host action is authorized.

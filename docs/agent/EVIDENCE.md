@@ -889,3 +889,19 @@ The Server versions contain the required section names and corresponding registr
 - The stage-smoke script uses this operation only on a disposable GitHub-hosted Server 2022 runner and records cleanup. This is distinct from modifying the certificate store or enabling test signing.
 - Source: [Microsoft SignTool documentation](https://learn.microsoft.com/en-us/windows/win32/seccrypto/signtool) and [Installing a Catalog File by using SignTool](https://learn.microsoft.com/en-us/windows-hardware/drivers/install/installing-a-catalog-file-by-using-signtool).
 - Status: CONFIRMED — DOCUMENTED_TOOL_SEMANTICS.
+
+## E-180 — Stage-smoke CI #3 failed before package staging (2026-11-24)
+
+- Run [45371687882](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45371687882), job 138367259323, branch `experiment/win10-a2dp-stage-smoke-20261124`, script head `3305dddcb18f4e407e6b61762a2539a77412ea2d`.
+- Runner: Windows Server 2022 Datacenter build 20348, UBR 5870. Win10 19045.5917 mounted read-only; offline identity verified; exact BtaMPM companion found.
+- Script failed during offline audit with `The property 'Name' cannot be found on this object.` It did not reach the stage-smoke function. No target-side CAT verification, PnPUtil staging, catdb add/remove, device binding, service start, driver load, endpoint or audio result.
+- Cleanup succeeded. Artifact 14910689667: 152,010 bytes; SHA-256 `431f94d613a177c2d78735fad72844aab1b9fd04782641e5e39532525ee65c08`. It contains 23 PE JSON reports only; no manifest or stage-test report. Library: `/LDAC Project/Incoming/CI-3-stage-smoke-failure.zip`, ID `libfile_87489e2386f48191a54635114c06391a`.
+- Classification: **HARNESS_FAILURE / NO COMPATIBILITY RESULT**. Runner UBR 5870 differs from target 5761.
+
+## E-181 — Stage-smoke exception capture hardened; CI #4 running (2026-11-24)
+
+- Experimental commit [4d5734fb](https://github.com/as-0101/ldac-a2dp-windows/commit/4d5734fb19929dc332dfb572e9824151c470b62b), branch `experiment/win10-a2dp-stage-smoke-20261124`.
+- Replaced unsafe direct access to optional `InvocationInfo.MyCommand.Name` in the outer catch with guarded reads; added error position/stack trace capture and per-subroutine markers around INF, component, catalog, catalog-membership and offline-service audits.
+- Diagnostic hardening only; root cause of CI #3 is not yet established.
+- CI #4 [45381650079](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45381650079), head `4d5734fb19929dc332dfb572e9824151c470b62b`, was in progress at last check: preflight passed, step 7 active, no artifact.
+

@@ -421,3 +421,10 @@ No third-party binary was downloaded or stored.
 - Branch: `experiment/win10-a2dp-stage-smoke-20261124`; script commit `3305dddcb18f4e407e6b61762a2539a77412ea2d`; workflow commit `692cb1a5e4df7de5ca0ebc72e61878c1c62df300`.
 - Workflow records runner UBR but only enforces build 20348 / InstallationType=Server. Treat any eventual result as specific to the recorded UBR, not automatically to 20348.5761.
 - Artifact policy: metadata/text reports only; temporary Microsoft SYS/INF/CAT/ISO/WIM payloads are removed before upload.
+
+## Stage-smoke CI #3 failure artifact — 2026-11-24
+
+| Artifact | Exact identity | Durable location / status |
+|---|---|---|
+| CI #3 stage-smoke partial metadata | GitHub artifact 14910689667; 152,010 bytes; SHA-256 `431f94d613a177c2d78735fad72844aab1b9fd04782641e5e39532525ee65c08` | Library `/LDAC Project/Incoming/CI-3-stage-smoke-failure.zip`, Library ID `libfile_87489e2386f48191a54635114c06391a`. Contains 23 PE JSON reports only; no manifest or stage-test.json. No CAT verification or DriverStore staging result. |
+| CI #4 diagnostic rerun | Run 45381650079, head 4d5734fb19929dc332dfb572e9824151c470b62b | In progress at last check; no artifact yet. |

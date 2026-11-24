@@ -192,3 +192,14 @@ Stage-smoke scope: disposable GitHub-hosted Windows Server 2022 runner; explicit
 - Steps 1–6 passed; step 7 is still in progress. No artifact/result is available yet.
 - Runner preflight enforces Server 2022 build 20348 / InstallationType=Server and records UBR, but does not pin UBR 5761. Interpret the eventual result only at the recorded UBR. If different from 5761, a separate exact-UBR disposable VM test is required before making a 20348.5761-specific claim.
 - Test scope remains CAT verification and DriverStore staging without `/install`; no device binding or driver load.
+
+## A2DP package stage-smoke experiments — 2026-11-24
+
+| Run | Branch / commit | Target runner | Artifact | Result |
+|---|---|---|---|---|
+| Stage-smoke #3 / 45371687882 | `experiment/win10-a2dp-stage-smoke-20261124` / `3305dddcb18f4e407e6b61762a2539a77412ea2d` | Server 2022 build 20348.5870 | 14910689667; 152,010 bytes; SHA-256 `431f94d613a177c2d78735fad72844aab1b9fd04782641e5e39532525ee65c08` | Offline audit script failed with missing `Name` property before stage-smoke; no CAT/staging result. **REJECTED — TOOLING FAILURE** |
+| Stage-smoke #4 / 45381650079 | `experiment/win10-a2dp-stage-smoke-20261124` / `4d5734fb19929dc332dfb572e9824151c470b62b` | Server 2022 build 20348; exact UBR pending | Pending | Safe exception capture + per-stage trace markers; step 7 active at last check. **IN PROGRESS** |
+
+Run #3 artifact is preserved in Library at `/LDAC Project/Incoming/CI-3-stage-smoke-failure.zip` (Library ID `libfile_87489e2386f48191a54635114c06391a`). The PE JSONs are metadata only; no SYS/DLL/INF/CAT payload is retained.
+
+Neither run proves package staging, PnP binding, service start, driver load, endpoint, SBC negotiation or audio. A hosted result on UBR 5870 must not be labelled as an exact 20348.5761 result.
