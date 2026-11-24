@@ -3,8 +3,8 @@
 Stages are cumulative but independently reported. Status values use CONFIRMED/SUPPORTED/HYPOTHESIS/REFUTED/UNTESTED/BLOCKED; environment tags are mandatory.
 
 | ID | Stage | Exact build / environment | Expected | Actual | Status | Next |
-| T-072 | Offline UUP catalog and SYSTEM service-registry audit | Win10 19045.5917 + Server 20348.5761, CI #7–#11 | Confirm exact system-catalog membership and offline service registrations | #7 failed in audit tooling before catalog/service output; #11 parser/SignTool preflight passed; image audit still running | IN_PROGRESS — TOOLING | Inspect catalog membership and service JSON; no product compatibility inference |
 |---|---|---|---|---|---|---|
+| T-072 | Offline UUP catalog and SYSTEM service-registry audit | Win10 19045.5917 + Server 20348.5761, CI #7–#11 | Confirm exact system-catalog membership and offline service registrations | #7 failed in audit tooling before catalog/service output; #11 parser/SignTool preflight passed; image audit still running | IN_PROGRESS — TOOLING | Inspect catalog membership and service JSON; no product compatibility inference |
 | T-001 | Build | CI #133 / 45044497961, Server 2022 hosted runner, ACX 1.0 / Universal | Compile and package | All 3 jobs pass | CONFIRMED — BUILD_ONLY | No runtime inference |
 | T-002 | Package integrity | CI #133 artifacts | Exact SYS/INF/CAT identity | ZIP inspected; SYS hash and INF DriverVer checked; SYS matches unsigned SYS byte-for-byte; PDB table analysis supports ACX 1.0 | CONFIRMED — STATIC_ANALYSIS | Retain hashes and PDB evidence |
 | T-003 | ACX class version | Physical Server 2022 host, read-only WinDbg | Identify registered class module version | `!wdfldr Acx01000.sys` output recorded CLASS_MODULE v1.0 / WDF 1.31 | CONFIRMED — PHYSICAL_HARDWARE_TEST (diagnostic only) | Do not infer bind compatibility |
