@@ -5,8 +5,7 @@ on:
     branches:
       - experiment/win10-a2dp-symbol-audit-20261124
     paths:
-      - tools/research/audit_pe_binary.py
-      - tools/research/fetch_win10_a2dp_binaries.py
+      - tools/research/**
       - .github/workflows/build.yml
   workflow_dispatch:
 
@@ -15,7 +14,7 @@ permissions:
 
 jobs:
   static-binary-audit:
-    name: Fetch Microsoft binaries and compare PE imports
+    name: Winbindex metadata and symbol-server collision audit
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -33,17 +32,58 @@ jobs:
       - name: Validate research scripts
         run: python -m py_compile tools/research/audit_pe_binary.py tools/research/fetch_win10_a2dp_binaries.py
 
-      - name: Fetch exact Win10 package binaries and Server 2022 references
+      - name: Fetch exact Win10 package metadata and compare symbol-server bytes
         run: |
           mkdir -p build/win10-a2dp-symbol-audit
           python tools/research/fetch_win10_a2dp_binaries.py --out build/win10-a2dp-symbol-audit
           python -m pip freeze > build/win10-a2dp-symbol-audit/python-packages.txt
 
-      - name: Upload static-audit evidence
+      - name: Remove Microsoft binary payloads before artifact upload
+        if: always()
+        run: |
+          rm -rf build/win10-a2dp-symbol-audit/win10
+          rm -rf build/win10-a2dp-symbol-audit/server2022
+          rm -rf build/win10-a2dp-symbol-audit/winbindex-cache
+
+      - name: Upload metadata and PE reports only
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: win10-a2dp-symbol-audit
-          path: build/win10-a2dp-symbol-audit/**
+          name: win10-a2dp-symbol-audit-metadata
+          path: |
+            build/win10-a2dp-symbol-audit/README.md
+            build/win10-a2dp-symbol-audit/manifest.json
+            build/win10-a2dp-symbol-audit/pe-audit/**
+            build/win10-a2dp-symbol-audit/python-packages.txt
           if-no-files-found: warn
-          retention-days: 30
+          retention-days: 7
+
+  catalog-package-audit:
+    name: Microsoft Update Catalog packages and Server 2022 runtime
+    runs-on: windows-2022
+    timeout-minutes: 90
+    steps:
+      - name: Checkout isolated research branch
+        uses: actions/checkout@v5
+
+      - name: Set up Python for PE analysis
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install PE parser dependency
+        run: python -m pip install --disable-pip-version-check --no-input pefile==2024.8.26
+
+      - name: Resolve and extract official packages without installing them
+        shell: pwsh
+        run: |
+          ./tools/research/extract_a2dp_catalog_packages.ps1 -OutputDirectory build/catalog-a2dp-audit
+
+      - name: Upload package metadata and PE reports only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: microsoft-catalog-a2dp-audit
+          path: build/catalog-a2dp-audit/**
+          if-no-files-found: warn
+          retention-days: 7
