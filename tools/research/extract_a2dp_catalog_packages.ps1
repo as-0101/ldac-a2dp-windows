@@ -283,10 +283,13 @@ foreach ($spec in $PackageSpecs) {
         $result.ManifestHits = @($ManifestHits | Where-Object { $_.KB -eq $spec.KB })
 
         $signtoolRoot = Join-Path ([Environment]::GetFolderPath('ProgramFilesX86')) 'Windows Kits\10\bin'
-        $signtool = Get-ChildItem -Path $signtoolRoot -Filter 'signtool.exe' -File -Recurse -ErrorAction SilentlyContinue |
-            Where-Object { $_.FullName -match '\\x64\\' } |
-            Sort-Object FullName -Descending |
-            Select-Object -First 1
+        $signtool = $null
+        if (Test-Path -LiteralPath $signtoolRoot -PathType Container) {
+            $signtool = Get-ChildItem -Path $signtoolRoot -Filter 'signtool.exe' -File -Recurse -ErrorAction SilentlyContinue |
+                Where-Object { $_.FullName -match '\\x64\\' } |
+                Sort-Object FullName -Descending |
+                Select-Object -First 1
+        }
         $infs = @($expanded | Where-Object { $_.Extension -eq '.inf' })
         $cats = @($expanded | Where-Object { $_.Extension -eq '.cat' })
         foreach ($inf in $infs) {
