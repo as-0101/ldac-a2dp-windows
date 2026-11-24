@@ -304,3 +304,7 @@ BlueCaster is a user-mode BTstack+WinUSB stack, not a codec DLL for Microsoft A2
 
 The captured DriverStore BthA2dp is 10.0.19041.4355 and E-119 reports direct imports from ntoskrnl only. The separate System32 copy and later symbol-server candidates have different hashes/import surfaces. All compatibility conclusions must be tied to the exact file SHA/version; revalidate the 19041.4355 package bytes against Server 20348.5761 before staging.
 
+## D-046 — Stop searching for a hidden Microsoft/Sony inbox LDAC DLL
+
+Sony's official support article says Windows has no system-level LDAC support regardless of Bluetooth controller. Keep the Windows 10 inbox package as the SBC milestone. For LDAC, evaluate a third-party A2DP transport/provider explicitly; do not spend more cycles searching arbitrary Windows 10 system folders for an inbox LDAC DLL.
+

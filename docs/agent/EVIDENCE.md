@@ -666,3 +666,9 @@ The Win10 A2DP package and DriverStore archives are already indexed. The Project
 
 The captured DriverStore BthA2dp 10.0.19041.4355 (282,624 bytes, SHA-256 `5FBA5EE606AAC39D9CBDA51C0A14DBABBB3A9B47BBD8AC5485ED137B4F354EC3`) is recorded by E-119/GNU objdump as PE32+ x64, native kernel, no delay-import directory and direct imports from `ntoskrnl.exe` only. The separate System32 copy is 279,040 bytes, SHA-256 `0442A18BBED4E323265C66561C8F8C171D8E934E9089C12B94D1DFDBB057B737`, with 8 import descriptors / 144 functions. CI #463's non-exact 19041.6392 symbol-server candidate is 282,624 bytes but has 8 descriptors / 149 imports and a different hash. These are distinct files/builds; never transfer import conclusions between them. The exact 19041.4355 report should be reproduced with the full PE parser when its bytes are extracted from the matching UUP image.
 
+## E-158 — Sony confirms no system-level LDAC support in Windows (2025-03-11)
+
+Sony's official support article states that Microsoft Windows and Apple macOS do not support Bluetooth LDAC at the operating-system level, regardless of the PC Bluetooth controller. This supports the conclusion that there is no Microsoft/Sony inbox Windows LDAC codec/provider DLL to transplant. Third-party implementations are separate A2DP drivers or alternate user-mode transports, not a hidden Windows codec DLL.
+
+Source: [Sony Support article 00260277](https://www.sony.ru/electronics/support/articles/00260277), last modified 2025-03-11.
+

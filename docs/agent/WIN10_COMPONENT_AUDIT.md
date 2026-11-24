@@ -289,3 +289,7 @@ The exact captured DriverStore BthA2dp 10.0.19041.4355 (282,624 bytes, SHA-256 `
 
 The exact captured BtaMPM 10.0.19041.5848 (43,008 bytes, SHA-256 `DA5CBBDCE6AC511EF8400E121DF6B6EACA7D05C0F40A01F7353CE9F220EB3DCD`) is the 3-descriptor / 42-import file shown in reports (2)/(3). Its direct imports are ntoskrnl.exe (37), cng.sys (1) and WppRecorder.sys (4). The 19041.7660 symbol-server candidate has the same import DLL set/count but a different hash; its export table is not proof of the exact 19041.5848 export table. Exact BtaMPM exports must be obtained from the matching UUP image.
 
+### Official LDAC implementation boundary
+
+Sony's own support article (E-158) states that Windows and macOS do not provide system-level LDAC support, independent of the Bluetooth controller. Therefore the search for a Microsoft/Sony inbox LDAC provider DLL in Windows 10 has a negative result. The Windows 10 inbox A2DP package is still useful for SBC/aptX; LDAC requires a third-party A2DP implementation or an alternate user-mode Bluetooth transport. Do not confuse a codec library such as AOSP `libldac` with a Windows A2DP provider.
+

@@ -781,3 +781,9 @@ Current stage remains package/static research only. No A2DP endpoint, SBC negoti
 - Exact package BtaMPM 10.0.19041.5848 remains a separate 3-descriptor / 42-import binary. Its imports are ntoskrnl, cng and WppRecorder; its exact exports still need to be compared against Server 20348.5761.
 - UUP 19045.4355 x64 is a candidate image for reproducing the captured BthA2dp version if the current 19045.5917 image does not contain matching hashes. No new UUP run started in this pass.
 
+## 2026-11-24 05:27 — official LDAC support boundary confirmed
+
+- Sony Support article 00260277 (last modified 2025-03-11) explicitly states that Windows/macOS do not support LDAC at OS level, regardless of the Bluetooth controller. This closes the search for a hidden Microsoft/Sony inbox LDAC DLL.
+- Windows 10 A2DP package remains the primary SBC path. A later LDAC milestone requires an explicit third-party A2DP provider/transport or an alternate user-mode stack; AOSP libldac alone is only an encoder library.
+- No change to code branches or physical host.
+

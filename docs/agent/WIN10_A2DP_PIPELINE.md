@@ -274,3 +274,9 @@ Microsoft's Windows 10 inbox A2DP codec list is SBC and aptX Classic; it contain
 
 E-119's exact DriverStore BthA2dp 10.0.19041.4355 report says direct imports from ntoskrnl.exe only. The separate 279,040-byte System32 copy has 8 import descriptors / 144 functions, while CI #463's later 19041.6392 DriverStore candidate has 8 descriptors / 149 functions. Do not infer that the captured 19041.4355 package needs the later candidate's HAL/KS/BtaMPM/SleepStudyHelper/WDFLDR/ksecdd import closure. Reparse the exact package hash from a matching UUP image before comparing Server exports.
 
+### Official confirmation that Windows has no inbox LDAC provider
+
+Sony's official support article states that Windows does not support LDAC at OS level, irrespective of the Bluetooth controller. This confirms that a hidden Microsoft/Sony Windows 10 LDAC DLL/provider is not the expected solution. A third-party LDAC implementation must own or extend the A2DP negotiation/transport path; registering an unrelated DLL or APO cannot add LDAC to the inbox profile.
+
+Source: [Sony Support 00260277](https://www.sony.ru/electronics/support/articles/00260277).
+

@@ -136,3 +136,5 @@ No service, device, profile-driver, endpoint, SBC negotiation, audio-stream, LDA
 | T-057 | LDAC negotiation and actual LDAC audio | OPPO Enco Buds2 ETE41 supports AAC/SBC only. | CANNOT TEST WITH OPPO; DIFFERENT LDAC SINK REQUIRED |
 
 | T-058 | Exact captured DriverStore BthA2dp 10.0.19041.4355 import revalidation | E-119 reports ntoskrnl-only direct imports; later 19041.6392 candidate has 8 descriptors / 149 imports, proving version drift. | PENDING exact-byte reparse + Server 20348.5761 export comparison |
+
+| T-059 | Official Windows LDAC provider/DLL existence check | Sony Support confirms no OS-level LDAC support in Windows/macOS, independent of controller; Microsoft Win10 codec table lists SBC/aptX Classic only. | COMPLETE — NO INBOX LDAC PROVIDER |
