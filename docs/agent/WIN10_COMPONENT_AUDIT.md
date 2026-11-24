@@ -242,3 +242,12 @@ CI #463 confirms that the A2DP component payloads in KB5036979 and KB5126657 are
 The Server 2022 KB5126655 scan found core Bluetooth packages but no A2DP INF/SYS or BtaMPM references. This makes the client A2DP profile package the concrete component gap to investigate; it does not justify a new driver or ACX experiment.
 
 Winbindex symbol-server downloads are rejected as exact targets because all three hashes differed from the captured archive and the returned file versions were 19041.6392 / 19041.1030 / 19041.7660 rather than 19041.4355 / 19041.1 / 19041.5848. See WIN10_UUP_IMAGE_AUDIT.md.
+
+
+## 2026-11-24 package audit update
+
+CI #463 confirms that the A2DP component payloads in KB5036979 and KB5126657 are PSF forward-delta files, not complete PE binaries. The extracted payload sizes (11,840 / 15,766 bytes for BthA2dp and 7,952 bytes for BtaMPM) fail the PE DOS-header check. The INF/component versions are still useful package-membership evidence.
+
+The Server 2022 KB5126655 scan found core Bluetooth packages but no A2DP INF/SYS or BtaMPM references. This makes the client A2DP profile package the concrete component gap to investigate; it does not justify a new driver or ACX experiment.
+
+Winbindex symbol-server downloads are rejected as exact targets because all three hashes differed from the captured archive and the returned file versions were 19041.6392 / 19041.1030 / 19041.7660 rather than 19041.4355 / 19041.1 / 19041.5848. See WIN10_UUP_IMAGE_AUDIT.md.
