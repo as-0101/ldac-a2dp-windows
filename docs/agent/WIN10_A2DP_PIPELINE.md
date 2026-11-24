@@ -398,3 +398,16 @@ Historical hardware proof (2026-10-22, Windows 11 25H2 VM, Realtek Bluetooth 5.4
 
 Thus no new LDAC codec implementation is needed. Microsoft Win10 BthA2dp remains the SBC path; it does not consume the project's AOSP LDAC static library. LDAC on Server will require a transport that actually advertises/negotiates the vendor codec, after the SBC milestone is stable.
 
+## Offline service-registration delta — 2026-11-24
+
+| Service | Win10 19045.5917 | Server 20348.5761 | Interpretation |
+|---|---|---|---|
+| BthA2dp | Present; Type 1, Start 3; \SystemRoot\System32\drivers\BthA2dp.sys | Absent | Expected A2DP profile gap |
+| BtaMPM | Absent as a service | Absent as a service | Companion module copied by INF; do not invent a separate service |
+| BthPort | Present; Type 1, Start 3 | Present; Type 1, Start 3 | Bluetooth core present |
+| BthEnum | Present; Type 1, Start 3 | Present; Type 1, Start 3 | Bluetooth PnP enumeration present |
+| BTHUSB | Present; Type 1, Start 3 | Present; Type 1, Start 3 | USB Bluetooth transport present |
+| AudioSrv | Present; Type 16, Start 2 | Present; Type 16, Start 3 | Demand-start configuration on Server; validate at runtime |
+| AudioEndpointBuilder | Present; Type 32, Start 2 | Present; Type 32, Start 3 | Demand-start configuration on Server; validate at runtime |
+
+The Win10 A2DP Source/common/BtaMPM package files are verified against the Win10 Client-Desktop-Required-Package catalog. Cross-SKU validation against Server catalogs remains pending; do not treat service absence alone as proof that the package cannot be staged.
