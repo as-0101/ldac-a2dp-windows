@@ -354,7 +354,7 @@ Read [PHYSICAL_TEST_RUNBOOK.md](PHYSICAL_TEST_RUNBOOK.md) before any user-side a
 - Reference: Windows 10 Enterprise x64 build 19045.
 - `BthA2dp.sys` 10.0.19041.4355, service RUNNING.
 - HFP: `BthHfEnum`/`BthHFAud`; AVRCP: `Microsoft.Bluetooth.AvrcpTransport.sys`.
-- BTAGService, BthAvctpSvc, bthserv, Audiosrv and AudioEndpointBuilder RUNNING.
+- Earlier service snapshot only: BTAGService/BthAvctpSvc were present. The later 2026-11-19 environment report (E-133) records them absent, while bthserv/Audiosrv/AudioEndpointBuilder are running.
 - Microsoft documents classic A2DP as a separate WDM profile driver communicating with BthPort; ACX is documented for Bluetooth LE Audio VSAP. Microsoft also states Windows Server SKUs lack in-box Bluetooth support.
 - Initial Win10 collector's optional PnpDevice call failed localization and left one CSV empty; the signed-driver inventory and endpoint dump are valid. A2DP INF/DriverStore package still needs capture.
 
