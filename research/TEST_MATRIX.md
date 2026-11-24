@@ -110,3 +110,15 @@ No service, device, profile-driver, endpoint, SBC negotiation, audio-stream, LDA
 | CI #463 — Winbindex exact identity | SHA-256 equals captured archive | Failed 0/3; symbol-server collision |
 | UUP image audit #3 | Exact image version, captured hashes, PE import/export comparison | In progress |
 | Disposable Server 2022 runtime | Service → enumeration → driver → endpoint → SBC → audio | Not started; gated on static audit |
+
+
+## 2026-11-24 exact-image tests
+
+| Test | Expected evidence | Result |
+|---|---|---|
+| CI #463 — Win10 A2DP package discovery | INF/component versions and package ownership | Passed |
+| CI #463 — PSF payload classification | Complete PE image or explicit delta classification | Delta classification confirmed; full PE not reconstructed |
+| CI #463 — Server A2DP package presence | A2DP INF/SYS/BtaMPM references in KB5126655 | No matching package/manifest hits |
+| CI #463 — Winbindex exact identity | SHA-256 equals captured archive | Failed 0/3; symbol-server collision |
+| UUP image audit #3 | Exact image version, captured hashes, PE import/export comparison | In progress |
+| Disposable Server 2022 runtime | Service → enumeration → driver → endpoint → SBC → audio | Not started; gated on static audit |
