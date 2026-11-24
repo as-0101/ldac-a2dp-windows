@@ -228,3 +228,7 @@ The Win10 package capture is already present. Do not rerun the exporter or repea
 ### D-032 — Keep APO/COM registrations separate from A2DP codec providers
 The mssysfx path registers Windows audio-effect APOs (user-mode COM DSP objects). WMALFXGFXDSP.dll and SysFxUI.dll are not LDAC encoder/decoder DLLs. No Microsoft LDAC codec-provider CLSID or user-mode codec DLL has been identified.
 
+
+
+### D-033 — Prioritize the updated DriverStore BthA2dp package copy
+The 282,624-byte DriverStore copy (version 10.0.19041.4355, SHA 5FBA...) has a direct import report from ntoskrnl.exe only. The separate 279,040-byte System32 copy (likely 10.0.19041.1 by secondary size/version corroboration; SHA 0442...) has 8 import descriptors / 144 functions. Treat them as different servicing generations and use the DriverStore package copy as the primary Server compatibility candidate. Do not infer that its smaller import table eliminates dynamic or INF-level dependencies.
