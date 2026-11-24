@@ -14,14 +14,19 @@ $PeDirectory = Join-Path $OutputDirectory "pe-audit"
 $InfReportPath = Join-Path $OutputDirectory "inf-summary.txt"
 $ComponentReportPath = Join-Path $OutputDirectory "component-hits.json"
 $ServerReferenceDirectory = Join-Path $OutputDirectory "server-reference"
+$Win10PackageFilesDirectory = Join-Path $OutputDirectory "win10-package-files"
+$script:Win10CatalogTargetFiles = @()
 New-Item -ItemType Directory -Path $OutputDirectory -Force | Out-Null
 New-Item -ItemType Directory -Path $PeDirectory -Force | Out-Null
 New-Item -ItemType Directory -Path $ServerReferenceDirectory -Force | Out-Null
+New-Item -ItemType Directory -Path $Win10PackageFilesDirectory -Force | Out-Null
 Import-Module Dism -ErrorAction Stop
 
 $Targets = @(
-    [pscustomobject]@{ Name="server2022-20348.5761"; Role="server"; Id="008aacce-b0b7-4aeb-a3b2-43286434832c"; ExpectedBuild="20348.5761"; ExpectedEditionId="ServerDatacenter"; PreferredEdition="ServerDatacenter"; FallbackEdition="ServerStandard"; ImagePattern="Datacenter|Standard" },
-    [pscustomobject]@{ Name="win10-19045.5917"; Role="win10"; Id="598d27dc-ad81-41aa-8c83-42b88e60c823"; ExpectedBuild="19045.5917"; ExpectedEditionId="Professional"; PreferredEdition="Professional"; FallbackEdition="Professional"; ImagePattern="Pro|Professional" }
+    # Win10 is mounted first so its exact signed A2DP package files can be
+    # retained temporarily and checked against the Server 2022 catalog set.
+    [pscustomobject]@{ Name="win10-19045.5917"; Role="win10"; Id="598d27dc-ad81-41aa-8c83-42b88e60c823"; ExpectedBuild="19045.5917"; ExpectedEditionId="Professional"; PreferredEdition="Professional"; FallbackEdition="Professional"; ImagePattern="Pro|Professional" },
+    [pscustomobject]@{ Name="server2022-20348.5761"; Role="server"; Id="008aacce-b0b7-4aeb-a3b2-43286434832c"; ExpectedBuild="20348.5761"; ExpectedEditionId="ServerDatacenter"; PreferredEdition="ServerDatacenter"; FallbackEdition="ServerStandard"; ImagePattern="Datacenter|Standard" }
 )
 
 $TargetFileNames = @(
@@ -403,7 +408,6 @@ function Get-OfflineServiceSummary {
 
 function Get-TargetCatalogMembership {
     param([Parameter(Mandatory)][string]$MountDirectory, [Parameter(Mandatory)][string]$Role)
-    if ($Role -ne "win10") { return @() }
 
     $driverStore = Join-Path $MountDirectory "Windows\System32\DriverStore\FileRepository"
     $infRoot = Join-Path $MountDirectory "Windows\INF"
@@ -415,28 +419,96 @@ function Get-TargetCatalogMembership {
         @{ name="btampm.inf"; pattern="btampm.inf_amd64"; policy="/pa" }
     )
     $targets = @()
-    foreach ($spec in $targetSpecs) {
-        $roots = @($driverStore, $infRoot)
-        $matches = foreach ($root in $roots) {
-            if (Test-Path -LiteralPath $root) {
-                Get-ChildItem -LiteralPath $root -Filter $spec.name -File -Recurse -ErrorAction SilentlyContinue |
-                    Where-Object {
-                        if ($spec.pattern) { $_.FullName -match [regex]::Escape($spec.pattern) } else { $true }
-                    }
+
+    if ($Role -eq "win10") {
+        foreach ($spec in $targetSpecs) {
+            $roots = @($driverStore, $infRoot)
+            $matches = foreach ($root in $roots) {
+                if (Test-Path -LiteralPath $root) {
+                    Get-ChildItem -LiteralPath $root -Filter $spec.name -File -Recurse -ErrorAction SilentlyContinue |
+                        Where-Object {
+                            if ($spec.pattern) { $_.FullName -match [regex]::Escape($spec.pattern) } else { $true }
+                        }
+                }
+            }
+            $file = $matches |
+                Sort-Object @{Expression={ if ($_.FullName -match "\\DriverStore\\FileRepository\\") { 0 } else { 1 } }}, FullName |
+                Select-Object -First 1
+            if ($file) {
+                $hash = (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash.ToUpperInvariant()
+                $copyName = "{0}-{1}{2}" -f $file.BaseName, $hash.Substring(0, 12), $file.Extension
+                $copyPath = Join-Path $Win10PackageFilesDirectory $copyName
+                Copy-Item -LiteralPath $file.FullName -Destination $copyPath -Force
+                $targets += [pscustomobject]@{
+                    name=$spec.name
+                    sourceRole="win10"
+                    sourcePath=$file.FullName.Substring($MountDirectory.Length).TrimStart("\")
+                    fullPath=$file.FullName
+                    copyPath=("win10-package-files\" + $copyName)
+                    sha256=$hash
+                    policy=$spec.policy
+                    missing=$false
+                }
+            } else {
+                $targets += [pscustomobject]@{
+                    name=$spec.name; sourceRole="win10"; sourcePath=$null
+                    fullPath=$null; copyPath=$null; sha256=$null
+                    policy=$spec.policy; missing=$true
+                }
             }
         }
-        $file = $matches | Sort-Object @{Expression={ if ($_.FullName -match "\\DriverStore\\FileRepository\\") { 0 } else { 1 } }}, FullName | Select-Object -First 1
-        if ($file) {
+        $script:Win10CatalogTargetFiles = $targets
+    }
+    elseif ($Role -eq "server") {
+        foreach ($source in @($script:Win10CatalogTargetFiles)) {
+            $copyFullPath = if ($source.copyPath) { Join-Path $OutputDirectory $source.copyPath } else { $null }
             $targets += [pscustomobject]@{
-                name=$spec.name
-                path=$file.FullName.Substring($MountDirectory.Length).TrimStart("\")
-                fullPath=$file.FullName
-                sha256=(Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash.ToUpperInvariant()
-                policy=$spec.policy
+                name=$source.name
+                sourceRole="win10"
+                sourcePath=$source.sourcePath
+                fullPath=$copyFullPath
+                copyPath=$source.copyPath
+                sha256=$source.sha256
+                policy=$source.policy
+                missing=($null -eq $copyFullPath -or -not (Test-Path -LiteralPath $copyFullPath))
             }
-        } else {
-            $targets += [pscustomobject]@{ name=$spec.name; path=$null; fullPath=$null; sha256=$null; policy=$spec.policy }
         }
+
+        # Positive controls prove that the Server catalog scan itself works.
+        $serverControls = @(
+            @{ name="BthPort.sys"; relative="Windows\System32\drivers\BTHport.sys"; policy="/kp" },
+            @{ name="BthEnum.sys"; relative="Windows\System32\drivers\BthEnum.sys"; policy="/kp" },
+            @{ name="BTHUSB.sys"; relative="Windows\System32\drivers\BTHUSB.sys"; policy="/kp" },
+            @{ name="bth.inf"; relative="Windows\INF\bth.inf"; policy="/pa" }
+        )
+        foreach ($control in $serverControls) {
+            $controlPath = Join-Path $MountDirectory $control.relative
+            if (Test-Path -LiteralPath $controlPath) {
+                $targets += [pscustomobject]@{
+                    name=$control.name
+                    sourceRole="server"
+                    sourcePath=$control.relative
+                    fullPath=$controlPath
+                    copyPath=$null
+                    sha256=(Get-FileHash -LiteralPath $controlPath -Algorithm SHA256).Hash.ToUpperInvariant()
+                    policy=$control.policy
+                    missing=$false
+                }
+            } else {
+                $targets += [pscustomobject]@{
+                    name=$control.name
+                    sourceRole="server"
+                    sourcePath=$control.relative
+                    fullPath=$null
+                    copyPath=$null
+                    sha256=$null
+                    policy=$control.policy
+                    missing=$true
+                }
+            }
+        }
+    } else {
+        return @()
     }
 
     $catalogRoots = @(
@@ -452,6 +524,7 @@ function Get-TargetCatalogMembership {
         }
     }
     $catalogFiles = @($catalogFiles | Sort-Object FullName -Unique)
+
     $signToolPath = $null
     $signToolCommand = Get-Command signtool.exe -ErrorAction SilentlyContinue | Select-Object -First 1
     if ($signToolCommand) {
@@ -472,22 +545,32 @@ function Get-TargetCatalogMembership {
     }
 
     $results = foreach ($target in $targets) {
-        if (-not $target.fullPath) {
-            [pscustomobject]@{
-                role=$Role; file=$target.name; filePath=$null; fileSha256=$null
-                status="TARGET_FILE_NOT_FOUND"; catalogPath=$null; catalogSha256=$null
-                catalogsScanned=0; verificationPolicy=$target.policy; signtool=$signToolPath
-                output="Target file was not found in the offline image."
-            }
+        $base = @{
+            role=$Role
+            sourceImageRole=$target.sourceRole
+            catalogImageRole=$Role
+            file=$target.name
+            filePath=$target.sourcePath
+            fileSha256=$target.sha256
+            targetCopyPath=$target.copyPath
+            catalogPath=$null
+            catalogSha256=$null
+            catalogsScanned=0
+            catalogCount=$catalogFiles.Count
+            verificationPolicy=$target.policy
+            signtool=$signToolPath
+            output=$null
+        }
+        if ($target.missing -or -not $target.fullPath -or -not (Test-Path -LiteralPath $target.fullPath)) {
+            $base.status = "TARGET_FILE_NOT_FOUND"
+            $base.output = "Source target file or retained Win10 package copy was not found."
+            [pscustomobject]$base
             continue
         }
         if (-not $signToolPath) {
-            [pscustomobject]@{
-                role=$Role; file=$target.name; filePath=$target.path; fileSha256=$target.sha256
-                status="SIGNTOOL_NOT_FOUND"; catalogPath=$null; catalogSha256=$null
-                catalogsScanned=0; verificationPolicy=$target.policy; signtool=$null
-                output="Windows SDK SignTool was not found on the disposable runner."
-            }
+            $base.status = "SIGNTOOL_NOT_FOUND"
+            $base.output = "Windows SDK SignTool was not found on the disposable runner."
+            [pscustomobject]$base
             continue
         }
 
@@ -505,24 +588,15 @@ function Get-TargetCatalogMembership {
             }
             if ($tested -le 3) { $lastOutput = ($verifyOutput | Out-String).Trim() }
         }
-        [pscustomobject]@{
-            role=$Role
-            file=$target.name
-            filePath=$target.path
-            fileSha256=$target.sha256
-            status=if ($match) { "CATALOG_MEMBER_VERIFIED" } elseif ($catalogFiles.Count -eq 0) { "NO_CATALOG_FILES_FOUND" } else { "NO_MATCH_IN_SCANNED_CATALOGS" }
-            catalogPath=if ($match) { $match.FullName.Substring($MountDirectory.Length).TrimStart("\") } else { $null }
-            catalogSha256=if ($match) { (Get-FileHash -LiteralPath $match.FullName -Algorithm SHA256).Hash.ToUpperInvariant() } else { $null }
-            catalogsScanned=$tested
-            catalogCount=$catalogFiles.Count
-            verificationPolicy=$target.policy
-            signtool=$signToolPath
-            output=$lastOutput
-        }
+        $base.status = if ($match) { "CATALOG_MEMBER_VERIFIED" } elseif ($catalogFiles.Count -eq 0) { "NO_CATALOG_FILES_FOUND" } else { "NO_MATCH_IN_SCANNED_CATALOGS" }
+        $base.catalogsScanned = $tested
+        $base.catalogPath = if ($match) { $match.FullName.Substring($MountDirectory.Length).TrimStart("\") } else { $null }
+        $base.catalogSha256 = if ($match) { (Get-FileHash -LiteralPath $match.FullName -Algorithm SHA256).Hash.ToUpperInvariant() } else { $null }
+        $base.output = $lastOutput
+        [pscustomobject]$base
     }
     return $results
 }
-
 function Collect-Image {
     param([Parameter(Mandatory)]$Target, [Parameter(Mandatory)][string]$WorkDirectory)
     $download = Download-UupIso -Target $Target -WorkDirectory $WorkDirectory
@@ -588,7 +662,7 @@ function Collect-Image {
                 $version = [System.Diagnostics.FileVersionInfo]::GetVersionInfo($file.FullName)
                 $expected = Get-ExpectedHash -File $file -RelativePath $relative
                 $expectedMatch = if ($expected) { $hash -eq $expected } else { $null }
-                $reference = if ($Target.Role -eq "win10") { $ServerReferenceDirectory } else { $null }
+                $reference = if ($Target.Role -eq "win10" -and (Test-Path -LiteralPath (Join-Path $ServerReferenceDirectory "ntoskrnl.exe"))) { $ServerReferenceDirectory } else { $null }
                 $peReport = Get-PeAudit -File $file -Role $Target.Role -Hash $hash -ReferenceDirectory $reference
                 $fileRecords += [pscustomobject]@{
                     role=$Target.Role
@@ -701,8 +775,10 @@ function Save-AuditReports {
 - The selected image version is checked before extracting files.
 - SHA-256 comparisons are made against the already-recorded Win10 archive hashes.
 - PE reports include imports, delay imports, exports, API-set imports and a static comparison of Win10 imports against Server 2022 exports.
-- Catalog membership is checked against offline catalogs with SignTool; embedded Authenticode status is reported separately.
+- Win10 A2DP files are checked against Win10 system catalogs and then the same exact file hashes are checked against the Server 2022 offline catalog set. Server Bluetooth core files are positive controls for the Server catalog scan.
+- Catalog membership is checked with SignTool; embedded Authenticode status is reported separately. A successful Win10 membership check alone does not prove Server 2022 can validate the package.
 - Offline SYSTEM hive service registrations are captured from a temporary copy; source images remain read-only.
+- Win10 package file copies are temporary and removed before the workflow uploads metadata.
 - No Microsoft binary payloads or ISO files are uploaded by this workflow; only metadata and text reports are retained.
 - Static export presence does not prove driver load or runtime compatibility.
 - Per-image status is recorded in manifest.json; completed image results are checkpointed before the next image starts.
@@ -738,4 +814,6 @@ if ($hadFailures) {
 }
 
 Remove-Item -LiteralPath $ServerReferenceDirectory -Recurse -Force -ErrorAction SilentlyContinue
+Remove-Item -LiteralPath $Win10PackageFilesDirectory -Recurse -Force -ErrorAction SilentlyContinue
 Write-Host "UUP image audit complete. Manifest: $(Join-Path $OutputDirectory 'manifest.json')"
+exit 0
