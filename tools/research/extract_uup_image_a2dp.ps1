@@ -307,48 +307,75 @@ function Get-OfflineImageIdentity {
 }
 
 
+function Get-OptionalPropertyValue {
+    param(
+        [AllowNull()][object]$InputObject,
+        [Parameter(Mandatory)][string]$Name
+    )
+    if ($null -eq $InputObject) { return $null }
+    $property = $InputObject.PSObject.Properties[$Name]
+    if ($null -eq $property) { return $null }
+    return $property.Value
+}
+
+# Strict-mode regression guard: registry objects do not all expose ServiceDll.
+$optionalPropertyProbe = [pscustomobject]@{ Type = 1; Start = 3 }
+if ($null -ne (Get-OptionalPropertyValue -InputObject $optionalPropertyProbe -Name "ServiceDll")) {
+    throw "Optional registry-property helper returned a value for an absent property."
+}
+if ((Get-OptionalPropertyValue -InputObject $optionalPropertyProbe -Name "Start") -ne 3) {
+    throw "Optional registry-property helper failed to return a present property."
+}
+
 function Get-OfflineServiceSummary {
     param(
         [Parameter(Mandatory)][string]$MountDirectory,
         [Parameter(Mandatory)][string]$WorkDirectory,
         [Parameter(Mandatory)][string]$Role
     )
-    $sourceHive = Join-Path $MountDirectory "Windows\System32\Config\SYSTEM"
+    $sourceHive = Join-Path $MountDirectory "Windows\\System32\\Config\\SYSTEM"
     if (-not (Test-Path -LiteralPath $sourceHive)) { throw "Offline SYSTEM hive not found: $sourceHive" }
     $hiveCopy = Join-Path $WorkDirectory "SYSTEM.audit.hiv"
     Copy-Item -LiteralPath $sourceHive -Destination $hiveCopy -Force
     $hiveName = "LDAC_UUP_AUDIT_SYSTEM_$Role"
     $loaded = $false
     try {
-        $loadOutput = & reg.exe load "HKLM\$hiveName" $hiveCopy 2>&1
+        $loadOutput = & reg.exe load "HKLM\\$hiveName" $hiveCopy 2>&1
         if ($LASTEXITCODE -ne 0) { throw "Could not load offline SYSTEM hive (exit=$LASTEXITCODE): $($loadOutput -join ' ')" }
         $loaded = $true
-        $selectPath = "Registry::HKEY_LOCAL_MACHINE\$hiveName\Select"
+        $selectPath = "Registry::HKEY_LOCAL_MACHINE\\$hiveName\\Select"
         $select = Get-ItemProperty -LiteralPath $selectPath
-        $current = [int]$select.Current
+        $currentValue = Get-OptionalPropertyValue -InputObject $select -Name "Current"
+        if ($null -eq $currentValue) { throw "Offline SYSTEM hive has no Select\\Current value." }
+        $current = [int]$currentValue
         $controlSet = "ControlSet{0:D3}" -f $current
         $serviceNames = @("BthA2dp", "BtaMPM", "BthPort", "BthEnum", "BTHUSB", "AudioSrv", "AudioEndpointBuilder")
         $records = foreach ($serviceName in $serviceNames) {
-            $servicePath = "Registry::HKEY_LOCAL_MACHINE\$hiveName\$controlSet\Services\$serviceName"
+            $servicePath = "Registry::HKEY_LOCAL_MACHINE\\$hiveName\\$controlSet\\Services\\$serviceName"
             if (Test-Path -LiteralPath $servicePath) {
                 $item = Get-ItemProperty -LiteralPath $servicePath
                 $parametersPath = Join-Path $servicePath "Parameters"
                 $serviceDll = $null
                 if (Test-Path -LiteralPath $parametersPath) {
                     $parameters = Get-ItemProperty -LiteralPath $parametersPath
-                    $serviceDll = [string]$parameters.ServiceDll
+                    $serviceDll = Get-OptionalPropertyValue -InputObject $parameters -Name "ServiceDll"
                 }
+                $typeValue = Get-OptionalPropertyValue -InputObject $item -Name "Type"
+                $startValue = Get-OptionalPropertyValue -InputObject $item -Name "Start"
+                $imagePathValue = Get-OptionalPropertyValue -InputObject $item -Name "ImagePath"
+                $groupValue = Get-OptionalPropertyValue -InputObject $item -Name "Group"
+                $dependOnServiceValue = Get-OptionalPropertyValue -InputObject $item -Name "DependOnService"
                 [pscustomobject]@{
                     role=$Role
                     controlSet=$controlSet
                     service=$serviceName
                     exists=$true
-                    type=if ($null -ne $item.Type) { [int]$item.Type } else { $null }
-                    start=if ($null -ne $item.Start) { [int]$item.Start } else { $null }
-                    imagePath=[string]$item.ImagePath
-                    group=[string]$item.Group
-                    dependOnService=@($item.DependOnService)
-                    serviceDll=$serviceDll
+                    type=if ($null -ne $typeValue) { [int]$typeValue } else { $null }
+                    start=if ($null -ne $startValue) { [int]$startValue } else { $null }
+                    imagePath=if ($null -ne $imagePathValue) { [string]$imagePathValue } else { $null }
+                    group=if ($null -ne $groupValue) { [string]$groupValue } else { $null }
+                    dependOnService=if ($null -ne $dependOnServiceValue) { @($dependOnServiceValue) } else { @() }
+                    serviceDll=if ($null -ne $serviceDll) { [string]$serviceDll } else { $null }
                     source="copied offline SYSTEM hive; read-only source image"
                 }
             } else {
@@ -369,7 +396,7 @@ function Get-OfflineServiceSummary {
         }
         return $records
     } finally {
-        if ($loaded) { & reg.exe unload "HKLM\$hiveName" 2>&1 | Out-Null }
+        if ($loaded) { & reg.exe unload "HKLM\\$hiveName" 2>&1 | Out-Null }
         Remove-Item -LiteralPath $hiveCopy -Force -ErrorAction SilentlyContinue
     }
 }
@@ -594,6 +621,7 @@ function Collect-Image {
             [pscustomobject]@{
                 name=$Target.Name
                 role=$Target.Role
+                status="COMPLETED"
                 expectedBuild=$Target.ExpectedBuild
                 selectedEdition=$download.Edition
                 availableEditions=$download.AvailableEditions
@@ -622,39 +650,41 @@ function Collect-Image {
     }
 }
 
-$results = @()
-$allInfLines = @()
-$allComponentHits = @()
-foreach ($target in $Targets) {
-    $workDirectory = Join-Path $OutputDirectory ("work-" + $target.Role)
-    $result = Collect-Image -Target $target -WorkDirectory $workDirectory
-    $results += $result
-    foreach ($inf in $result.infs) {
-        $allInfLines += "## $($result.name) :: $($inf.path)"
-        $allInfLines += "SHA-256: $($inf.sha256)"
-        $allInfLines += $inf.selectedLines
-        $allInfLines += ""
+function Save-AuditReports {
+    param([Parameter(Mandatory)][object[]]$Results)
+
+    $completed = @($Results | Where-Object { $_.status -eq "COMPLETED" })
+    $allInfLines = @()
+    $allComponentHits = @()
+    $allCatalogMembership = @()
+    $allServiceRegistrations = @()
+    foreach ($image in $completed) {
+        foreach ($inf in @($image.infs)) {
+            $allInfLines += "## $($image.name) :: $($inf.path)"
+            $allInfLines += "SHA-256: $($inf.sha256)"
+            $allInfLines += $inf.selectedLines
+            $allInfLines += ""
+        }
+        $allComponentHits += @($image.componentHits)
+        $allCatalogMembership += @($image.catalogMembership)
+        $allServiceRegistrations += @($image.serviceRegistrations)
     }
-    $allComponentHits += $result.componentHits
-}
 
-$manifest = [ordered]@{
-    generatedUtc=(Get-Date).ToUniversalTime().ToString("o")
-    githubRunId=$env:GITHUB_RUN_ID
-    githubSha=$env:GITHUB_SHA
-    scope="Offline UUP image extraction, static PE analysis, offline SYSTEM service registration inventory, and offline catalog membership verification only. No package installation, driver load, device enumeration, audio test, or physical-host access."
-    expectedCapturedHashes=$ExpectedHashes
-    images=$results
-}
-$manifest | ConvertTo-Json -Depth 30 | Set-Content -LiteralPath (Join-Path $OutputDirectory "manifest.json") -Encoding utf8
-$allInfLines | Set-Content -LiteralPath $InfReportPath -Encoding utf8
-$allComponentHits | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath $ComponentReportPath -Encoding utf8
-$allCatalogMembership = @($results | ForEach-Object { $_.catalogMembership })
-$allServiceRegistrations = @($results | ForEach-Object { $_.serviceRegistrations })
-$allCatalogMembership | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath (Join-Path $OutputDirectory "catalog-membership.json") -Encoding utf8
-$allServiceRegistrations | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath (Join-Path $OutputDirectory "service-registrations.json") -Encoding utf8
+    $manifest = [ordered]@{
+        generatedUtc=(Get-Date).ToUniversalTime().ToString("o")
+        githubRunId=$env:GITHUB_RUN_ID
+        githubSha=$env:GITHUB_SHA
+        scope="Offline UUP image extraction, static PE analysis, offline SYSTEM service registration inventory, and offline catalog membership verification only. No package installation, driver load, device enumeration, audio test, or physical-host access."
+        expectedCapturedHashes=$ExpectedHashes
+        images=$Results
+    }
+    $manifest | ConvertTo-Json -Depth 30 | Set-Content -LiteralPath (Join-Path $OutputDirectory "manifest.json") -Encoding utf8
+    $allInfLines | Set-Content -LiteralPath $InfReportPath -Encoding utf8
+    $allComponentHits | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath $ComponentReportPath -Encoding utf8
+    $allCatalogMembership | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath (Join-Path $OutputDirectory "catalog-membership.json") -Encoding utf8
+    $allServiceRegistrations | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath (Join-Path $OutputDirectory "service-registrations.json") -Encoding utf8
 
-@"
+    @"
 # UUP image A2DP component audit
 
 - Win10 reference image: 19045.5917 x64, UUP ID 598d27dc-ad81-41aa-8c83-42b88e60c823.
@@ -667,7 +697,37 @@ $allServiceRegistrations | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath (
 - Offline SYSTEM hive service registrations are captured from a temporary copy; source images remain read-only.
 - No Microsoft binary payloads or ISO files are uploaded by this workflow; only metadata and text reports are retained.
 - Static export presence does not prove driver load or runtime compatibility.
+- Per-image status is recorded in manifest.json; completed image results are checkpointed before the next image starts.
 "@ | Set-Content -LiteralPath (Join-Path $OutputDirectory "README.md") -Encoding utf8
+}
+
+$results = @()
+$hadFailures = $false
+foreach ($target in $Targets) {
+    $workDirectory = Join-Path $OutputDirectory ("work-" + $target.Role)
+    try {
+        $result = Collect-Image -Target $target -WorkDirectory $workDirectory
+        $results += $result
+        Write-Host "Completed offline audit for $($target.Name)."
+    } catch {
+        $hadFailures = $true
+        $results += [pscustomobject]@{
+            name=$target.Name
+            role=$target.Role
+            status="FAILED"
+            expectedBuild=$target.ExpectedBuild
+            error=$_.Exception.Message
+            errorLine=$_.InvocationInfo.ScriptLineNumber
+            errorCommand=$_.InvocationInfo.MyCommand.Name
+        }
+        Write-Warning "Offline audit failed for $($target.Name): $($_.Exception.Message)"
+    }
+    Save-AuditReports -Results $results
+}
+
+if ($hadFailures) {
+    throw "One or more offline image audits failed. Per-image status and completed results are preserved in manifest.json."
+}
 
 Remove-Item -LiteralPath $ServerReferenceDirectory -Recurse -Force -ErrorAction SilentlyContinue
 Write-Host "UUP image audit complete. Manifest: $(Join-Path $OutputDirectory 'manifest.json')"
