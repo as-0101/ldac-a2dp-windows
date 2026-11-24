@@ -1,3 +1,18 @@
+## ACTIVE OVERRIDE — 2026-11-24 12:10 Europe/Kyiv
+
+**Primary route remains the existing Windows 10 A2DP Source package. Do not return to ACX/WDK bind-probe work.** CI #12 has now completed the cross-SKU catalog check. The next gate is original-CAT verification and DriverStore-only staging on a disposable Windows Server 2022 runner.
+
+- CI #12 [45354874225](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45354874225), commit 08663c4ca7d1536b96c554fd5e484382262b1250, completed successfully. It extracted Win10 19045.5917 and Server 20348.5761 offline images.
+- All five exact Win10 A2DP package files verify against the same Win10 servicing CAT: Microsoft-Windows-Client-Desktop-Required-Package~31bf3856ad364e35~amd64~~10.0.19041.5917.cat, SHA-256 78772FA12959C072D687283F08D08367B8A8EF1A2F07D7B72F20BCAFD12483BF.
+- The same five file hashes have **no matching catalog in the Server 20348.5761 offline image**, after scanning all 8,325 catalog files. This is a validated no-membership result, not proof that the CAT itself is untrusted or cannot be registered.
+- Server positive controls passed 4/4: BthPort.sys, BthEnum.sys, BTHUSB.sys and bth.inf all verify against Microsoft-OneCore-Bluetooth-Package~...~10.0.20348.5756.cat, SHA-256 B0A59B9C3B6E528487BB273332015C8CC3A65A5E60F33BF8AA263E41F6D59AA6.
+- The CI #12 artifact is preserved in Library at /LDAC Project/Incoming/CI-12-cross-sku-a2dp-audit.zip (Library ID libfile_08ac72cb1a688191b6940ec4cb82716e) with a readable summary beside it (Library ID libfile_9d20fd91acdc8191bf556453ba6d746c).
+- CAT signer subject/thumbprint was **not** retained in CI #12 metadata (catalogSignature serialized as null). Do not claim a recorded signer identity. File membership and signature-policy verification succeeded on the Win10 source image; verbose target-side SignTool evidence is the next test.
+- The dedicated stage-smoke branch is experiment/win10-a2dp-stage-smoke-20261124. It verifies the original CAT on a disposable GitHub-hosted Server 2022 runner, then tries pnputil /add-driver without /install; if needed it registers the CAT with SignTool's system component/driver catalog database and retries. It cleans up the staged package and catalog. It does not bind a device or start a driver.
+- Stage-smoke runs #1/#2 failed in the PowerShell parser before UUP extraction due an interpolated $name: string; the parser issue was corrected. Run #3 [45371687882](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45371687882) is the current attempt. These harness failures are not Windows compatibility results.
+- No A2DP endpoint, PnP device match, service start, driver load, SBC negotiation or audio stream has been proven. Physical Server 2022 remains untouched; server-2022-oppo is unchanged; ACX bind-probe remains parked.
+
+
 ## Active recovery and next actions — 2026-11-24
 
 1. Let UUP audit #11 [45347639357](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45347639357) finish. Its preflight already passed: PowerShell parser accepted the script and x64 SignTool was found. Inspect `manifest.json`, `catalog-membership.json`, `service-registrations.json`, `component-hits.json`, and catalog/INF summary when available.
