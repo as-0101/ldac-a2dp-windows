@@ -1,6 +1,6 @@
 # Windows 10 Bluetooth A2DP component audit
 
-**Updated:** 2026-11-24 01:42 Europe/Kyiv  
+**Updated:** 2026-11-24 02:19 Europe/Kyiv  
 **Scope:** Windows 10 22H2 A2DP source package → Windows Server 2022 build 20348.5761.  
 **Execution status:** static research only. No build, CI run, driver installation, device restart, or physical-host mutation was performed.
 
@@ -172,3 +172,39 @@ The as-0101/ldac-a2dp-windows repository is a fork of yariktop133/ldac-a2dp-wind
 - [BluetoothGoodies — Alternative A2DP Driver EULA](https://www.bluetoothgoodies.com/a2dp/eula/)
 - [Dependencies — open-source PE dependency analysis](https://github.com/lucasg/Dependencies)
 - [Upstream LDAC A2DP Windows project](https://github.com/yariktop133/ldac-a2dp-windows)
+
+
+## 8. Strategy correction — codec ownership and ready alternatives (2026-11-24 02:19)
+
+### 8.1 Windows 10 has no inbox LDAC binary to transplant
+
+Microsoft's [Classic Audio codec table](https://learn.microsoft.com/en-us/windows-hardware/drivers/bluetooth/bluetooth-classic-audio) lists SBC and aptX Classic for Windows 10; AAC is Windows 11-only and LDAC is not listed. The captured package therefore remains a candidate for the SBC milestone, not a source of an LDAC DLL.
+
+Microsoft's [Bluetooth stack documentation](https://learn.microsoft.com/en-us/windows-hardware/drivers/bluetooth/using-the-bluetooth-driver-stack) describes a PnP-loaded profile driver selected through INF matching and communicating with `BthPort.sys` through WDM IRPs and BRBs. The captured source/common INF installs `BthA2dp.sys`; `BtaMPM.sys` is profile/multiprofile management. The `mssysfx` APO registration path is for audio effects and is not an LDAC codec provider.
+
+A public PDB symbol index for the older `BthA2dp.sys` 10.0.17763.168 build exposes internal `A2dpSbcCodec` and `AptXCodec` classes and AVDTP code, with no `Ldac` string in 997 named symbols. This is useful architecture corroboration only; it is not the PDB for the captured 10.0.19041.4355 DriverStore binary and must not be used as an exact symbol map for that file.
+
+### 8.2 Existing LDAC source in this repository
+
+The `server-2022-oppo` branch already vendors AOSP `external/libldac` at upstream commit `eeee1a3f` (import recorded in [commit 95bb928](https://github.com/as-0101/ldac-a2dp-windows/commit/95bb92866b0d77de20ee94694eb4be2979635947)). CMake builds `ldacBT_enc` and `ldacBT_abr` as static libraries; `service/encoder.cpp` calls the AOSP APIs. This is an existing encoder source, not a Windows 10 DLL, not a Microsoft A2DP provider and not a transport by itself.
+
+The vendored NOTICE states that certification is required to use LDAC in products. Sony's [AOSP page](https://www.sony.net/Products/LDAC/aosp/) provides a corporate licensing inquiry. Keep a local technical proof separate from any product-distribution/certification decision.
+
+### 8.3 PE parser correction
+
+The Library script `pe_imports_a2dp.py` does not advance its import-descriptor offset by 20 bytes inside the descriptor loop. It therefore reads the same descriptor repeatedly. The 1,315,472-byte `a2dp_pe_imports_report.txt` is invalid for descriptor counts and dependency conclusions. Reports (2)/(3) are separate 8,098-byte reports, but their corrected generating source was not found in the Library; re-run with Dependencies/PEInspector and retain the parser. Do not conflate those System32 reports with E-119's GNU objdump report for the 282,624-byte DriverStore package copy.
+
+### 8.4 Existing user-mode LDAC alternative: BlueCaster
+
+[BlueCaster v3.0.4](https://github.com/SeiyaFunaokaJP/BlueCaster/releases/tag/v3.0.4), published 2026-11-23, advertises LDAC 330/660/990 kbps and implements A2DP using BTstack+WinUSB in user mode. It bypasses the Windows Bluetooth stack and requires a USB Bluetooth adapter assigned to WinUSB. Its published requirements are Windows 10 22H2 or Windows 11; Server 2022 is not listed. Its README states that distributed programs include BTstack under a personal/non-commercial license unless separately licensed. This is a possible later disposable-VM alternative, not a plug-in DLL and not an approved physical-host action.
+
+### 8.5 Corrected decision and next gate
+
+1. Do not search for a Microsoft inbox LDAC DLL or attempt to register MSSysFx/APO DLLs as codecs.
+2. Keep the captured Win10 Microsoft package as the minimal SBC candidate.
+3. Re-run the exact DriverStore `BthA2dp.sys` and `BtaMPM.sys` static audit with a retained parser, then resolve imports against the exact Server 20348.5761 exports.
+4. Continue official WIM/CBS/system-catalog provenance work. No cross-SKU staging before package ownership and applicability are known.
+5. Test only in a disposable Server 2022 VM and report service, enumeration, driver load, endpoint, SBC negotiation and actual audio as separate gates.
+6. For LDAC, use a different sink. Evaluate BlueCaster only after SBC and after Server/WinUSB/licensing constraints are resolved.
+
+No build, CI, install, runtime test, physical-host query or physical-host mutation was performed in this update.

@@ -217,3 +217,18 @@ The 23:49 archive is the current package source. It supersedes the earlier 20:49
 - Microsoft defines LOCALMFG as the local Bluetooth radio manufacturer. 0x0002 is Intel; 0x005D is Realtek. The current host's LOCALMFG&0002 therefore identifies the local Intel radio, not the OPPO earbuds.
 - The rtka2dp DriverStore folder is not the active oem75 binding; its INF bytes/version were not captured. Public Realtek package IDs use LOCALMFG&005D, so it is not applicable to the current Intel radio.
 - Earlier records that show Microsoft A2DP or BTAGService/BthAvctpSvc running are historical snapshots; E-132/E-133 are the later records for this audit.
+
+
+## 2026-11-24 02:19 — codec and PE-parser provenance
+
+| Artifact / reference | ID / URL | Version / size / SHA-256 | Purpose / status |
+|---|---|---|---|
+| `pe_imports_a2dp.py` | Project/Library file ID `file_000000002c8c821081ba77ee9d223c6f`; Library ID `libfile_6bda9621e34481918defd5640143d3de` | 3,380 bytes | Legacy parser source. **Invalid for descriptor enumeration**: no 20-byte increment in IMAGE_IMPORT_DESCRIPTOR loop. Retain for audit trail only. |
+| `a2dp_pe_imports_report.txt` | Project/Library file ID `file_00000000f33882109a6b1f79c3aaf72d`; Library ID `libfile_d42044fdbba48191ba88ed214588123b` | 1,315,472 bytes | Superseded/invalid repeated-descriptor report. Do not use as an import closure. |
+| Public BthA2dp PDB symbol index | https://lise.pnfsoftware.com/winpdb/DFB24CB4F18C0AA1A5BFD99419D85302B75DAAFEB253DD4A5CA22DFF65BA3385-BthA2dp.html | BthA2dp.sys 10.0.17763.168; SHA-256 DFB24CB4F18C0AA1A5BFD99419D85302B75DAAFEB253DD4A5CA22DFF65BA3385 | Secondary evidence of internal SBC/aptX codec classes and AVDTP; not the captured 10.0.19041.4355 binary. |
+| AOSP libldac source import | https://github.com/as-0101/ldac-a2dp-windows/commit/95bb92866b0d77de20ee94694eb4be2979635947 | Upstream AOSP external/libldac commit `eeee1a3f` | Existing encoder source, statically linked into the project service; no Windows 10 DLL. Sony certification/licensing needs separate confirmation before product distribution. |
+| BlueCaster v3.0.4 x64 portable release | https://github.com/SeiyaFunaokaJP/BlueCaster/releases/tag/v3.0.4 | 16,494,671 bytes; SHA-256 `3C27828065D6A20ABEF3B19B435B71D8F6053768CC0900934E15FD112346A024` | External release asset only; not downloaded or installed. Existing user-mode A2DP/LDAC path using BTstack+WinUSB; requires USB adapter, lists Win10 22H2/Win11, not Server 2022. BTstack personal/non-commercial license applies. |
+
+### Parser provenance correction
+
+The legacy 1.3 MB report is not a trustworthy multi-descriptor import report. Its generating script reuses the same descriptor offset for every loop iteration. The 8,098-byte reports (2)/(3) are separate outputs, but their corrected generating script was not found in the Library. Until those exact binaries are re-run with a retained parser and a second tool, treat the 144-function count as provisional. The GNU objdump E-119 report for the 282,624-byte DriverStore package copy remains a separate record and must not be conflated with the System32 report.

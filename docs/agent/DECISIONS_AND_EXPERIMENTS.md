@@ -239,3 +239,21 @@ Microsoft's Bluetooth PnP documentation defines LOCALMFG as the manufacturer of 
 
 ### D-035 — Do not use the residual Realtek rtka2dp package for the current host
 A rtka2dp.inf DriverStore folder exists, but its INF bytes/version were not captured and it is not the current oem75 binding. Public Realtek IDs use LOCALMFG&005D, while this host's local radio is LOCALMFG&0002 (Intel). Keep it as an unverified residue/reference only; do not install or adapt it for the OPPO path.
+
+
+## Decisions added — 2026-11-24 02:19
+
+### D-036 — Stop searching for a Microsoft Windows 10 inbox LDAC DLL
+Microsoft's Windows 10 Classic Audio codec table lists SBC and aptX Classic, not LDAC. The captured A2DP path is a kernel profile-driver package. No Microsoft inbox LDAC codec DLL/provider exists in the documented path. Continue with that package for SBC; do not spend cycles looking for a nonexistent inbox LDAC DLL.
+
+### D-037 — Treat BthA2dp as the profile/codec implementation, not a DLL host
+The documented profile-driver model loads a PnP profile driver through INF and sends WDM IRPs/BRBs to BthPort. Older public BthA2dp symbols show internal SBC/aptX codec classes and AVDTP. No documented user-mode LDAC provider interface was found in the reviewed Windows 10 docs/INFs. Do not assume a standalone codec DLL can be registered into this stack.
+
+### D-038 — Retire the legacy PE import report for dependency conclusions
+The Library `pe_imports_a2dp.py` does not advance the IMAGE_IMPORT_DESCRIPTOR pointer by 20 bytes; its 1.3 MB output repeats the first descriptor. Preserve the file/report as historical evidence, but do not use them for imports, exports or dependency closure. Re-run with a retained corrected toolchain.
+
+### D-039 — Keep AOSP libldac as encoder source, not as a Win10 binary
+The existing project vendors AOSP `external/libldac` at `eeee1a3f` and statically links it into the custom service. It is not a Windows 10 DLL and does not by itself integrate with Microsoft's A2DP profile driver. Sony certification/licensing must be clarified before product distribution.
+
+### D-040 — Evaluate BlueCaster only as a later, separate transport option
+BlueCaster v3.0.4 already implements user-mode A2DP with LDAC through BTstack+WinUSB. It bypasses the Windows Bluetooth stack, takes over a USB adapter, does not list Server 2022 support, and includes BTstack with a personal/non-commercial license. It may be assessed in a disposable VM after SBC, but is not a drop-in DLL and must not be installed on the physical host.

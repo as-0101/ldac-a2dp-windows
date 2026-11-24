@@ -4,7 +4,7 @@
 
 
 
-**Snapshot:** 2026-11-23 22:36 Europe/Kyiv  
+**Snapshot:** 2026-11-24 02:19 Europe/Kyiv  
 **Scope:** A2DP stereo source only. HFP/microphone is out of scope.
 
 ## Executive conclusion
@@ -176,3 +176,38 @@ Full file/PE map and source links: [WIN10_COMPONENT_AUDIT.md](WIN10_COMPONENT_AU
 The archived Server 2022 environment report records bthserv, Audiosrv and AudioEndpointBuilder running; BTAGService and BthAvctpSvc not installed. BTAGService is HFP/audio-gateway (out of scope); BthAvctpSvc is AVCTP/AVRCP control and is not a prerequisite for the core A2DP audio stream. The core bthport.sys, bthusb.sys, bthenum.sys and bthmini.sys files are present, while btha2dp.sys is absent from System32\\drivers.
 
 A DriverStore folder named rtka2dp.inf_amd64_0fd0faf5e73b2466 is present, but the captured A2DP INF investigation did not export its INF bytes or version. Public Realtek driver catalogs associate legacy rtka2dp.inf packages with LOCALMFG&005D IDs; the current local radio uses LOCALMFG&0002 (Intel), while the Realtek package targets LOCALMFG&005D. The current OPPO A2DP service node is actually bound to the custom oem75.inf. Do not treat rtka2dp.inf as the active OPPO driver or as an LDAC candidate.
+
+
+## 7. Codec ownership and provider boundary — 2026-11-24 02:19
+
+The Windows 10 path is a profile-driver pipeline, not a codec-DLL plug-in chain:
+
+```mermaid
+flowchart TD
+  R["Bluetooth radio / USB or vendor miniport"] --> P["BthPort.sys — HCI/L2CAP core"]
+  P --> E["BTHENUM Audio Sink 0x110B"]
+  E --> I["PnP + source/common A2DP INF"]
+  I --> A["BthA2dp.sys — A2DP/AVDTP profile and codec path"]
+  A --> K["KS filter/pins and audio interfaces"]
+  K --> W["AudioEndpointBuilder / AudioSrv / audio engine"]
+  W --> U["WASAPI application"]
+  M["BtaMPM.sys — profile/multiprofile management"] -. "INF Include/Needs / package dependency" .-> A
+  F["MSSysFx APOs — audio effects only"] -. "separate effects path" .-> W
+```
+
+- The source INF is the playback-to-earbuds direction. The sink INF is the reverse direction and is not required for the PC-to-OPPO playback milestone.
+- The common INF is Class=MEDIA, DriverVer 10.0.19041.4355. It includes `ks.inf`, `wdmaudio.inf` and `BtaMpm.inf`, registers `BthA2dp` as a demand-start kernel service, and registers KS audio interfaces.
+- `btampm.inf` is Class=SYSTEM, DriverVer 10.0.19041.5848; its CopyFilesOnly section supplies `BtaMPM.sys`. This is not the LDAC encoder.
+- The `mssysfx.CopyFilesAndRegister` / APO path supplies audio processing effects. It is not a documented A2DP codec provider.
+- Microsoft's documented A2DP codecs for Windows 10 are SBC and aptX Classic. There is no inbox LDAC DLL. The public 17763.168 BthA2dp PDB shows SBC/aptX codec classes inside the profile driver; treat this as older-build corroboration only.
+- The project AOSP `libldac` source is already statically linked into its own service; it cannot be registered into the Microsoft profile driver through any documented user-mode codec-provider contract found in the reviewed sources.
+
+### Later LDAC alternatives (not the SBC path)
+
+BlueCaster v3.0.4 is an existing user-mode A2DP implementation using BTstack+WinUSB and advertising LDAC. It bypasses the Windows Bluetooth stack, takes over a USB adapter through WinUSB, lists Windows 10 22H2/Windows 11 but not Server 2022, and includes BTstack under a personal/non-commercial license. Keep it as a disposable-VM candidate only; it is not a drop-in DLL and must not be installed on the physical Server.
+
+OPPO Enco Buds2 ETE41 is AAC/SBC only. It can validate the SBC stream, but a later LDAC negotiation/audio test requires a different sink that advertises LDAC.
+
+### Static PE audit quality correction
+
+The Library `pe_imports_a2dp.py` repeats the same import descriptor because it does not advance the descriptor pointer by 20 bytes. Its 1.3 MB report is invalid for dependency analysis. Reports (2)/(3) are separate, but their corrected parser source was not retained. Re-run the exact package binaries with Dependencies/PEInspector and retain the script/output pair. Keep the 282,624-byte DriverStore binary and the 279,040-byte System32 binary separate.
