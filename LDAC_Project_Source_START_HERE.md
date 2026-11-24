@@ -34,7 +34,7 @@
 
 ## Physical-host safety
 
-Last recorded PnP state: oem75.inf, DriverVer 0.2.325.1600, Code 37 / ProblemStatus 0xC000000D. This is not a fresh read-only check from this run. No physical-host command or mutation was performed.
+Last recorded PnP state: the OPPO BTHENUM 0x110B node was present and bound to the project's own oem75.inf (provider LDAC A2DP Project, service LdacA2dp, DriverVer 0.2.325.1600); Code 37 / ProblemStatus 0xC000000D occurred at custom driver start. This is not a test of the Microsoft Win10 BthA2dp package and is not a fresh read-only check from this run. No physical-host command or mutation was performed.
 
 Do not run prepare-oppo-host.cmd, upgrade-oppo.cmd, install-oppo.cmd or rollback-oppo.cmd. No driver install/restart, BCD/security/test-signing or certificate changes, or OS update/rollback. Notion journal is append-only.
 
