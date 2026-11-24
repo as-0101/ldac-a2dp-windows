@@ -420,3 +420,12 @@ The actual OS delta is the dedicated Win10 A2DP source/common INF package and Bt
 
 Historical Windows 11 VM proof: 2026-10-22 Realtek Bluetooth 5.4 USB passthrough + JBL Live 780NC, LDAC 96 kHz / MTU 679 / 150 ms, audible tone, 2,972 packets and zero drops. This validates the prior custom stack on that VM only; it does not validate Server 2022.
 
+
+## System-supplied catalog policy — 2026-11-24
+
+The exact Win10 A2DP package capture contains `microsoft_bluetooth_a2dp_src.inf` (10.0.19041.1), `microsoft_bluetooth_a2dp.inf` (10.0.19041.4355), and `btampm.inf` (10.0.19041.5848). These system-supplied INFs have no `CatalogFile` directive. This is expected: Microsoft documents that system-supplied INF files omit CatalogFile because the OS validates them against all system-supplied catalog files. Do not classify the package as unsigned or add a CatalogFile line; verify the exact INF and SYS hashes against offline catalogs. [Microsoft INF Version section](https://learn.microsoft.com/en-us/windows-hardware/drivers/install/inf-version-section).
+
+The common INF contains `BthA2dp.sys=SignatureAttributes.DRM`, but its `[SignatureAttributes.DRM]` subsection is empty. Microsoft documents `DRMLevel=1200|1300` and conditional application through HCK package features/tests. Record this directive as INF metadata only; do not claim a DRM-specific signature is present without catalog evidence. [Microsoft INF SignatureAttributes section](https://learn.microsoft.com/en-us/windows-hardware/drivers/install/inf-signatureattributes-section).
+
+UUP audit #7 failed in the audit script before catalog/service outputs; recovery runs #8–#11 are in progress. See `WIN10_UUP_IMAGE_AUDIT.md`. No staging or runtime result exists yet.
+

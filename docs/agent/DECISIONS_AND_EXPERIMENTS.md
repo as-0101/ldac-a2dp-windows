@@ -1,3 +1,20 @@
+## Decisions added — 2026-11-24
+
+| ID | Decision | Rationale | State |
+|---|---|---|---|
+| D-057 | Do not add a `CatalogFile` directive to the system-supplied Win10 A2DP INFs and do not label them unsigned because the directive is absent. | Microsoft documents that system-supplied INFs omit CatalogFile and are validated against all system-supplied catalogs. Verify exact INF/SYS membership against the offline OS catalog set; never modify the signed INF. | ACTIVE |
+
+## EXP-008 — UUP offline catalog membership and service registry audit
+
+- Question: do the exact Win10 A2DP source/common INF, BthA2dp.sys and BtaMPM.sys belong to a valid system-supplied catalog, and what service registrations exist in Win10 19045.5917 versus Server 20348.5761?
+- Scope: offline UUP images only; no driver staging, service start, PnP binding, physical-host access or audio test.
+- UUP #7 [45342686564](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45342686564) failed because StrictMode accessed an optional `ServiceDll` property absent from a registry object. This was a tooling failure, not a driver compatibility result.
+- Recovery commits: [f451e4ce](https://github.com/as-0101/ldac-a2dp-windows/commit/f451e4cee683a1922aacdfb0505d3f8a97ece8a8), [fd9fd19c](https://github.com/as-0101/ldac-a2dp-windows/commit/fd9fd19cf261b97c0c509127035639c2a69e8386), [f0605f14](https://github.com/as-0101/ldac-a2dp-windows/commit/f0605f14aff2f8ff937c169c3796216b26058aac), [ff8c4a3b](https://github.com/as-0101/ldac-a2dp-windows/commit/ff8c4a3b6a8467d940b239571670ae29da5ca1a3).
+- CI #11 [45347639357](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45347639357): PowerShell parser and x64 SignTool preflight passed; offline image audit is still running.
+- Results: PENDING. Do not claim catalog membership or service-registration success until JSON reports are inspected.
+- Decision: retain the exact Win10 system INF and SYS bytes; do not edit INF, add a CatalogFile line, or copy Win10 KS/WDMAUDIO core.
+- Physical Server 2022 remains untouched; ACX bind-probe remains parked.
+
 # Decisions and experiment ledger
 
 ## Decisions

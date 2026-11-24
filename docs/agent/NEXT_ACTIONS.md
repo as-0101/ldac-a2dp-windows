@@ -1,3 +1,18 @@
+## Active recovery and next actions — 2026-11-24
+
+1. Let UUP audit #11 [45347639357](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45347639357) finish. Its preflight already passed: PowerShell parser accepted the script and x64 SignTool was found. Inspect `manifest.json`, `catalog-membership.json`, `service-registrations.json`, `component-hits.json`, and catalog/INF summary when available.
+2. Verify catalog membership separately for the exact DriverStore `BthA2dp.sys`, `BtaMPM.sys`, `microsoft_bluetooth_a2dp.inf`, `microsoft_bluetooth_a2dp_src.inf`, and `btampm.inf`. A system-supplied INF having no `CatalogFile` directive is normal; Windows validates it against system-supplied catalogs. Do not add or edit that directive.
+3. Correlate any matching catalog path/hash/signer with CBS MUM and WinSxS manifest ownership. Do not treat a valid CAT signature alone as proof that a specific SYS/INF is a member.
+4. Compare offline SYSTEM service registrations: Win10 should show the installed A2DP service state; Server should show its existing Bluetooth core/generic services without the dedicated A2DP source service. Treat this as registry inventory only, not runtime start proof.
+5. If the exact package files are verified as system-catalog members, prepare a **disposable Server 2022 only** staging experiment using the existing source/common A2DP INF and BtaMPM dependency. Capture PnP ranking and SetupAPI logs. Do not patch `bth.inf`, do not copy Win10 KS/WDMAUDIO core, and do not touch the physical host.
+6. Keep stage results separate: package staging → BTHENUM 0x110B selection → BthA2dp service start → driver load → KS render endpoint. A real Bluetooth radio/USB passthrough is required for actual SBC negotiation and continuous stereo audio; GitHub CI without a radio cannot prove audio.
+7. Only after SBC stereo, test LDAC with a sink that actually supports LDAC. OPPO Enco Buds2 remains an SBC/AAC target, not an LDAC proof device.
+8. ACX bind-probe stays parked. Do not repeat CI #248/#255.
+
+## UUP catalog audit recovery — 2026-11-24
+
+CI #7 failed at optional `ServiceDll` access in the offline SYSTEM inventory. This was an audit-tool defect, not a Windows driver failure. Runs #8–#11 are recovery attempts; #11 preflight passed and its offline audit is in progress. See `WIN10_UUP_IMAGE_AUDIT.md` and BUILD_REGISTRY for exact IDs.
+
 ## LDAC codec work status — 2026-11-24
 
 No encoder/decoder development is needed for the next milestone. The repository already contains AOSP libldac at upstream commit eeee1a3f as static libraries, and a prior Windows 11 VM/JBL Live 780NC run proved LDAC 96 kHz audio with 2,972 packets and zero drops. Reuse that as the later LDAC reference. First finish the Win10 A2DP package audit and prove SBC stereo on Server 2022. Do not claim the prior VM result is a Server 2022 result.

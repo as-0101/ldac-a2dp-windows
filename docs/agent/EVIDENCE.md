@@ -807,3 +807,15 @@ Historical proof (not a Server 2022 result): commit 31306e56fe69381adf66dde83eb4
 
 Decision: no new LDAC encoder/decoder work is needed. Keep the existing AOSP encoder and custom AVDTP path as the later LDAC reference. The immediate Server work remains getting the existing Win10 Microsoft A2DP source package to stable SBC without replacing Server Bluetooth core.
 
+
+## 2026-11-24 — system catalog policy and UUP audit recovery
+
+| ID | Claim / observation | Status | Source |
+|---|---|---|---|
+| E-172 | Win10 system-supplied A2DP source/common and BtaMPM INFs omit `CatalogFile`; Microsoft states that system-supplied INFs omit this directive because Windows validates them against all system-supplied catalogs. Absence of the directive is not evidence of an unsigned package. | CONFIRMED | UUP #6 INF summary in artifact 14895876155; [Microsoft INF Version section](https://learn.microsoft.com/en-us/windows-hardware/drivers/install/inf-version-section). |
+| E-173 | Common A2DP INF maps `BthA2dp.sys` to `SignatureAttributes.DRM`, but the captured DRM subsection is empty. Microsoft documents DRMLevel 1200/1300 and conditional HCK application; no applied DRM signature is inferred. | CONFIRMED — INF TEXT ONLY | UUP #6 INF summary; [Microsoft INF SignatureAttributes section](https://learn.microsoft.com/en-us/windows-hardware/drivers/install/inf-signatureattributes-section). |
+| E-174 | UUP audit #7 failed in offline SYSTEM service inventory because StrictMode accessed absent optional `ServiceDll`; this is an audit-tool defect, not a driver compatibility result. | CONFIRMED | [CI #7](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45342686564), job 138269822356 logs. |
+| E-175 | Audit recovery adds safe optional-property access, per-image checkpointing/continue-on-error, path handling and hardened SignTool discovery on the isolated experiment branch. | CONFIRMED — CODE CHANGE | Experiment commits [f451e4ce](https://github.com/as-0101/ldac-a2dp-windows/commit/f451e4cee683a1922aacdfb0505d3f8a97ece8a8), [fd9fd19c](https://github.com/as-0101/ldac-a2dp-windows/commit/fd9fd19cf261b97c0c509127035639c2a69e8386), [f0605f14](https://github.com/as-0101/ldac-a2dp-windows/commit/f0605f14aff2f8ff937c169c3796216b26058aac). |
+| E-176 | CI #11 PowerShell parser and x64 SignTool preflight passed; offline image/catalog/service audit remains in progress. | CONFIRMED — PREFLIGHT ONLY | [CI #11](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45347639357), job 138285969226. |
+| E-177 | CI #7 partial artifact contains 20 Server PE JSON reports only; no catalog-membership, offline service-registry or complete manifest result was produced. | CONFIRMED | Artifact 14896789955, SHA-256 `dca3859cab81728950b037d93b43f170e2fc730412adda369340d67839152380`. |
+

@@ -217,3 +217,33 @@ Both images contain the generic mapping for UUID 0x110B:
 
 Both map the base UUID to BthGenericService with the _GENERIC hardware ID and a null associated-service install. The Win10/Server difference is the additional Win10 dedicated A2DP source/common INFs plus BtaMPM, absent from Server. Do not copy or patch bth.inf. The source INF includes PreConfigureDriver=*; SetupAPI selection/rank remains an explicit disposable-VM test.
 
+
+## UUP catalog/registry audit recovery — 2026-11-24
+
+### CI #7 failure
+
+[Run 45342686564](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45342686564), commit `5bdbc75d904beb8c5f84787cc592ae9134df40c6`, reached the exact Server 20348.5761 image and failed at `Get-OfflineServiceSummary`: StrictMode raised because a registry object lacked the optional `ServiceDll` property. The artifact 14896789955 (144,045 bytes, SHA-256 `dca3859cab81728950b037d93b43f170e2fc730412adda369340d67839152380`) contains 20 Server PE JSON reports only. No catalog membership, offline service registrations, or Win10 image result were produced. This is an audit-script defect, not a Windows driver failure.
+
+### Recovery changes
+
+- `Get-OptionalPropertyValue` now checks `PSObject.Properties` before reading optional registry values and has a small self-test for missing/present properties.
+- Per-image results are checkpointed after each target; a failure for one image is recorded and does not suppress the other image's audit.
+- Offline SYSTEM hive paths use single Windows separators.
+- SignTool discovery safely checks `Get-Command` and falls back to the Windows Kits x64 path.
+- Workflow now parses the PowerShell script and confirms x64 SignTool availability before downloading multi-gigabyte UUP images.
+
+### Recovery runs
+
+| Run | Commit | Current state at documentation cut |
+|---|---|---|
+| [#8 / 45346767600](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45346767600) | `f451e4ce` | In progress; first safe-property recovery, before path correction |
+| [#9 / 45346822337](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45346822337) | `fd9fd19c` | In progress; path correction |
+| [#10 / 45347437488](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45347437488) | `f0605f14` | In progress; SignTool discovery correction |
+| [#11 / 45347639357](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45347639357) | `ff8c4a3b` | Preflight passed; offline UUP/catalog/service audit in progress |
+
+### Important catalog-policy correction
+
+The Win10 `microsoft_bluetooth_a2dp_src.inf`, `microsoft_bluetooth_a2dp.inf`, and `btampm.inf` have no `CatalogFile` directive. Microsoft explicitly states that system-supplied INFs omit this directive because Windows validates them against all system-supplied catalogs. Therefore the absence of a local CAT or CatalogFile line is expected for an inbox package; the next audit must locate the exact matching OS catalog and verify membership. Do not add a CatalogFile line or modify the INF.
+
+The common INF also maps `BthA2dp.sys` to `SignatureAttributes.DRM`, but the captured DRM subsection is empty. Microsoft documents DRMLevel 1200/1300 and conditional HCK application; the exact applied signature attributes remain unverified.
+

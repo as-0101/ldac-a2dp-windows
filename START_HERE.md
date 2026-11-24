@@ -1,3 +1,19 @@
+> **System-supplied A2DP package catalog correction — 2026-11-24**
+>
+> The Win10 A2DP source/common and BtaMPM INFs have no `CatalogFile` directive. This is expected for system-supplied INFs: Microsoft documents that Windows validates them against all system-supplied catalog files. Do **not** classify these INFs as unsigned and do not add a `CatalogFile` line; verify exact INF/SYS membership against offline OS catalogs. See [INF Version section](https://learn.microsoft.com/en-us/windows-hardware/drivers/install/inf-version-section) and [Catalog files and digital signatures](https://learn.microsoft.com/en-us/windows-hardware/drivers/install/catalog-files).
+>
+> The common A2DP INF also maps `BthA2dp.sys` to `SignatureAttributes.DRM`, but the captured `[SignatureAttributes.DRM]` section is empty. Microsoft documents DRMLevel values 1200/1300 and says additional signatures depend on HCK package features/tests. Do not infer that a DRM signature was actually applied; record the exact INF text and catalog evidence separately. See [INF SignatureAttributes section](https://learn.microsoft.com/en-us/windows-hardware/drivers/install/inf-signatureattributes-section).
+>
+> **UUP audit recovery — 2026-11-24**
+>
+> UUP audit #7 [45342686564](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45342686564) failed in the audit script, not in Windows compatibility: StrictMode raised because an offline service registry object did not contain optional `ServiceDll`. Its artifact 14896789955 is partial (20 Server PE JSON reports only; no catalog/service result), SHA-256 `dca3859cab81728950b037d93b43f170e2fc730412adda369340d67839152380`.
+>
+> The isolated experiment branch now has a safe optional-property reader, per-image checkpoints/continue-on-error, corrected registry path separators, and hardened SignTool discovery. CI #11 [45347639357](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45347639357) passed its PowerShell parser + x64 SignTool preflight; the offline image audit is still running. Runs #8–#10 are redundant recovery attempts and remain separately recorded. No package staging or driver load has been attempted.
+>
+> The previously verified PE result remains static-only: exact Win10 DriverStore `BthA2dp.sys` 10.0.19041.4355 (SHA-256 `5FBA5EE606AAC39D9CBDA51C0A14DBABBB3A9B47BBD8AC5485ED137B4F354EC3`) has 149/149 imports resolved against Server 20348.5761 plus exact Win10 BtaMPM; `BtaMPM.sys` 10.0.19041.5848 has 42/42 imports resolved. This is not ABI/runtime/load proof.
+>
+> Physical Server 2022 was not accessed. `server-2022-oppo` remains unchanged; ACX bind-probe remains parked.
+>
 > **LDAC encoder provenance — 2026-11-24**
 >
 > The existing project already contains the AOSP Sony LDAC encoder from upstream commit eeee1a3f (imported in repository commit 95bb92866b0d77de20ee94694eb4be2979635947). CMake builds ldacBT_enc and ldacBT_abr as STATIC libraries; service/encoder.cpp calls ldacBT_get_handle, ldacBT_init_handle_encode, ldacBT_encode and ldac_ABR_Proc, then frames output with the project's AVDTP code. There is no prebuilt Windows LDAC DLL in this repository. The vendored METADATA does not declare a semantic version, so do not label it 2.0.2 without separate provenance.

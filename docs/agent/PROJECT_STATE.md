@@ -1,3 +1,15 @@
+## Current verified state — 2026-11-24
+
+- Main code branch `server-2022-oppo` remains at `39eea45ab5d93c09836819db75f2a64177fbf09a`; no code or driver changes were made there.
+- Documentation branch before this update: `9e421c110c8931522255e071bcde9e0d5457d7ac`.
+- Experiment branch `experiment/win10-a2dp-catalog-registry-audit-20261124` contains only offline audit tooling changes; current workflow attempts are #8–#11.
+- UUP audit #7 failed because StrictMode encountered an absent optional `ServiceDll` property while reading a copied offline SYSTEM hive. The partial artifact contains only Server PE metadata; no catalog membership or service-registration conclusion can be drawn from #7.
+- The optional-property reader, per-image checkpointing, path handling, SignTool discovery and workflow preflight were corrected. CI #11 preflight passed; UUP extraction/catalog/service audit is still in progress.
+- Microsoft documents that system-supplied INFs omit `CatalogFile` because Windows validates them against all system-supplied catalogs. Therefore the A2DP INF's lack of `CatalogFile` is expected, not evidence of an unsigned package. Exact SYS/INF catalog membership is still pending.
+- Static compatibility remains as previously verified: Win10 DriverStore `BthA2dp.sys` 10.0.19041.4355 (AMD64, 282,624 bytes, SHA-256 `5FBA5EE606AAC39D9CBDA51C0A14DBABBB3A9B47BBD8AC5485ED137B4F354EC3`) has 149 imports across eight descriptors, no delay imports/API-set imports/exports; all 149 resolve by name against Server 20348.5761 references and exact Win10 BtaMPM. `BtaMPM.sys` 10.0.19041.5848 (AMD64, 43,008 bytes, SHA-256 `DA5CBBDCE6AC511EF8400E121DF6B6EACA7D05C0F40A01F7353CE9F220EB3DCD`) has 42 imports, 14 exports, no delay imports/API-set imports; all 42 resolve. Static export presence does not prove ABI/runtime compatibility.
+- The common A2DP INF's `SignatureAttributes.DRM` mapping is recorded, but its section has no DRMLevel value; no claim is made that a DRM-specific signature was applied.
+- No package staging, service start, PnP enumeration, driver load, endpoint creation, SBC negotiation, or audio test has been performed in this run. Physical Server 2022 was not accessed.
+
 ## LDAC codec status — 2026-11-24
 
 The existing AOSP encoder and project AVDTP LDAC implementation are already present; no new codec code or Windows DLL is required for the next milestone. Historical LDAC audio was proven on a separate Windows 11 VM with JBL Live 780NC, but Server 2022 remains unverified. The immediate goal is still SBC through the existing Win10 Microsoft A2DP source package.

@@ -1,3 +1,11 @@
+## UUP image audit artifacts — 2026-11-24
+
+| Artifact | Exact identity | Durable location / status |
+|---|---|---|
+| UUP audit #6 full static PE metadata | GitHub artifact 14895876155; 328,218 bytes; SHA-256 `c1792bd8e5bcdf2a583c3738eeb22bdf27a64ba6ad2701ad70aa8f879d045209` | CI #6 [45332165839](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45332165839); downloaded in current run to `/mnt/data/win10-a2dp-symbol-audit-metadata.zip`. Contains Win10 + Server PE JSONs, exact captured hashes, and 149/149 + 42/42 static import resolution. No catalog membership. |
+| UUP audit #7 partial metadata | GitHub artifact 14896789955; 144,045 bytes; SHA-256 `dca3859cab81728950b037d93b43f170e2fc730412adda369340d67839152380` | CI #7 [45342686564](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45342686564). Contains 20 Server PE JSON reports only; script failed before manifest, INF, catalog and service reports. |
+| UUP audit #8–#11 | Runs 45346767600, 45346822337, 45347437488, 45347639357 | Isolated experiment branch. #11 parser/SignTool preflight passed; offline catalog/service results pending. |
+
 # Artifact index
 
 This index records durable locations and provenance. Exact hashes are only recorded when measured or supplied by a primary artifact/report. Do not treat a mention as proof that bytes are available.
