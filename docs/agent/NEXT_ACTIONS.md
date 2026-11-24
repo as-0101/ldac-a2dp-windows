@@ -208,7 +208,7 @@ See EVIDENCE.md entries E-044–E-053 and PROJECT_STATE latest section.
 - BTHENUM A2DP service GUID `0000110B-0000-1000-8000-00805F9B34FB`;
 - MEDIA class, section `BthA2dpSrc`, `KS=1`;
 - `ks.inf`, `wdmaudio.inf`, `BtaMpm.inf` included in the class registration;
-- separate HFP components `BthHFEnum`/`BthHFAud`, AVRCP transport, BTAGService, BthAvctpSvc, bthserv, Audiosrv and AudioEndpointBuilder.
+- HFP components BthHFEnum/BthHFAud are out of scope. Earlier inventory included HFP/AVRCP services; the later 2026-11-19 environment snapshot records BTAGService/BthAvctpSvc absent, while bthserv/Audiosrv/AudioEndpointBuilder are running.
 
 Microsoft documents classic A2DP as a WDM profile driver communicating with BthPort; ACX is not the documented classic A2DP profile-driver model. ACX is used in a separate LE Audio architecture. The repeated ACX class-bind failures therefore do not answer how to enable Windows 10-style classic A2DP on Server.
 
