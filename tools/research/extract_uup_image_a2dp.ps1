@@ -452,9 +452,17 @@ function Get-TargetCatalogMembership {
         }
     }
     $catalogFiles = @($catalogFiles | Sort-Object FullName -Unique)
-    $signToolPath = (Get-Command signtool.exe -ErrorAction SilentlyContinue | Select-Object -First 1).Source
-    if (-not $signToolPath) {
-        $kitsRoot = Join-Path \${env:ProgramFiles(x86)} "Windows Kits\10\bin"
+    $signToolPath = $null
+    $signToolCommand = Get-Command signtool.exe -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($signToolCommand) {
+        $signToolPath = [string]$signToolCommand.Source
+        if ([string]::IsNullOrWhiteSpace($signToolPath)) {
+            $signToolPath = [string]$signToolCommand.Path
+        }
+    }
+    if ([string]::IsNullOrWhiteSpace($signToolPath)) {
+        $programFilesX86 = [Environment]::GetFolderPath("ProgramFilesX86")
+        $kitsRoot = Join-Path $programFilesX86 "Windows Kits\10\bin"
         if (Test-Path -LiteralPath $kitsRoot) {
             $signTool = Get-ChildItem -LiteralPath $kitsRoot -Filter "signtool.exe" -File -Recurse -ErrorAction SilentlyContinue |
                 Where-Object { $_.FullName -match "\\x64\\signtool\.exe$" } |
