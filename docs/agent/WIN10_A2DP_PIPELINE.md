@@ -304,3 +304,32 @@ The common INF:
 ### Minimal adaptation candidate
 
 Keep Server's existing radio miniport, BthPort and BthEnum stack. The first package-level candidate is to make the existing Win10 source/common A2DP INF chain available for the remote 0x110B sink, together with the exact compatible profile files. Do not replace Server `bth.inf` wholesale; verify driver rank, INF ownership, CBS applicability and system catalog membership first. This is a static INF finding only; no staging, service start, endpoint, SBC negotiation or audio has been tested.
+
+## LDAC codec versus A2DP transport — exact source inventory
+
+### Encoder
+
+The current fork already vendors Sony/AOSP `libldac` version **2.0.2**. The public C API declares 12 unique `ldacBT_*` functions:
+`ldacBT_get_handle`, `ldacBT_free_handle`, `ldacBT_close_handle`, `ldacBT_get_version`, `ldacBT_get_sampling_freq`, `ldacBT_get_bitrate`, `ldacBT_init_handle_encode`, `ldacBT_set_eqmid`, `ldacBT_get_eqmid`, `ldacBT_alter_eqmid_priority`, `ldacBT_encode`, `ldacBT_get_error_code`.
+The ABR header declares five `ldac_ABR_*` functions: `ldac_ABR_get_handle`, `ldac_ABR_free_handle`, `ldac_ABR_Init`, `ldac_ABR_set_thresholds`, `ldac_ABR_Proc`.
+
+The fork builds `ldacBT_enc` and `ldacBT_abr` as STATIC libraries and links them into `ldacsvc_core`; it does not ship or load `ldac.dll`. `service/encoder.cpp` calls the encoder directly and then packetizes output through `avdtp_media_packet`.
+
+### Decoder
+
+The product does not include an LDAC decoder. `tools/ldacverify/build-ldacdec.py` fetches `anonymix007/libldacdec` at pinned commit `c90094b15e25aef0e47c6d775fa94aceb36cabbc` and builds `ldacdec_wav.exe` solely to verify captured/encoded LDAC frames.
+
+### Existing Windows DLL recipe
+
+Incus Multicodec's `btmulticodec/ldac.py` uses ctypes to load `bin/ldac.dll`. Its `native/build.cmd` compiles libldac with MSVC `/LD /MT` and defines `LDACBT_API` / `LDAC_ABR_API` as `__declspec(dllexport)`. The repo contains the build recipe and Python binding, not a prebuilt DLL. It is an encoder-only DLL, not a Bluetooth transport, COM provider, KS filter or Windows A2DP codec plug-in.
+
+### Transport alternatives
+
+- [Incus Multicodec](https://github.com/incustechsupport/incus-multicodec): Bumble Bluetooth stack + WinUSB + WASAPI loopback; no kernel driver; uses a USB adapter exclusively while active. Supports SBC/LDAC in its own A2DP source path. Windows 10/11 are declared; Server 2022 is not.
+- [BlueCaster](https://github.com/SeiyaFunaokaJP/BlueCaster): BTstack + WinUSB user-mode A2DP source; adapter takeover; Windows 10 22H2/11 declared, Server 2022 not.
+- [OpenA2DP](https://github.com/RafiMota/open-a2dp): pre-alpha; driver build/runtime not established.
+- Current fork parent [yariktop133/ldac-a2dp-windows](https://github.com/yariktop133/ldac-a2dp-windows): custom KMDF/ACX transport; upstream targets Windows 11 / ACX 1.1 and test-signing.
+
+### Consequence
+
+There is no evidence of a Microsoft inbox LDAC provider DLL that can be registered into `BthA2dp.sys`. The Windows 10 source/common INF is the primary SBC path. LDAC requires an A2DP source transport that advertises LDAC in AVDTP; an encoder DLL alone cannot create the endpoint or negotiate the codec. The least disruptive LDAC fallback to evaluate after SBC is a user-mode stack with a dedicated USB adapter, on a disposable Server 2022 VM. No physical-host changes.

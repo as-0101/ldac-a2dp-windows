@@ -312,3 +312,14 @@ The archived INF comparison now isolates a smaller package-level delta than the 
 - The common INF copies BthA2dp.sys, installs the demand-start BthA2dp kernel service and registers KSCATEGORY_AUDIO source/sink interfaces, while reusing KS/WDMAUDIO/BtaMPM/MSSysFx registrations.
 
 This makes the Win10 source/common INF plus its exact binaries the first minimal adaptation candidate. It does **not** yet prove that the binary loads on Server 20348.5761 or that the package is signed/applicable. Exact PE exports/imports, CAT/CBS ownership, rank and disposable-VM staging are still required. Preserve Server's existing BthPort/BthEnum/radio core; no new Bluetooth driver is justified by this evidence.
+
+## LDAC encoder/decoder/provider inventory — 2026-11-24
+
+The current fork already contains the LDAC encoder. Sony/AOSP libldac 2.0.2 is built as static `ldacBT_enc` + `ldacBT_abr` and linked into `ldacsvc_core`; there is no product `ldac.dll`. The source API exposes 12 encoder functions and five ABR functions. The separate `libldacdec` tool is fetched by `tools/ldacverify` only for verification and is not a product decoder.
+
+An external Windows `ldac.dll` build recipe exists in Incus Multicodec, but the repository commits no prebuilt binary. The DLL is a codec encoder wrapper, not a COM/KS provider or A2DP transport. Incus supplies transport separately through Bumble + WinUSB; BlueCaster uses BTstack + WinUSB. Both bypass the Windows A2DP profile and take over a USB adapter; Server 2022 support is not declared.
+
+The practical split is now explicit:
+1. Win10 A2DP source/common INF + BthA2dp.sys is the minimal existing-package candidate for SBC.
+2. Existing libldac encoder source is already available; do not spend time searching for another encoder DLL.
+3. LDAC negotiation/audio requires a compatible A2DP source transport. Evaluate Incus Multicodec with a dedicated USB adapter after SBC is stable; keep custom ACX/KMDF path suspended unless a later measured blocker requires it.

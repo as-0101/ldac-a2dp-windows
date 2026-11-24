@@ -144,3 +144,6 @@ No service, device, profile-driver, endpoint, SBC negotiation, audio-stream, LDA
 | T-062 | Offline service/class/MMDevices registrations and system CatRoot membership | Not completed by run #3; current UUP script still needs this extension. | NOT TESTED / NEXT IMPLEMENTATION STEP |
 
 | T-063 | Server 20348 vs Win10 19045 A2DP INF match/registration delta | Archived INF comparison: Server bth.inf maps 0x110B to BthGenericService via _GENERIC fallback and null service; Win10 source INF matches base UUID and chains to BthA2dp common install. | STATIC INF REVIEW COMPLETE; exact image/CAT/rank and disposable-VM stage/runtime pending |
+
+| T-064 | LDAC encoder/decoder/DLL inventory | Current fork statically links AOSP libldac 2.0.2 encoder + ABR; decoder build is verification-only; Incus source recipe builds encoder-only ldac.dll but commits no binary. | SOURCE AUDIT COMPLETE; no PE hash/export table or runtime test |
+| T-065 | Existing user-mode A2DP transport fallback | Incus Multicodec (Bumble + WinUSB) and BlueCaster (BTstack + WinUSB) found; both bypass Windows A2DP and take over USB adapter. | CANDIDATES IDENTIFIED; Server 2022 compatibility and OPPO SBC / LDAC sink tests pending |

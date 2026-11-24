@@ -308,3 +308,20 @@ The source Win10 package archives remain in Project Sources/Library and were not
 | E-162 | `docs/agent/EVIDENCE.md` | Static INF evidence only; no package staging, service start, endpoint, SBC negotiation or audio |
 
 These are existing Library artifacts. No new collection or materialization was required.
+
+## LDAC codec/transport source inventory — 2026-11-24
+
+| Artifact | Source identity | Role / status |
+|---|---|---|
+| `third_party/libldac/inc/ldacBT.h` | repo branch `server-2022-oppo`; blob `f43820cc3444ac624fd87ee45019598c80f965f6` | AOSP/Sony LDAC encoder C API declarations |
+| `third_party/libldac/abr/inc/ldacBT_abr.h` | blob `135238ff1b673ab4cceafec670c542fcceef2d63` | LDAC adaptive-bitrate C API declarations |
+| `third_party/libldac/src/ldacBT_api.c` | blob `a490a62451cb61c8c2d352b3e16c29ddcbe01691` | `ldacBT_get_version()` returns 2.0.2 |
+| `CMakeLists.txt` | blob `1c9f6e01f541c4b8b04837119f2ecf55c55cb67e` | Static `ldacBT_enc` / `ldacBT_abr` linked into `ldacsvc_core` |
+| `service/encoder.cpp` | blob `216b2d9d8c30b37030aefd3dcfcf494b0aedfadd` | Calls LDAC encoder and AVDTP media packetizer; no DLL boundary |
+| `tools/ldacverify/build-ldacdec.py` | blob `6e673a95d09ceed379cb251294f56be00fbb3565` | Fetches `anonymix007/libldacdec` commit `c90094b15e25aef0e47c6d775fa94aceb36cabbc`; verification-only decoder |
+| [Incus Multicodec](https://github.com/incustechsupport/incus-multicodec) | `btmulticodec/ldac.py`, `native/build.cmd` | Builds `ldac.dll` from libldac source; no prebuilt DLL committed; encoder only; Bumble + WinUSB transport |
+| [BlueCaster](https://github.com/SeiyaFunaokaJP/BlueCaster) | repository README | BTstack + WinUSB user-mode A2DP source; adapter takeover; Windows 10 22H2/11, Server 2022 not declared |
+| [OpenA2DP](https://github.com/RafiMota/open-a2dp) | repository README | Pre-alpha; driver build/runtime not established |
+| Upstream parent | [yariktop133/ldac-a2dp-windows](https://github.com/yariktop133/ldac-a2dp-windows) | Current fork parent; Windows 11 / ACX 1.1 / test-signing path, not Server 20348 drop-in |
+
+Git blob identifiers above are not file SHA-256 values. No Incus `ldac.dll` binary was built or hashed in this audit.

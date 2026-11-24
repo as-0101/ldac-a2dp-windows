@@ -334,3 +334,13 @@ The archived Server 20348 `bth.inf` maps remote Audio Sink UUID 0x110B to a gene
 The archived Win10 `microsoft_bluetooth_a2dp_src.inf` matches the base BTHENUM UUID 0x110B (remote A2DP Sink), then delegates to `microsoft_bluetooth_a2dp.inf` / `Common_BthA2dp_Install`. The common INF copies BthA2dp.sys, installs the demand-start BthA2dp service and registers KSCATEGORY_AUDIO interfaces while including the existing KS, WDMAUDIO, BtaMPM and MSSysFx registrations.
 
 Therefore the first adaptation candidate is the existing Win10 A2DP source/common INF + its exact binaries, layered on Server's existing Bluetooth core. Do not replace BthPort/BthEnum or the radio miniport, and do not write a new driver unless later evidence proves a kernel blocker. This decision is limited to the static INF path; PE/CAT/CBS/rank compatibility and disposable-VM runtime remain gates.
+
+## D-051 — Do not search for or register a Windows inbox LDAC provider DLL; the missing layer is A2DP transport/profile integration
+
+The current fork already statically links Sony/AOSP libldac encoder 2.0.2 and its ABR helper into `ldacsvc_core`. Its `service/encoder.cpp` produces LDAC frames and hands them to the separate AVDTP media packetizer. The product does not need a separate LDAC encoder DLL.
+
+The only decoder in the repo workflow is `libldacdec`, fetched and built by `tools/ldacverify` for offline verification. It is not a product dependency.
+
+Incus Multicodec demonstrates a Windows `ldac.dll` build recipe, but the DLL is an encoder wrapper over the same libldac source, not a COM/KS codec provider or transport. Incus uses Bumble + WinUSB for its own A2DP stack; BlueCaster uses BTstack + WinUSB. These are user-mode alternatives that bypass the Windows A2DP profile and take over a USB adapter. Server 2022 support is unverified.
+
+Therefore: finish the existing Win10 A2DP source/common INF path for SBC first. For LDAC, a real A2DP source must advertise the vendor codec in AVDTP and transport LDAC frames. Prefer evaluating the existing user-mode stack with a dedicated USB adapter over resuming the custom ACX driver. Do not attempt to register `ldac.dll` as an arbitrary Windows A2DP codec provider.

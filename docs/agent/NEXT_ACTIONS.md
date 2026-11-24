@@ -1,15 +1,15 @@
-# Immediate next actions — 2026-11-24 06:24 Europe/Kyiv
+# Immediate next actions — 2026-11-24 06:32 Europe/Kyiv
 
 This block supersedes older ACX-focused action lists below.
 
-1. Inspect UUP audit #4 ([45325486392](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45325486392)) and #5 ([45325586394](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45325586394)). #5 is the latest script revision and includes the Win10 BtaMPM companion export reference.
-2. Confirm each mounted image from its offline SOFTWARE hive: exact CurrentBuild.UBR must be 19045.5917 / 20348.5761, and EditionID must be Professional / ServerDatacenter. Do not use Get-WindowsImage.Version; that property was absent from the DISM object in run #3.
-3. Compare extracted SHA-256 values against the captured identities: DriverStore BthA2dp 5FBA5EE606AAC39D9CBDA51C0A14DBABBB3A9B47BBD8AC5485ED137B4F354EC3; separate System32 BthA2dp 0442A18BBED4E323265C66561C8F8C171D8E934E9089C12B94D1DFDBB057B737; BtaMPM DA5CBBDCE6AC511EF8400E121DF6B6EACA7D05C0F40A01F7353CE9F220EB3DCD.
-4. For every exact or explicitly non-exact candidate, record PE architecture, timestamp, OS/image/subsystem versions, direct/delay imports, exports, API-set names, embedded signature state and static Server export resolution. Keep the two BthA2dp copies separate and resolve BthA2dp → matching Win10 BtaMPM as a companion dependency.
-5. Treat the INF delta as the minimal package-level candidate: Server `bth.inf` uses a generic `_GENERIC` fallback for UUID 0x110B, while Win10 `microsoft_bluetooth_a2dp_src.inf` matches the base UUID and chains to the common A2DP install. Verify ranking, exact package ownership and CAT membership before staging; do not replace Server BthPort/BthEnum or the radio miniport.
-6. Complete offline SYSTEM/SOFTWARE service, BTHENUM/class and MMDevices registration plus system CatRoot catalog membership. Do not infer catalog membership from an embedded signature or package-local CAT absence.
-7. If 19045.5917 does not reproduce the captured hashes, audit 19045.4355 as a separate exact-version candidate. Do not use Winbindex timestamp/size collisions as exact binaries.
-8. Only after static, registry, CBS and catalog checks pass, stage the existing Win10 source/common INF and binaries in a disposable Server 2022 VM. Record service start → enumeration → driver load → endpoint → SBC negotiation → actual stereo audio separately.
+1. Inspect UUP audit #4 ([45325486392](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45325486392)) and #5 ([45325586394](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45325586394)); #5 is the latest script revision with the BtaMPM companion reference.
+2. Verify offline image identity (CurrentBuild.UBR + EditionID), then compare exact SHA-256 against the captured Win10 DriverStore BthA2dp, separate System32 BthA2dp and BtaMPM files. Keep all copies/version families separate.
+3. Complete PE architecture/timestamp/OS/subsystem/import/delay-import/export/API-set and Server 20348.5761 resolution; close SYSTEM/SOFTWARE service/class/MMDevices registrations and system CatRoot membership.
+4. Use the existing Win10 `microsoft_bluetooth_a2dp_src.inf` + common A2DP INF/binaries as the first minimal SBC candidate. Preserve Server BthPort/BthEnum/radio core. Verify rank, catalog and CBS applicability before any disposable-VM staging.
+5. On the disposable VM, test service start → device enumeration → driver load → A2DP endpoint → SBC negotiation → actual stereo audio separately. OPPO Enco Buds2 is AAC/SBC only, so it is suitable for this milestone.
+6. LDAC encoder is already present in the fork: AOSP libldac 2.0.2 is statically linked into `ldacsvc_core`. No Microsoft inbox LDAC codec/provider DLL has been identified. The separate `libldacdec` tool is verification-only.
+7. For LDAC after SBC, prefer evaluating an existing user-mode A2DP stack (Incus Multicodec: Bumble + WinUSB; BlueCaster: BTstack + WinUSB) on a disposable Server 2022 VM with a dedicated USB adapter and LDAC-capable sink. These stacks bypass Windows A2DP and Server 2022 support is unverified; do not treat them as drop-in DLLs.
+8. Keep the custom KMDF/ACX driver path suspended. The upstream parent targets Windows 11/ACX 1.1 and test signing; it is not a justified next step for Server 2022 build 20348. No ACX bind-probe.
 9. Physical Server 2022 remains read-only. No driver install, device restart, BCD/security/test-signing/certificate change, OS update/rollback or prepare/upgrade/install/rollback script. HFP/microphone remains out of scope.
 10. Code changes stay on the isolated experiment branch; documentation only on `docs/project-source-reorg`. Notion journal remains append-only.
 

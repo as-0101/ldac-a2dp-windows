@@ -1,4 +1,4 @@
-> **ACTIVE PROJECT OVERRIDE — 2026-11-24 06:24 Europe/Kyiv**
+> **ACTIVE PROJECT OVERRIDE — 2026-11-24 06:32 Europe/Kyiv**
 >
 > Priority is the smallest Windows 10 A2DP package adaptation for Server 2022, starting with SBC stereo. Do not create a new Bluetooth/ACX driver and do not resume ACX bind-probe work; CI #248/#255 are closed.
 > - Existing Win10 source/common/sink INF, DriverStore and System32 artifacts are already in Project Sources/Library. Do not re-export or ask the user to resend them.
@@ -9,6 +9,7 @@
 > - Corrective commits: `144d42105a26d5aa21f159ae068b17a047f724a9` verifies exact `CurrentBuild.UBR` and `EditionID` from a copied offline SOFTWARE hive and adds HAL/SleepStudyHelper/WDFLDR/ksecdd; `e947970356884ead996bcc7347fa0e5554aa770b` adds the matching Win10 `BtaMPM.sys` companion reference.
 > - UUP audit #4 (`45325486392`) and #5 (`45325586394`) are in progress. #5 is the latest script revision. No result is accepted until image identity and hashes are recorded.
 > - INF comparison identifies the smallest profile-layer gap: Server `bth.inf` maps remote A2DP Sink UUID 0x110B to `BthGenericService` using a `_GENERIC` hardware-ID fallback; that section has a null service install and only sets `GenericDriverInstalled`. Win10 `microsoft_bluetooth_a2dp_src.inf` matches the base 0x110B UUID and chains into the common install that registers `BthA2dp.sys` and KSCATEGORY_AUDIO interfaces. This is a package-level candidate, not a runtime result.
+> - Codec/transport split: the fork already statically links AOSP libldac encoder 2.0.2 into `ldacsvc_core`; no Windows inbox LDAC provider DLL has been identified. The `libldacdec` decoder is test-only. Incus Multicodec builds a separate `ldac.dll` encoder wrapper but uses Bumble + WinUSB for transport; Server 2022 is not declared supported.
 > - `server-2022-oppo` remains unchanged. No driver install or runtime test was performed on the physical host.
 >
 > The Library Project Source START_HERE snapshot is historical; use this repository copy and the canonical docs below.

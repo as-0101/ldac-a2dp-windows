@@ -111,3 +111,7 @@ No run in this block has established PE compatibility, CAT membership, driver st
 ## 2026-11-24 — static INF binding delta (no build)
 
 The archived comparison transcripts `00-33.txt` and `00-34.txt` reveal the Server generic 0x110B fallback versus the Win10 dedicated A2DP source INF/common install chain (E-162). This was a read-only static review of existing Library artifacts; no build, package stage, CI run, driver installation or runtime test was performed. The UUP image runs #4/#5 remain the separate PE/CBS/catalog audit gate.
+
+## 2026-11-24 — LDAC codec/DLL source audit (no build)
+
+Read-only source audit only. The current fork statically links AOSP libldac 2.0.2 encoder + ABR into `ldacsvc_core`; no DLL was built. Incus Multicodec contains a source build recipe for a separate `ldac.dll` encoder wrapper but no checked-in binary. The decoder build is verification-only. No CI/build/run ID, PE hash, DLL import/export table or runtime test was produced. See E-163.
