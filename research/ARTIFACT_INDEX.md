@@ -198,3 +198,22 @@ The 23:49 archive is the current package source. It supersedes the earlier 20:49
 - No ISO/WIM/ESD/CAB/MSU media was found in the current Library inventory. Do not ask for the already captured ZIP; the remaining image input is Windows 10 22H2 and Server 2022 WIM/component metadata.
 - New detailed map: [WIN10_COMPONENT_AUDIT.md](../docs/agent/WIN10_COMPONENT_AUDIT.md).
 
+
+
+## Server 2022 read-only Bluetooth/PnP evidence — 2026-11-24
+
+| Artifact | File ID | What it establishes |
+|---|---|---|
+| A2DP_Server2022_Environment_20261119_180132.txt | file_000000006424821088aec377a93ea3a3 | Archived Server 20348.5761 services, core Bluetooth driver files, missing btha2dp.sys and DriverStore INF folder inventory |
+| A2DP_INF_Investigation.txt | file_0000000004ec8210a7a7c2273d7e5dbe | bth.inf generic service mapping and an empty A2DP INF FILES section; notes the rtka2dp DriverStore folder without exporting its INF bytes |
+| ldac-precheck.txt | file_000000007b088210b26633c565ab08df | One present A2DP devnode and current binding oem75.inf |
+| 20-36.txt | file_00000000f64082108f18eca5ae6a2fb0 | Detailed latest recorded PnP properties: custom LDAC A2DP Project provider/service, oem75.inf, DriverVer 0.2.325.1600, Code 37 / 0xC000000D |
+| 17-45.txt | file_000000005394821082f50d54a99d9133 | Earlier custom-driver package/rank comparison; historical only |
+| A2DP_Server2022_NextGate.txt | file_000000006ac48210a535a619c14edeeb | Existing Server-side next-gate summary |
+
+### Interpretation
+
+- The 20-36 record is the latest recorded PnP evidence: the A2DP service node is present/enumerated; the custom LdacA2dp driver fails at start. It is not a test of Microsoft's Win10 BthA2dp package.
+- Microsoft defines LOCALMFG as the local Bluetooth radio manufacturer. 0x0002 is Intel; 0x005D is Realtek. The current host's LOCALMFG&0002 therefore identifies the local Intel radio, not the OPPO earbuds.
+- The rtka2dp DriverStore folder is not the active oem75 binding; its INF bytes/version were not captured. Public Realtek package IDs use LOCALMFG&005D, so it is not applicable to the current Intel radio.
+- Earlier records that show Microsoft A2DP or BTAGService/BthAvctpSvc running are historical snapshots; E-132/E-133 are the later records for this audit.
