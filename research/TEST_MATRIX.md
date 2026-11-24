@@ -164,3 +164,11 @@ No service, device, profile-driver, endpoint, SBC negotiation, audio-stream, LDA
 |---|---|---|---|---|
 | T-068 | Win10 A2DP CBS ownership | Identify the package MUM and exact dualModeDriver assembly identities | CI #463 KB5036979 MUM declares A2DP common 19041.4355, BtaMPM, source and sink INFs under Client-Desktop-Required; KB5126657 updates A2DP common to 7802 and BtaMPM to 7725; Server KB5126655 has no corresponding hits | CONFIRMED — STATIC_ANALYSIS; standalone staging/CAT applicability pending |
 
+
+
+## 2026-11-24 07:20 Europe/Kyiv — directional package minimization
+
+| ID | Gate | Required proof | Actual result | Status / next |
+|---|---|---|---|---|
+| T-069 | A2DP role/package scope | Confirm source vs sink INF direction for PC → OPPO | Source INF matches remote A2DP Sink UUID 0x110B; sink INF is reverse direction and unnecessary for playback to earbuds. Source INF chains to common INF + BtaMPM/KS/WDMAUDIO/MSSysFx. | CONFIRMED — STATIC_INF_REVIEW; package staging and runtime remain untested |
+

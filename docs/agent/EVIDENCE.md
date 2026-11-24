@@ -725,3 +725,8 @@ For KB5036979 / captured package version 10.0.19041.4355, the MUM `Microsoft-Win
 - `microsoft_bluetooth_a2dp_snk.inf` and `microsoft_bluetooth_a2dp_src.inf` → corresponding `dualModeDriver` assemblies version 10.0.19041.1.
 
 For KB5126657, the MUM declares A2DP common 10.0.19041.7802 and BtaMPM 10.0.19041.7725. The Server KB5126655 catalog scan has no matching A2DP/BtaMPM package/MUM hits. This confirms Win10 client CBS ownership and Server package absence in the scanned update; it does not prove that the driver package cannot be independently staged on Server. Full image CAT/registry/INF applicability and disposable-VM staging remain untested.
+
+
+## E-167 — Only the A2DP source INF is required for PC-to-OPPO playback
+
+The archived Win10 INF comparison and `WIN10_A2DP_PIPELINE.md` establish that `microsoft_bluetooth_a2dp_src.inf` matches the remote A2DP Sink UUID 0x110B and is the host-to-headphones playback direction. `microsoft_bluetooth_a2dp_snk.inf` is the reverse-direction profile (Windows as A2DP sink) and is not required for the OPPO playback milestone. The source INF chains to the common A2DP INF; the common INF requires BtaMPM, KS, WDMAUDIO and MSSysFx registration/copy sections. This narrows the candidate package set but does not prove staging or runtime. No INF was staged.

@@ -362,3 +362,8 @@ Runs #4/#5 proved the UUP image identity path works for Server 20348.5761 but ex
 CI #463 MUM evidence shows that the Win10 A2DP common/source/sink and BtaMPM INF packages are declared as `dualModeDriver` entries owned by `Microsoft-Windows-Client-Desktop-Required-Package`. The Server KB5126655 catalog scan has no corresponding package references. This explains why the Server SKU lacks the profile package, but it does not establish whether the underlying signed driver package can be independently staged on Server.
 
 Keep the minimal Win10 A2DP source/common package as the SBC candidate, but do not inject the entire client CBS package or manually copy SYS/INF files. First verify exact DriverStore/CAT membership, INF target decorations, OS applicability and whether PnPUtil/SetupAPI can stage the complete signed driver package independently in a disposable Server 2022 VM.
+
+
+## D-054 — Exclude the reverse-direction A2DP sink INF from the SBC milestone
+
+The user’s target is PC → OPPO Enco Buds2 playback. The Win10 source INF matches the remote A2DP Sink UUID 0x110B; the separate `microsoft_bluetooth_a2dp_snk.inf` installs the reverse direction (Windows acting as A2DP sink). The minimal candidate is `microsoft_bluetooth_a2dp_src.inf` + `microsoft_bluetooth_a2dp.inf` + required BtaMPM/KS/WDMAUDIO/MSSysFx dependencies. Do not stage the sink INF or HFP components. This is a static INF scope decision only; no staging/runtime result.

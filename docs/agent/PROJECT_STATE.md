@@ -840,3 +840,8 @@ Current stage remains package/static research only. No A2DP endpoint, SBC negoti
 The captured Win10 package's A2DP common INF assembly is version 10.0.19041.4355. The same MUM lists the BtaMPM INF and source/sink INFs as driver entries; source/sink assembly identities are 10.0.19041.1. The latest KB5126657 MUM moves A2DP common to 10.0.19041.7802 and BtaMPM to 10.0.19041.7725. The 74-byte/71-byte INF entries seen in expanded catalog payloads are PSF delta artifacts/placeholders, not complete INF files.
 
 This narrows the next question: can the dualModeDriver package be staged independently on Server 2022 with its valid catalog and exact dependencies, or does Windows enforce Client-Desktop-Required CBS ownership? Do not inject the entire client package. Exact WIM PE/CAT/registry audit remains pending.
+
+
+## 2026-11-24 07:20 Europe/Kyiv — scope reduced to the A2DP source direction
+
+The existing `WIN10_A2DP_PIPELINE.md` confirms that `microsoft_bluetooth_a2dp_src.inf` matches the remote A2DP Sink UUID 0x110B (the OPPO earbuds), while `microsoft_bluetooth_a2dp_snk.inf` is the reverse-direction Windows A2DP sink profile. For PC → OPPO stereo playback, the minimal candidate is therefore source INF + common INF + required BtaMPM/KS/WDMAUDIO/MSSysFx dependencies; do not stage the reverse-direction sink INF or HFP components. This is a scope decision based on the existing archived INF comparison, not a runtime result. No package was staged.
