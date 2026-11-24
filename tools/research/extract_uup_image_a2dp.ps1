@@ -21,7 +21,7 @@ Import-Module Dism -ErrorAction Stop
 
 $Targets = @(
     [pscustomobject]@{ Name="server2022-20348.5761"; Role="server"; Id="008aacce-b0b7-4aeb-a3b2-43286434832c"; ExpectedBuild="20348.5761"; PreferredEdition="ServerDatacenter"; FallbackEdition="ServerStandard"; ImagePattern="Datacenter|Standard" },
-    [pscustomobject]@{ Name="win10-19045.5917"; Role="win10"; Id="598d27dc-ad81-41aa-8c83-42b88e60c823"; ExpectedBuild="19045.5917"; PreferredEdition="Professional"; FallbackEdition="Professional"; ImagePattern="Professional" }
+    [pscustomobject]@{ Name="win10-19045.5917"; Role="win10"; Id="598d27dc-ad81-41aa-8c83-42b88e60c823"; ExpectedBuild="19045.5917"; PreferredEdition="Professional"; FallbackEdition="Professional"; ImagePattern="Pro|Professional" }
 )
 
 $TargetFileNames = @(
@@ -50,7 +50,7 @@ $ExpectedHashes = @{
 
 function Invoke-UupApi {
     param([Parameter(Mandatory)][string]$Name, [Parameter(Mandatory)][hashtable]$Query)
-    $parts = @($Query.GetEnumerator() | Sort-Object Name | ForEach-Object { "$($_.Name)=$([uri]::EscapeDataString([string]$_.Value))" })
+    $parts = @($Query.GetEnumerator() | Sort-Object Key | ForEach-Object { "$($_.Key)=$([uri]::EscapeDataString([string]$_.Value))" })
     $uri = "https://api.uupdump.net/$Name.php?" + ($parts -join "&")
     Invoke-RestMethod -Method Get -Uri $uri -TimeoutSec 90
 }
@@ -187,8 +187,8 @@ function Get-ComponentHits {
         }
     }
     if (Test-Path -LiteralPath $mumRoot) {
-        $mumFiles = Get-ChildItem -LiteralPath $mumRoot -Filter "*.mum" -File
-        $matches = Select-String -Path $mumFiles.FullName -Pattern $ComponentPattern -ErrorAction SilentlyContinue
+        $mumFiles = @(Get-ChildItem -LiteralPath $mumRoot -Filter "*.mum" -File)
+        $matches = if ($mumFiles.Count -gt 0) { Select-String -Path $mumFiles.FullName -Pattern $ComponentPattern -ErrorAction SilentlyContinue } else { @() }
         foreach ($match in $matches) {
             $hits += [pscustomobject]@{ role=$Role; kind="CBS-MUM"; file=[System.IO.Path]::GetFileName($match.Path); lineNumber=$match.LineNumber; line=$match.Line.Trim() }
         }
