@@ -115,3 +115,14 @@ The archived comparison transcripts `00-33.txt` and `00-34.txt` reveal the Serve
 ## 2026-11-24 — LDAC codec/DLL source audit (no build)
 
 Read-only source audit only. The current fork statically links AOSP libldac 2.0.2 encoder + ABR into `ldacsvc_core`; no DLL was built. Incus Multicodec contains a source build recipe for a separate `ldac.dll` encoder wrapper but no checked-in binary. The decoder build is verification-only. No CI/build/run ID, PE hash, DLL import/export table or runtime test was produced. See E-163.
+
+
+## 2026-11-24 07:13 — UUP audit harness correction
+
+| Run | Branch / commit | Result | Artifact / evidence |
+|---|---|---|---|
+| UUP audit #4 / 45325486392 | `experiment/win10-a2dp-uup-image-audit-20261124`, `144d42105a26d5aa21f159ae068b17a047f724a9` | FAILED — parser harness | Server image identity 20348.5761 / ServerDatacenter verified; `int(None)` on AudioEndpointBuilder.dll delay-import hint; no metadata artifact |
+| UUP audit #5 / 45325586394 | same branch, `e947970356884ead996bcc7347fa0e5554aa770b` | FAILED — same parser harness | Same Server identity; same TypeError; no metadata artifact |
+| UUP audit #6 / 45332165839 | same branch, `6778022b4453857e53acf8a18afe54bb7e46f5f5` | IN PROGRESS at update | Three PE parser regression tests passed; UUP extraction/audit still running; no result accepted yet |
+
+The failures in #4/#5 are not binary or OS compatibility results. Do not use them as evidence against BthA2dp. No driver/runtime build or physical-host test was performed.

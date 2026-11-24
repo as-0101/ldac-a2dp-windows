@@ -325,3 +325,16 @@ These are existing Library artifacts. No new collection or materialization was r
 | Upstream parent | [yariktop133/ldac-a2dp-windows](https://github.com/yariktop133/ldac-a2dp-windows) | Current fork parent; Windows 11 / ACX 1.1 / test-signing path, not Server 20348 drop-in |
 
 Git blob identifiers above are not file SHA-256 values. No Incus `ldac.dll` binary was built or hashed in this audit.
+
+
+## 2026-11-24 07:13 Europe/Kyiv — PE parser correction and UUP rerun
+
+| Artifact | Identity | Purpose / status |
+|---|---|---|
+| PE parser fix | Experiment commit `6778022b4453857e53acf8a18afe54bb7e46f5f5`; parser Git blob `fb2ec06a56f39e196a3e482c7fe3b8396ef15b0f` | Treat absent delay-import hint as null instead of calling `int(None)`; Git blob SHA is not a file SHA-256 |
+| Regression tests | `tests/test_audit_pe_binary.py`; Git blob `941e15984dd1d725326bcc09a703712eca1b3aa0` | Tests named delay-import with missing hint, ordinal import with missing hint, and numeric named-import hint |
+| UUP workflow update | `.github/workflows/uup-image-audit.yml`; Git blob `fec810d613874df33a61b4c32bf6699516d95702` | Adds regression-test path trigger and runs unit tests before downloading UUP images |
+| UUP audit #4/#5 | Runs `45325486392` / `45325586394` | Both failed in the parser after verifying Server image identity; no output artifact |
+| UUP audit #6 | Run `45332165839`; commit `6778022b4453857e53acf8a18afe54bb7e46f5f5`; job `138235648697` | Regression tests passed; image audit still running; no metadata artifact available at this update |
+
+No Microsoft binary payload or UUP image was committed. Existing Win10 source package archives were not recollected.

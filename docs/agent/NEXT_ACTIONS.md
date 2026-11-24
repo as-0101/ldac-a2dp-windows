@@ -1,17 +1,17 @@
-# Immediate next actions — 2026-11-24 06:32 Europe/Kyiv
+# Immediate next actions — 2026-11-24 07:13 Europe/Kyiv
 
 This block supersedes older ACX-focused action lists below.
 
-1. Inspect UUP audit #4 ([45325486392](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45325486392)) and #5 ([45325586394](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45325586394)); #5 is the latest script revision with the BtaMPM companion reference.
-2. Verify offline image identity (CurrentBuild.UBR + EditionID), then compare exact SHA-256 against the captured Win10 DriverStore BthA2dp, separate System32 BthA2dp and BtaMPM files. Keep all copies/version families separate.
-3. Complete PE architecture/timestamp/OS/subsystem/import/delay-import/export/API-set and Server 20348.5761 resolution; close SYSTEM/SOFTWARE service/class/MMDevices registrations and system CatRoot membership.
-4. Use the existing Win10 `microsoft_bluetooth_a2dp_src.inf` + common A2DP INF/binaries as the first minimal SBC candidate. Preserve Server BthPort/BthEnum/radio core. Verify rank, catalog and CBS applicability before any disposable-VM staging.
-5. On the disposable VM, test service start → device enumeration → driver load → A2DP endpoint → SBC negotiation → actual stereo audio separately. OPPO Enco Buds2 is AAC/SBC only, so it is suitable for this milestone.
-6. LDAC encoder is already present in the fork: AOSP libldac 2.0.2 is statically linked into `ldacsvc_core`. No Microsoft inbox LDAC codec/provider DLL has been identified. The separate `libldacdec` tool is verification-only.
-7. For LDAC after SBC, prefer evaluating an existing user-mode A2DP stack (Incus Multicodec: Bumble + WinUSB; BlueCaster: BTstack + WinUSB) on a disposable Server 2022 VM with a dedicated USB adapter and LDAC-capable sink. These stacks bypass Windows A2DP and Server 2022 support is unverified; do not treat them as drop-in DLLs.
-8. Keep the custom KMDF/ACX driver path suspended. The upstream parent targets Windows 11/ACX 1.1 and test signing; it is not a justified next step for Server 2022 build 20348. No ACX bind-probe.
-9. Physical Server 2022 remains read-only. No driver install, device restart, BCD/security/test-signing/certificate change, OS update/rollback or prepare/upgrade/install/rollback script. HFP/microphone remains out of scope.
-10. Code changes stay on the isolated experiment branch; documentation only on `docs/project-source-reorg`. Notion journal remains append-only.
+1. Inspect UUP audit #6 ([45332165839](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45332165839)); verify the regression-test step and final metadata artifact. Runs #4/#5 are closed as parser-harness failures, not binary failures.
+2. Confirm both offline image identities: Win10 19045.5917 x64 / Professional and Server 20348.5761 x64 / ServerDatacenter. Runs #4/#5 verified only the Server image before failing; Win10 image identity remains unverified.
+3. Compare extracted SHA-256 against the existing captured Win10 archive: DriverStore BthA2dp 19041.4355, separate System32 BthA2dp, and BtaMPM 19041.5848. Keep all copies/version families separate.
+4. Complete PE architecture/timestamp/OS/subsystem/direct+delay imports/exports/API-set and exact Server 20348.5761 export resolution. Include the Win10 BtaMPM companion when resolving BthA2dp imports.
+5. Extend the offline audit to SYSTEM/SOFTWARE service/class/MMDevices registrations, CBS/WinSxS ownership and system CatRoot membership. A missing package-local CAT is not proof of an unsigned inbox package.
+6. If 19045.5917 does not reproduce the captured hashes, use the already identified 19045.4355 x64 UUP candidate (ID `446f2934-e38b-4801-a529-fcf40231a02a`) as a separate exact-version target; do not substitute later binaries.
+7. Only after exact PE/CAT/CBS/rank checks, stage the existing Win10 source/common A2DP package in a disposable Server 2022 VM. Preserve Server BthPort/BthEnum/radio core.
+8. On the disposable VM, test service start → device enumeration → driver load → A2DP endpoint → SBC negotiation → actual stereo audio separately. OPPO Enco Buds2 is suitable for SBC.
+9. After SBC only, evaluate an existing user-mode A2DP transport with a dedicated USB adapter and an LDAC-capable sink. The current fork already has the encoder; an encoder DLL alone is not a codec provider or transport.
+10. Keep custom KMDF/ACX work suspended. Physical Server 2022 remains read-only; no driver install, device restart, BCD/security/test-signing/certificate change, OS update/rollback or prepare/upgrade/install/rollback script. HFP/microphone remains out of scope.
 
 # Current continuation — 2026-11-24 02:19 (codec ownership and PE audit correction)
 

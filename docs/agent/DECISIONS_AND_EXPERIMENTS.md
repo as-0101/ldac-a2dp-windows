@@ -344,3 +344,14 @@ The only decoder in the repo workflow is `libldacdec`, fetched and built by `too
 Incus Multicodec demonstrates a Windows `ldac.dll` build recipe, but the DLL is an encoder wrapper over the same libldac source, not a COM/KS codec provider or transport. Incus uses Bumble + WinUSB for its own A2DP stack; BlueCaster uses BTstack + WinUSB. These are user-mode alternatives that bypass the Windows A2DP profile and take over a USB adapter. Server 2022 support is unverified.
 
 Therefore: finish the existing Win10 A2DP source/common INF path for SBC first. For LDAC, a real A2DP source must advertise the vendor codec in AVDTP and transport LDAC frames. Prefer evaluating the existing user-mode stack with a dedicated USB adapter over resuming the custom ACX driver. Do not attempt to register `ldac.dll` as an arbitrary Windows A2DP codec provider.
+
+
+## D-052 — Treat absent PE delay-import hints as nullable metadata
+
+Runs #4/#5 proved the UUP image identity path works for Server 20348.5761 but exposed a parser edge case: pefile can return a named delay-import symbol with `hint=None`. A missing hint is not a missing import and must not abort the audit or be coerced to zero. The isolated experiment parser now preserves null and has regression coverage. CI #6 passed the unit-test step; the UUP image audit remains pending. Do not infer any binary compatibility result from the #4/#5 harness failures.
+
+## Experiment — UUP audit #4/#5 parser failure and #6 correction
+
+- #4 / 45325486392 and #5 / 45325586394 both verified the Server 20348.5761 offline SOFTWARE hive, then failed at `int(None)` while parsing AudioEndpointBuilder.dll delay imports. No Win10 image, PE report, CAT/CBS result or artifact was produced.
+- Isolated experiment commit `6778022b4453857e53acf8a18afe54bb7e46f5f5` added the nullable-hint fix and three regression tests; CI #6 / 45332165839 passed the tests.
+- Full UUP audit #6 remains the active run. No driver/package staging, runtime test or physical-host action is authorized or performed.

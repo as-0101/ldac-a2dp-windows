@@ -147,3 +147,12 @@ No service, device, profile-driver, endpoint, SBC negotiation, audio-stream, LDA
 
 | T-064 | LDAC encoder/decoder/DLL inventory | Current fork statically links AOSP libldac 2.0.2 encoder + ABR; decoder build is verification-only; Incus source recipe builds encoder-only ldac.dll but commits no binary. | SOURCE AUDIT COMPLETE; no PE hash/export table or runtime test |
 | T-065 | Existing user-mode A2DP transport fallback | Incus Multicodec (Bumble + WinUSB) and BlueCaster (BTstack + WinUSB) found; both bypass Windows A2DP and take over USB adapter. | CANDIDATES IDENTIFIED; Server 2022 compatibility and OPPO SBC / LDAC sink tests pending |
+
+
+## 2026-11-24 07:13 Europe/Kyiv — PE audit harness regression
+
+| ID | Gate | Required proof | Actual result | Status / next |
+|---|---|---|---|---|
+| T--Infinity | UUP audit #4/#5 parser robustness | Parse named delay-import entries whose hint is absent | Both runs verified Server 20348.5761 identity, then failed on `int(None)` in AudioEndpointBuilder.dll; no Win10 image or metadata report was reached | FAILED — HARNESS ONLY; no binary conclusion |
+| T--Infinity | PE parser regression tests | Preserve absent hint as null; retain numeric hints | CI #6 run 45332165839, job 138235648697: all three unit tests passed before UUP download | CONFIRMED — BUILD_ONLY; full UUP audit still in progress |
+
