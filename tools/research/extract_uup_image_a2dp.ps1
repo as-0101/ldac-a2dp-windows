@@ -306,6 +306,188 @@ function Get-OfflineImageIdentity {
     }
 }
 
+
+function Get-OfflineServiceSummary {
+    param(
+        [Parameter(Mandatory)][string]$MountDirectory,
+        [Parameter(Mandatory)][string]$WorkDirectory,
+        [Parameter(Mandatory)][string]$Role
+    )
+    $sourceHive = Join-Path $MountDirectory "Windows\System32\Config\SYSTEM"
+    if (-not (Test-Path -LiteralPath $sourceHive)) { throw "Offline SYSTEM hive not found: $sourceHive" }
+    $hiveCopy = Join-Path $WorkDirectory "SYSTEM.audit.hiv"
+    Copy-Item -LiteralPath $sourceHive -Destination $hiveCopy -Force
+    $hiveName = "LDAC_UUP_AUDIT_SYSTEM_$Role"
+    $loaded = $false
+    try {
+        $loadOutput = & reg.exe load "HKLM\$hiveName" $hiveCopy 2>&1
+        if ($LASTEXITCODE -ne 0) { throw "Could not load offline SYSTEM hive (exit=$LASTEXITCODE): $($loadOutput -join ' ')" }
+        $loaded = $true
+        $selectPath = "Registry::HKEY_LOCAL_MACHINE\$hiveName\Select"
+        $select = Get-ItemProperty -LiteralPath $selectPath
+        $current = [int]$select.Current
+        $controlSet = "ControlSet{0:D3}" -f $current
+        $serviceNames = @("BthA2dp", "BtaMPM", "BthPort", "BthEnum", "BTHUSB", "AudioSrv", "AudioEndpointBuilder")
+        $records = foreach ($serviceName in $serviceNames) {
+            $servicePath = "Registry::HKEY_LOCAL_MACHINE\$hiveName\$controlSet\Services\$serviceName"
+            if (Test-Path -LiteralPath $servicePath) {
+                $item = Get-ItemProperty -LiteralPath $servicePath
+                $parametersPath = Join-Path $servicePath "Parameters"
+                $serviceDll = $null
+                if (Test-Path -LiteralPath $parametersPath) {
+                    $parameters = Get-ItemProperty -LiteralPath $parametersPath
+                    $serviceDll = [string]$parameters.ServiceDll
+                }
+                [pscustomobject]@{
+                    role=$Role
+                    controlSet=$controlSet
+                    service=$serviceName
+                    exists=$true
+                    type=if ($null -ne $item.Type) { [int]$item.Type } else { $null }
+                    start=if ($null -ne $item.Start) { [int]$item.Start } else { $null }
+                    imagePath=[string]$item.ImagePath
+                    group=[string]$item.Group
+                    dependOnService=@($item.DependOnService)
+                    serviceDll=$serviceDll
+                    source="copied offline SYSTEM hive; read-only source image"
+                }
+            } else {
+                [pscustomobject]@{
+                    role=$Role
+                    controlSet=$controlSet
+                    service=$serviceName
+                    exists=$false
+                    type=$null
+                    start=$null
+                    imagePath=$null
+                    group=$null
+                    dependOnService=@()
+                    serviceDll=$null
+                    source="copied offline SYSTEM hive; read-only source image"
+                }
+            }
+        }
+        return $records
+    } finally {
+        if ($loaded) { & reg.exe unload "HKLM\$hiveName" 2>&1 | Out-Null }
+        Remove-Item -LiteralPath $hiveCopy -Force -ErrorAction SilentlyContinue
+    }
+}
+
+function Get-TargetCatalogMembership {
+    param([Parameter(Mandatory)][string]$MountDirectory, [Parameter(Mandatory)][string]$Role)
+    if ($Role -ne "win10") { return @() }
+
+    $driverStore = Join-Path $MountDirectory "Windows\System32\DriverStore\FileRepository"
+    $infRoot = Join-Path $MountDirectory "Windows\INF"
+    $targetSpecs = @(
+        @{ name="BthA2dp.sys"; pattern="microsoft_bluetooth_a2dp.inf_amd64"; policy="/kp" },
+        @{ name="BtaMPM.sys"; pattern="btampm.inf_amd64"; policy="/kp" },
+        @{ name="microsoft_bluetooth_a2dp.inf"; pattern="microsoft_bluetooth_a2dp.inf_amd64"; policy="/pa" },
+        @{ name="microsoft_bluetooth_a2dp_src.inf"; pattern="microsoft_bluetooth_a2dp_src.inf_amd64"; policy="/pa" },
+        @{ name="btampm.inf"; pattern="btampm.inf_amd64"; policy="/pa" }
+    )
+    $targets = @()
+    foreach ($spec in $targetSpecs) {
+        $roots = @($driverStore, $infRoot)
+        $matches = foreach ($root in $roots) {
+            if (Test-Path -LiteralPath $root) {
+                Get-ChildItem -LiteralPath $root -Filter $spec.name -File -Recurse -ErrorAction SilentlyContinue |
+                    Where-Object {
+                        if ($spec.pattern) { $_.FullName -match [regex]::Escape($spec.pattern) } else { $true }
+                    }
+            }
+        }
+        $file = $matches | Sort-Object @{Expression={ if ($_.FullName -match "\\DriverStore\\FileRepository\\") { 0 } else { 1 } }}, FullName | Select-Object -First 1
+        if ($file) {
+            $targets += [pscustomobject]@{
+                name=$spec.name
+                path=$file.FullName.Substring($MountDirectory.Length).TrimStart("\")
+                fullPath=$file.FullName
+                sha256=(Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash.ToUpperInvariant()
+                policy=$spec.policy
+            }
+        } else {
+            $targets += [pscustomobject]@{ name=$spec.name; path=$null; fullPath=$null; sha256=$null; policy=$spec.policy }
+        }
+    }
+
+    $catalogRoots = @(
+        (Join-Path $MountDirectory "Windows\servicing\Packages"),
+        (Join-Path $MountDirectory "Windows\WinSxS\Catalogs"),
+        (Join-Path $MountDirectory "Windows\System32\CatRoot"),
+        (Join-Path $MountDirectory "Windows\System32\CatRoot2"),
+        $driverStore
+    )
+    $catalogFiles = foreach ($root in $catalogRoots) {
+        if (Test-Path -LiteralPath $root) {
+            Get-ChildItem -LiteralPath $root -Filter "*.cat" -File -Recurse -ErrorAction SilentlyContinue
+        }
+    }
+    $catalogFiles = @($catalogFiles | Sort-Object FullName -Unique)
+    $signToolPath = (Get-Command signtool.exe -ErrorAction SilentlyContinue | Select-Object -First 1).Source
+    if (-not $signToolPath) {
+        $kitsRoot = Join-Path \${env:ProgramFiles(x86)} "Windows Kits\10\bin"
+        if (Test-Path -LiteralPath $kitsRoot) {
+            $signTool = Get-ChildItem -LiteralPath $kitsRoot -Filter "signtool.exe" -File -Recurse -ErrorAction SilentlyContinue |
+                Where-Object { $_.FullName -match "\\x64\\signtool\.exe$" } |
+                Sort-Object FullName -Descending | Select-Object -First 1
+            if ($signTool) { $signToolPath = $signTool.FullName }
+        }
+    }
+
+    $results = foreach ($target in $targets) {
+        if (-not $target.fullPath) {
+            [pscustomobject]@{
+                role=$Role; file=$target.name; filePath=$null; fileSha256=$null
+                status="TARGET_FILE_NOT_FOUND"; catalogPath=$null; catalogSha256=$null
+                catalogsScanned=0; verificationPolicy=$target.policy; signtool=$signToolPath
+                output="Target file was not found in the offline image."
+            }
+            continue
+        }
+        if (-not $signToolPath) {
+            [pscustomobject]@{
+                role=$Role; file=$target.name; filePath=$target.path; fileSha256=$target.sha256
+                status="SIGNTOOL_NOT_FOUND"; catalogPath=$null; catalogSha256=$null
+                catalogsScanned=0; verificationPolicy=$target.policy; signtool=$null
+                output="Windows SDK SignTool was not found on the disposable runner."
+            }
+            continue
+        }
+
+        $match = $null
+        $tested = 0
+        $lastOutput = $null
+        foreach ($catalog in $catalogFiles) {
+            $tested++
+            $verifyOutput = & $signToolPath verify $target.policy /c $catalog.FullName $target.fullPath 2>&1
+            $exitCode = $LASTEXITCODE
+            if ($exitCode -eq 0) {
+                $match = $catalog
+                $lastOutput = ($verifyOutput | Out-String).Trim()
+                break
+            }
+            if ($tested -le 3) { $lastOutput = ($verifyOutput | Out-String).Trim() }
+        }
+        [pscustomobject]@{
+            role=$Role
+            file=$target.name
+            filePath=$target.path
+            fileSha256=$target.sha256
+            status=if ($match) { "CATALOG_MEMBER_VERIFIED" } elseif ($catalogFiles.Count -eq 0) { "NO_CATALOG_FILES_FOUND" } else { "NO_MATCH_IN_SCANNED_CATALOGS" }
+            catalogPath=if ($match) { $match.FullName.Substring($MountDirectory.Length).TrimStart("\") } else { $null }
+            catalogSha256=if ($match) { (Get-FileHash -LiteralPath $match.FullName -Algorithm SHA256).Hash.ToUpperInvariant() } else { $null }
+            catalogsScanned=$tested
+            catalogCount=$catalogFiles.Count
+            verificationPolicy=$target.policy
+            signtool=$signToolPath
+            output=$lastOutput
+        }
+    }
+    return $results
+}
+
 function Collect-Image {
     param([Parameter(Mandatory)]$Target, [Parameter(Mandatory)][string]$WorkDirectory)
     $download = Download-UupIso -Target $Target -WorkDirectory $WorkDirectory
@@ -406,6 +588,8 @@ function Collect-Image {
             $infRecords = Get-InfSummary -MountDirectory $mountDirectory -Role $Target.Role
             $componentHits = Get-ComponentHits -MountDirectory $mountDirectory -Role $Target.Role
             $catalogRecords = Get-CatalogSummary -MountDirectory $mountDirectory -Role $Target.Role
+            $catalogMembership = Get-TargetCatalogMembership -MountDirectory $mountDirectory -Role $Target.Role
+            $serviceRegistrations = Get-OfflineServiceSummary -MountDirectory $mountDirectory -WorkDirectory $WorkDirectory -Role $Target.Role
 
             [pscustomobject]@{
                 name=$Target.Name
@@ -426,6 +610,8 @@ function Collect-Image {
                 infs=$infRecords
                 componentHits=$componentHits
                 catalogs=$catalogRecords
+                catalogMembership=$catalogMembership
+                serviceRegistrations=$serviceRegistrations
             }
         } finally {
             Dismount-WindowsImage -Path $mountDirectory -Discard -ErrorAction SilentlyContinue | Out-Null
@@ -456,13 +642,17 @@ $manifest = [ordered]@{
     generatedUtc=(Get-Date).ToUniversalTime().ToString("o")
     githubRunId=$env:GITHUB_RUN_ID
     githubSha=$env:GITHUB_SHA
-    scope="Offline UUP image extraction and static PE analysis only. No package installation, driver load, device enumeration, audio test, or physical-host access."
+    scope="Offline UUP image extraction, static PE analysis, offline SYSTEM service registration inventory, and offline catalog membership verification only. No package installation, driver load, device enumeration, audio test, or physical-host access."
     expectedCapturedHashes=$ExpectedHashes
     images=$results
 }
 $manifest | ConvertTo-Json -Depth 30 | Set-Content -LiteralPath (Join-Path $OutputDirectory "manifest.json") -Encoding utf8
 $allInfLines | Set-Content -LiteralPath $InfReportPath -Encoding utf8
 $allComponentHits | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath $ComponentReportPath -Encoding utf8
+$allCatalogMembership = @($results | ForEach-Object { $_.catalogMembership })
+$allServiceRegistrations = @($results | ForEach-Object { $_.serviceRegistrations })
+$allCatalogMembership | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath (Join-Path $OutputDirectory "catalog-membership.json") -Encoding utf8
+$allServiceRegistrations | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath (Join-Path $OutputDirectory "service-registrations.json") -Encoding utf8
 
 @"
 # UUP image A2DP component audit
@@ -473,7 +663,8 @@ $allComponentHits | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath $Compone
 - The selected image version is checked before extracting files.
 - SHA-256 comparisons are made against the already-recorded Win10 archive hashes.
 - PE reports include imports, delay imports, exports, API-set imports and a static comparison of Win10 imports against Server 2022 exports.
-- Catalog membership is not inferred from Get-AuthenticodeSignature on SYS files. INF/CAT and CBS/WinSxS hits are recorded separately.
+- Catalog membership is checked against offline catalogs with SignTool; embedded Authenticode status is reported separately.
+- Offline SYSTEM hive service registrations are captured from a temporary copy; source images remain read-only.
 - No Microsoft binary payloads or ISO files are uploaded by this workflow; only metadata and text reports are retained.
 - Static export presence does not prove driver load or runtime compatibility.
 "@ | Set-Content -LiteralPath (Join-Path $OutputDirectory "README.md") -Encoding utf8
