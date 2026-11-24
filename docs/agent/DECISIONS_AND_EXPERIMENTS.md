@@ -423,3 +423,10 @@ The original INF/SYS/CAT bytes must remain unchanged. Do not add a CatalogFile l
 
 Stage-smoke harness commits: 5b6ccfaed40ae75669ef74aad1e8de0d5284a0ef, 32fe8206781cdf41955348a18bf3671c998e71bb, 3305dddcb18f4e407e6b61762a2539a77412ea2d; workflow 692cb1a5e4df7de5ca0ebc72e61878c1c62df300. Run #1/#2 parser failures are harness-only; run #3 is in progress.
 
+
+## 2026-11-24 — keep Server KS/WDMAUDIO components
+
+CI #12 confirms Server ks.inf 10.0.20348.1 exposes KS.Registration and Server wdmaudio.inf 10.0.20348.5756 exposes WDMAUDIO.Registration and mssysfx.CopyFilesAndRegister. Their hashes differ from Win10, but the required INF sections exist in the target image.
+
+Decision: do not transplant Win10 ks.inf, wdmaudio.inf, MSSysFx or related audio components. The minimal candidate package remains A2DP Source/common + BtaMPM companion, using the Server's existing KS/WDMAUDIO registration sections. This is static INF evidence only; staging/runtime remains unproven.
+
