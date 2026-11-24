@@ -209,10 +209,10 @@ jobs:
           foreach ($script in 'extract-pe-resource.py','decode-dcm-manifest.py') {
             Invoke-WebRequest "$source/$script" -OutFile $script
           }
-          python extract-pe-resource.py $dll[0].FullName --id 614
+          python -X utf8 extract-pe-resource.py $dll[0].FullName --id 614
           foreach ($m in $manifest) {
             $xmlPath = Join-Path $env:RUNNER_TEMP 'deployment.xml'
-            python decode-dcm-manifest.py -d resource_614.bin -o $xmlPath $m.FullName
+            python -X utf8 decode-dcm-manifest.py -d resource_614.bin -o $xmlPath $m.FullName
             $xml = [Xml.XmlDocument]::new()
             $xml.XmlResolver = $null
             $xml.Load($xmlPath)
