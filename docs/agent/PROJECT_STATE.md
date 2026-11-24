@@ -773,3 +773,11 @@ Current stage remains package/static research only. No A2DP endpoint, SBC negoti
 - Common INF includes ks.inf, wdmaudio.inf, BtaMpm.inf; Needs KS.Registration, WDMAUDIO.Registration, BtaMPM.CopyFilesOnly and mssysfx.CopyFilesAndRegister; AddService BthA2dp is demand-start and KSCATEGORY_AUDIO interfaces are registered. Existing Server comparison already has generic KS/WDMAUDIO/MSSysFx dependencies. Package-level adaptation remains the preferred hypothesis pending exact checks.
 - No driver/device/endpoint/audio runtime stage was tested; no physical-host query or mutation occurred.
 
+## 2026-11-24 05:25 — exact package version differs from later symbol-server candidate
+
+- The captured DriverStore BthA2dp 10.0.19041.4355 (282,624 bytes; SHA-256 `5FBA5EE606AAC39D9CBDA51C0A14DBABBB3A9B47BBD8AC5485ED137B4F354EC3`) is recorded in E-119/GNU objdump as importing directly from `ntoskrnl.exe` only.
+- The separate System32 BthA2dp copy is 279,040 bytes, SHA-256 `0442A18BBED4E323265C66561C8F8C171D8E934E9089C12B94D1DFDBB057B737`, and has 8 descriptors / 144 imports. It is not the DriverStore package binary.
+- CI #463's symbol-server BthA2dp 10.0.19041.6392 candidate is also 282,624 bytes but has 8 descriptors / 149 imports and a different SHA. This proves the import surface can change across file versions; the 19041.6392 candidate must not be used as a proxy for 19041.4355.
+- Exact package BtaMPM 10.0.19041.5848 remains a separate 3-descriptor / 42-import binary. Its imports are ntoskrnl, cng and WppRecorder; its exact exports still need to be compared against Server 20348.5761.
+- UUP 19045.4355 x64 is a candidate image for reproducing the captured BthA2dp version if the current 19045.5917 image does not contain matching hashes. No new UUP run started in this pass.
+

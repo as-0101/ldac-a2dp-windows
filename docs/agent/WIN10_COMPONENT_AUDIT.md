@@ -283,3 +283,9 @@ The archived Server comparison already contains ks.inf, wdmaudio.inf, WMALFXGFXD
 
 BlueCaster is user-mode BTstack+WinUSB, takes over a USB radio and has no Server 2022 support claim; its BTstack license is personal/non-commercial. OpenA2DP is pre-alpha; its kernel drivers have not been built with WDK or run against a headset. The project's AOSP libldac remains a static encoder library in the existing service, not a Windows 10 A2DP provider DLL.
 
+### Version-specific import surface — important correction
+
+The exact captured DriverStore BthA2dp 10.0.19041.4355 (282,624 bytes, SHA-256 `5FBA5EE606AAC39D9CBDA51C0A14DBABBB3A9B47BBD8AC5485ED137B4F354EC3`) is reported by E-119/GNU objdump to import directly from `ntoskrnl.exe` only. Do not confuse it with the separate 279,040-byte System32 copy (8 descriptors / 144 imports) or the non-exact 19041.6392 symbol-server candidate (8 descriptors / 149 imports). Import closure changes across versions; the exact package binary still needs revalidation with the retained full parser.
+
+The exact captured BtaMPM 10.0.19041.5848 (43,008 bytes, SHA-256 `DA5CBBDCE6AC511EF8400E121DF6B6EACA7D05C0F40A01F7353CE9F220EB3DCD`) is the 3-descriptor / 42-import file shown in reports (2)/(3). Its direct imports are ntoskrnl.exe (37), cng.sys (1) and WppRecorder.sys (4). The 19041.7660 symbol-server candidate has the same import DLL set/count but a different hash; its export table is not proof of the exact 19041.5848 export table. Exact BtaMPM exports must be obtained from the matching UUP image.
+

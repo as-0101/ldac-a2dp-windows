@@ -300,3 +300,7 @@ The first implementation hypothesis is to reuse the Windows 10 source/common A2D
 
 BlueCaster is a user-mode BTstack+WinUSB stack, not a codec DLL for Microsoft A2DP; it takes over a USB radio, has no Server 2022 support claim and carries a personal/non-commercial BTstack license. OpenA2DP is pre-alpha and its kernel drivers have not been built/run against hardware. Neither replaces the current Win10 package/SBC investigation.
 
+## D-045 — Never substitute a later BthA2dp import map for the captured package version
+
+The captured DriverStore BthA2dp is 10.0.19041.4355 and E-119 reports direct imports from ntoskrnl only. The separate System32 copy and later symbol-server candidates have different hashes/import surfaces. All compatibility conclusions must be tied to the exact file SHA/version; revalidate the 19041.4355 package bytes against Server 20348.5761 before staging.
+

@@ -103,3 +103,9 @@ The 19041.6392 BthA2dp candidate has 149 imports across 8 descriptors. The 19041
 
 UUP run #3 (45317582562, commit `e9900fc894772997526995feeaecfff4a9ec5ff0`) remains in progress. No driver installation or physical-host access occurs in this workflow.
 
+### Exact captured build candidate
+
+The captured A2DP common INF/BthA2dp package version is 10.0.19041.4355. UUP Dump lists an x64 Windows 10 22H2 build 19045.4355 candidate (ID `446f2934-e38b-4801-a529-fcf40231a02a`): [UUP Dump build](https://uupdump.net/selectlang.php?id=446f2934-e38b-4801-a529-fcf40231a02a). Its actual mounted image contents have not yet been validated. If the current 19045.5917 image does not contain the captured BthA2dp SHA, add this as a separate exact-version image target; do not replace the current run while it is in progress.
+
+E-119 reports the exact captured DriverStore BthA2dp 19041.4355 has only ntoskrnl direct imports. The separate System32 copy and later 19041.6392 symbol-server candidate have 8 import descriptors, so imports are version-dependent and must be compared per exact hash.
+

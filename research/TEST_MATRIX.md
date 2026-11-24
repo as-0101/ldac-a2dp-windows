@@ -135,3 +135,4 @@ No service, device, profile-driver, endpoint, SBC negotiation, audio-stream, LDA
 | T-056 | Device enumeration → driver load → A2DP endpoint → SBC negotiation → actual stereo audio | Requires a real Bluetooth radio and OPPO sink in a disposable Server 2022 VM. Hosted CI has no demonstrated radio/audio path. | NOT TESTED |
 | T-057 | LDAC negotiation and actual LDAC audio | OPPO Enco Buds2 ETE41 supports AAC/SBC only. | CANNOT TEST WITH OPPO; DIFFERENT LDAC SINK REQUIRED |
 
+| T-058 | Exact captured DriverStore BthA2dp 10.0.19041.4355 import revalidation | E-119 reports ntoskrnl-only direct imports; later 19041.6392 candidate has 8 descriptors / 149 imports, proving version drift. | PENDING exact-byte reparse + Server 20348.5761 export comparison |

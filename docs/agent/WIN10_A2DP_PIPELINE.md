@@ -270,3 +270,7 @@ No generic COM A2DP codec-provider contract or LDAC CLSID was found in the revie
 
 Microsoft's Windows 10 inbox A2DP codec list is SBC and aptX Classic; it contains no LDAC codec/provider DLL. The project's AOSP libldac is compiled as static encoder libraries and called by its own service; it is not a plug-in to BthA2dp.sys. A later LDAC milestone needs an A2DP transport that explicitly advertises LDAC and a sink that supports it. OPPO Enco Buds2 ETE41 is AAC/SBC only, so it can validate SBC but cannot validate LDAC.
 
+### Version-specific PE caution
+
+E-119's exact DriverStore BthA2dp 10.0.19041.4355 report says direct imports from ntoskrnl.exe only. The separate 279,040-byte System32 copy has 8 import descriptors / 144 functions, while CI #463's later 19041.6392 DriverStore candidate has 8 descriptors / 149 functions. Do not infer that the captured 19041.4355 package needs the later candidate's HAL/KS/BtaMPM/SleepStudyHelper/WDFLDR/ksecdd import closure. Reparse the exact package hash from a matching UUP image before comparing Server exports.
+

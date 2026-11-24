@@ -403,3 +403,4 @@ Microsoft references:
 - https://learn.microsoft.com/windows-hardware/drivers/bluetooth/bluetooth-support-in-previous-windows-versions
 
 ---
+9. Revalidate the exact captured DriverStore BthA2dp 10.0.19041.4355 and BtaMPM 10.0.19041.5848 separately. E-119 reports the package BthA2dp imports only ntoskrnl; the 19041.6392 symbol-server candidate has a different 8-descriptor import surface. Do not use the later candidate as a proxy.

@@ -662,3 +662,7 @@ Run 45317582562, experiment branch `experiment/win10-a2dp-uup-image-audit-202611
 
 The Win10 A2DP package and DriverStore archives are already indexed. The Project file object did not expose an authorized raw-byte materialization path in this runtime; this is an access-path limitation, not a missing artifact. Continue with existing text reports and official UUP images; do not ask the user to resend files.
 
+## E-157 — BthA2dp import surface is version-dependent
+
+The captured DriverStore BthA2dp 10.0.19041.4355 (282,624 bytes, SHA-256 `5FBA5EE606AAC39D9CBDA51C0A14DBABBB3A9B47BBD8AC5485ED137B4F354EC3`) is recorded by E-119/GNU objdump as PE32+ x64, native kernel, no delay-import directory and direct imports from `ntoskrnl.exe` only. The separate System32 copy is 279,040 bytes, SHA-256 `0442A18BBED4E323265C66561C8F8C171D8E934E9089C12B94D1DFDBB057B737`, with 8 import descriptors / 144 functions. CI #463's non-exact 19041.6392 symbol-server candidate is 282,624 bytes but has 8 descriptors / 149 imports and a different hash. These are distinct files/builds; never transfer import conclusions between them. The exact 19041.4355 report should be reproduced with the full PE parser when its bytes are extracted from the matching UUP image.
+
