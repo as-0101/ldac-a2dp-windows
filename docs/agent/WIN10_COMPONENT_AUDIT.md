@@ -111,7 +111,11 @@ The recorded Server 2022 build 20348.5761 comparison found:
 
 Microsoft's support matrix says Windows 10 SKUs have in-box Bluetooth support and Windows Server SKUs do not. That is product-support policy, not proof that a Windows 10 A2DP binary cannot load on Server 2022.
 
-The last recorded physical-host PnP state is still the user-provided oem75.inf / DriverVer 0.2.325.1600 / Code 37 / ProblemStatus 0xC000000D record. It is historical evidence, not a fresh live check from this run. No physical-host command was run.
+The last recorded physical-host PnP state is the custom LDAC A2DP Project driver, not the Microsoft or Realtek package: the present BTHENUM A2DP Sink node (UUID 0x110B, device-specific suffix LOCALMFG&0002) is bound to oem75.inf, provider LDAC A2DP Project, service LdacA2dp, section LdacA2dp_Device.NT, DriverVer 0.2.325.1600. The node is present and enumerated, but driver start fails with Code 37 / ProblemStatus 0xC000000D. This is a failure of the project's custom driver start path; it is not a test of the Windows 10 Microsoft BthA2dp package. The record is historical, not a fresh live check from this run. No physical-host command was run.
+
+The archived Server environment report also records bthserv, Audiosrv and AudioEndpointBuilder running; BTAGService and BthAvctpSvc are not installed. BTAGService is the HFP/audio-gateway path (out of scope); BthAvctpSvc is the AVCTP/AVRCP control path and is not evidence that the core A2DP audio stream is unavailable. Core bthport.sys, bthusb.sys, bthenum.sys and bthmini.sys files are present; btha2dp.sys is not found in System32\\drivers. ibtusb.sys is also not found at that path, although multiple ibtusb.inf packages are in DriverStore, so the active radio miniport is not established by this report.
+
+A DriverStore folder rtka2dp.inf_amd64_0fd0faf5e73b2466 is present, but the A2DP_INF_Investigation report has an empty A2DP INF FILES section and does not capture its INF bytes/version. Public Realtek catalogs identify the legacy rtka2dp.inf package with BTHENUM hardware IDs ending LOCALMFG&005D; the OPPO node above ends LOCALMFG&0002. The actual OPPO binding is oem75.inf, not rtka2dp.inf. Treat the Realtek folder as an unverified leftover/reference package, not as the current driver or an LDAC candidate.
 
 ## 5. Codec reality and existing LDAC candidates
 
