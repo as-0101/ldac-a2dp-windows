@@ -1,0 +1,61 @@
+name: UUP image A2DP audit
+
+on:
+  push:
+    branches:
+      - experiment/win10-a2dp-uup-image-audit-20261124
+    paths:
+      - tools/research/extract_uup_image_a2dp.ps1
+      - tools/research/audit_pe_binary.py
+      - .github/workflows/uup-image-audit.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  exact-uup-image-audit:
+    name: Win10 19045.5917 vs Server 20348.5761 offline component audit
+    runs-on: windows-2022
+    timeout-minutes: 180
+    steps:
+      - name: Checkout isolated experiment branch
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install pinned PE parser
+        run: python -m pip install --disable-pip-version-check --no-input pefile==2024.8.26
+
+      - name: Download exact UUP images and audit components offline
+        shell: pwsh
+        run: ./tools/research/extract_uup_image_a2dp.ps1 -OutputDirectory build/uup-image-audit
+
+      - name: Remove any residual image or binary payloads
+        if: always()
+        shell: pwsh
+        run: |
+          $root = "build/uup-image-audit"
+          if (Test-Path $root) {
+            Remove-Item "$root/server-reference" -Recurse -Force -ErrorAction SilentlyContinue
+            Get-ChildItem $root -Recurse -File -ErrorAction SilentlyContinue |
+              Where-Object { $_.Extension -in @(".sys", ".dll", ".exe", ".drv", ".iso", ".wim", ".esd", ".psf", ".cab", ".msu") } |
+              Remove-Item -Force -ErrorAction SilentlyContinue
+          }
+
+      - name: Upload metadata and text reports only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: uup-image-a2dp-audit-metadata
+          path: |
+            build/uup-image-audit/README.md
+            build/uup-image-a2dp-audit/manifest.json
+            build/uup-image-a2dp-audit/inf-summary.txt
+            build/uup-image-a2dp-audit/component-hits.json
+            build/uup-image-a2dp-audit/pe-audit/**
+          if-no-files-found: warn
+          retention-days: 7
