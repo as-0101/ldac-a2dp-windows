@@ -117,3 +117,14 @@ Next gate: finish cross-SKU catalog verification, then test original-package sta
 ## Cross-SKU audit implementation update — 2026-11-24
 
 The isolated cross-SKU audit script was extended to record the matched CAT's embedded Authenticode signer/status in addition to SignTool membership and catalog SHA-256. Latest script commit: 11f0c4776b3d1ed6c79f5dca75634dda40c19ba9. The follow-up CI result has not yet been verified.
+
+## Latest verified state — cross-SKU catalog audit (2026-11-24)
+
+CI #12 [45354874225](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45354874225) completed successfully. Exact images: Windows 10 19045.5917 x64 and Windows Server 2022 20348.5761 x64.
+
+The exact five-file Win10 A2DP package (BthA2dp.sys, BtaMPM.sys, common INF, source INF, btampm.inf) is a member of one Win10 servicing CAT (SHA-256 78772FA12959C072D687283F08D08367B8A8EF1A2F07D7B72F20BCAFD12483BF). The same exact file hashes have no match in the 8,325 Server image catalogs. Server positive controls passed 4/4 against the Server OneCore Bluetooth catalog (SHA-256 B0A59B9C3B6E528487BB273332015C8CC3A65A5E60F33BF8AA263E41F6D59AA6). Therefore the Win10 CAT is not pre-registered in the Server image's system catalog set; this does not prove that its Microsoft signature chain cannot be validated or that the catalog cannot be registered.
+
+The next experiment is limited to a disposable GitHub-hosted Server 2022 runner: verify the original CAT and its members with SignTool, try PnPUtil staging without /install, then (only if required) add the original CAT to the system component/driver catalog database and retry. No certificate store change, device binding, service start, driver load or physical-host access. Current run #3: [45371687882](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45371687882).
+
+CI #12 metadata and its readable summary are saved under /LDAC Project/Incoming in Library. The Server-side CAT signer subject was not captured by the artifact (catalogSignature is null); do not claim it was independently recorded.
+
