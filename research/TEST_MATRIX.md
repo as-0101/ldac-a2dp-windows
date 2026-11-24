@@ -204,3 +204,12 @@ No service, device, profile-driver, endpoint, SBC negotiation, audio-stream, LDA
 | LDAC negotiation / actual LDAC stream | LDAC-capable receiver | NOT RUN | Separate post-SBC milestone |
 
 Server AudioSrv and AudioEndpointBuilder exist with Start=3 (demand start), versus Start=2 on Win10. Treat as a configuration difference to validate during runtime, not as proof of failure.
+
+## 2026-11-24 — cross-SKU catalog and DriverStore staging gates
+
+| ID | Gate | Actual result | Status / next |
+|---|---|---|---|
+| T-072 | Exact Win10 A2DP CAT membership vs Server 20348.5761 catalogs | Win10 19045.5917: all five exact package files verify against one CAT. Server 20348.5761: no matching catalog for any of the five across 8,325 CAT files. Server BthPort/BthEnum/BTHUSB/bth.inf positive controls pass 4/4. | CONFIRMED — CROSS_SKU_CATALOG_MEMBERSHIP. Original CAT signature verification on Server runner and PnP staging still pending. |
+| T-073 | Original Win10 A2DP Source package staging on disposable Server 2022 | Stage-smoke run #3 [45371687882](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45371687882): parser preflight passed; UUP extraction/stage test in progress at 12:10 Kyiv. Runs #1/#2 were PowerShell harness parse failures, not compatibility results. | IN PROGRESS — DriverStore-only; no /install, no device binding. |
+| T-074 | BthA2dp service start / BTHENUM UUID 0x110B match / driver load / endpoint / SBC / audio | Not tested by CI #12 or current stage-smoke harness. | NOT RUN — requires a disposable Server 2022 VM with a Bluetooth radio; keep physical host untouched. |
+
