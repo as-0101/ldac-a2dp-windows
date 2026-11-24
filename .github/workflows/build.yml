@@ -26,7 +26,6 @@ jobs:
         uses: actions/setup-python@v6
         with:
           python-version: "3.12"
-          cache: pip
 
       - name: Install pinned static-analysis tools
         run: python -m pip install --disable-pip-version-check --no-input winbindex==3.0.0 pefile==2024.8.26
