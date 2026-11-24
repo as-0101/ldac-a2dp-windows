@@ -121,3 +121,35 @@ jobs:
           $matches = @($caps | Where-Object Name -match 'Bluetooth|A2DP')
           "CAPABILITIES total=$($caps.Count) named_matches=$($matches.Count)"
           $matches | Select-Object Name,State | Format-Table
+      - name: Compare detached Server inbox INF with PnPUtil import and enumerate component identities
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $false
+          if ($env:RUNNER_ENVIRONMENT -ne 'github-hosted' -or [Environment]::OSVersion.Version.Build -ne 20348) { throw 'Requires hosted Server 20348' }
+          $manifestRoot = Join-Path $env:windir 'WinSxS/Manifests'
+          $manifests = @(Get-ChildItem -LiteralPath $manifestRoot -Filter '*.manifest' -File -Force)
+          $mums = @(Get-ChildItem -LiteralPath (Join-Path $env:windir 'servicing/Packages') -Filter '*.mum' -File -Force)
+          foreach ($set in 'manifests','mums') {
+            $items = if ($set -eq 'manifests') { $manifests } else { $mums }
+            $profile = @($items | Where-Object Name -match 'a2dp|btampm')
+            $bt = @($items | Where-Object Name -match 'bluetooth|bthport')
+            "INVENTORY set=$set total=$($items.Count) profile=$($profile.Count) bluetooth=$($bt.Count)"
+            $profile | ForEach-Object { "PROFILE $($_.Name)" }
+            $bt | Select-Object -First 4 | ForEach-Object { "CONTROL $($_.Name)" }
+            if ($items.Count -lt 100) { throw 'Inventory incomplete' }
+          }
+          $dir = New-Item -ItemType Directory -Path (Join-Path $env:RUNNER_TEMP ([guid]::NewGuid()))
+          $file = Join-Path $dir.FullName 'wdmaudio.inf'
+          Copy-Item (Join-Path $env:windir 'INF/wdmaudio.inf') $file
+          $catalogLines = @(Select-String -LiteralPath $file -Pattern '^\s*CatalogFile(?:\.\S+)?\s*=')
+          "DETACHED file=wdmaudio.inf catalog_directives=$($catalogLines.Count) sha256=$((Get-FileHash $file).Hash)"
+          $before = @(Get-WindowsDriver -Online | ForEach-Object Driver | Sort-Object)
+          $output = & pnputil.exe /add-driver $file 2>&1
+          $rc = $LASTEXITCODE
+          $output | ForEach-Object { "PNP $_" }
+          "PNP_EXIT $rc"
+          $after = @(Get-WindowsDriver -Online | ForEach-Object Driver | Sort-Object)
+          "OEM_NEW $(@($after | Where-Object { $_ -notin $before }) -join ',')"
+          Get-Content (Join-Path $env:windir 'INF/setupapi.dev.log') -Tail 300 | Select-String 'wdmaudio|0xe000|catalog|!!!' | Select-Object -Last 32 | ForEach-Object { "SETUP $($_.Line)" }
+          exit 0
