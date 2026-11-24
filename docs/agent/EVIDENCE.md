@@ -894,7 +894,7 @@ The Server versions contain the required section names and corresponding registr
 
 - Run [45371687882](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45371687882), job 138367259323, branch `experiment/win10-a2dp-stage-smoke-20261124`, script head `3305dddcb18f4e407e6b61762a2539a77412ea2d`.
 - Runner: Windows Server 2022 Datacenter build 20348, UBR 5870. Win10 19045.5917 mounted read-only; offline identity verified; exact BtaMPM companion found.
-- Script failed during offline audit with `The property 'Name' cannot be found on this object.` It did not reach the stage-smoke function. No target-side CAT verification, PnPUtil staging, catdb add/remove, device binding, service start, driver load, endpoint or audio result.
+- Script failed during offline audit with `The property 'Name' cannot be found on this object.` It did not reach the stage-smoke function. The offline catalog-membership subroutine may have partially run, but no complete report was saved, so membership is UNKNOWN. No explicit stage-smoke SignTool gate, PnPUtil staging, catdb add/remove, device binding, service start, driver load, endpoint or audio result is available.
 - Cleanup succeeded. Artifact 14910689667: 152,010 bytes; SHA-256 `431f94d613a177c2d78735fad72844aab1b9fd04782641e5e39532525ee65c08`. It contains 23 PE JSON reports only; no manifest or stage-test report. Library: `/LDAC Project/Incoming/CI-3-stage-smoke-failure.zip`, ID `libfile_87489e2386f48191a54635114c06391a`.
 - Classification: **HARNESS_FAILURE / NO COMPATIBILITY RESULT**. Runner UBR 5870 differs from target 5761.
 

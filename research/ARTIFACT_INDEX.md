@@ -426,5 +426,5 @@ No third-party binary was downloaded or stored.
 
 | Artifact | Exact identity | Durable location / status |
 |---|---|---|
-| CI #3 stage-smoke partial metadata | GitHub artifact 14910689667; 152,010 bytes; SHA-256 `431f94d613a177c2d78735fad72844aab1b9fd04782641e5e39532525ee65c08` | Library `/LDAC Project/Incoming/CI-3-stage-smoke-failure.zip`, Library ID `libfile_87489e2386f48191a54635114c06391a`. Contains 23 PE JSON reports only; no manifest or stage-test.json. No CAT verification or DriverStore staging result. |
+| CI #3 stage-smoke partial metadata | GitHub artifact 14910689667; 152,010 bytes; SHA-256 `431f94d613a177c2d78735fad72844aab1b9fd04782641e5e39532525ee65c08` | Library `/LDAC Project/Incoming/CI-3-stage-smoke-failure.zip`, Library ID `libfile_87489e2386f48191a54635114c06391a`. Contains 23 PE JSON reports only; no manifest or stage-test.json. No complete catalog-membership report or DriverStore staging result. |
 | CI #4 diagnostic rerun | Run 45381650079, head 4d5734fb19929dc332dfb572e9824151c470b62b | In progress at last check; no artifact yet. |

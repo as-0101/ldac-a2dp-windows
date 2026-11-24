@@ -453,7 +453,7 @@ Run [45371687882](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/4537
 
 ## D-175 — Treat stage-smoke #3 as a tooling failure, not a compatibility result
 
-CI #3 [45371687882](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45371687882) failed during offline image-audit collection with `The property 'Name' cannot be found on this object.` It mounted Win10 19045.5917 read-only, verified offline image identity and located the exact BtaMPM companion, but did not reach the stage-smoke function. There is no target-side CAT verification or PnPUtil staging result. Do not classify this as rejection of the Microsoft A2DP package.
+CI #3 [45371687882](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45371687882) failed during offline image-audit collection with `The property 'Name' cannot be found on this object.` It mounted Win10 19045.5917 read-only, verified offline image identity and located the exact BtaMPM companion, but did not reach the stage-smoke function. There is no complete offline catalog-membership report or explicit stage-smoke/PnPUtil staging result. Do not classify this as rejection of the Microsoft A2DP package.
 
 The outer catch had an unguarded `InvocationInfo.MyCommand.Name` access that could mask the originating error. Commit 4d5734fb adds safe error-field reads and per-subroutine markers. The exact failing subroutine remains unknown until CI #4's artifact/log is inspected.
 
