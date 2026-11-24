@@ -170,3 +170,16 @@ No build or installation was performed. Public documentation screening only:
 - No driver build or runtime test was performed.
 
 - Follow-up audit's latest script commit: 11f0c4776b3d1ed6c79f5dca75634dda40c19ba9; matched CAT signer/status is now recorded with Get-AuthenticodeSignature.
+
+## 2026-11-24 — cross-SKU catalog audit and stage-smoke harness
+
+| Run | Branch / commit | Result | Evidence |
+|---|---|---|---|
+| CI #12 / [45354874225](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45354874225) | experiment/win10-a2dp-cross-sku-catalog-audit-20261124, 08663c4ca7d1536b96c554fd5e484382262b1250 | SUCCESS — Win10 CAT membership 5/5; Server membership 0/5; Server positive controls 4/4 | Artifact 14907426966; ZIP SHA-256 655d93a43fc599c393988cec830e1914639fd1560ff957cea488295077bf7e8a |
+| CI #13 / [45355817586](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45355817586) | same branch, 11f0c4776b3d1ed6c79f5dca75634dda40c19ba9 | FAILED — UUP Dump reported WU_REQUEST_FAILED; harness then dereferenced missing data; no compatibility result | No artifact |
+| Stage smoke #1 / [45371500131](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45371500131) | experiment/win10-a2dp-stage-smoke-20261124, 692cb1a5e4df7de5ca0ebc72e61878c1c62df300 | FAILED — PowerShell parser caught unescaped $name: interpolation before UUP download | Harness-only failure |
+| Stage smoke #2 / [45371573832](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45371573832) | same branch, 32fe8206781cdf41955348a18bf3671c998e71bb | FAILED — same parser issue; run started before parser fix | Harness-only failure |
+| Stage smoke #3 / [45371687882](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45371687882) | same branch, 3305dddcb18f4e407e6b61762a2539a77412ea2d | IN PROGRESS at 2026-11-24 12:10 Kyiv | Parser preflight passed; UUP extraction/stage step running |
+
+Stage-smoke scope: disposable GitHub-hosted Windows Server 2022 runner; explicit CAT verification; PnPUtil DriverStore staging without /install; optional SignTool catdb add/remove; cleanup. It does not bind a device or prove service start, driver load or audio. No physical host or production code branch is touched.
+
