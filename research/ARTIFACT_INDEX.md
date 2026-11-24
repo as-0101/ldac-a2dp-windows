@@ -384,3 +384,12 @@ No third-party binary was downloaded or stored.
 | UUP audit #6 PE reports | Inside artifact pe-audit/ | 47 JSON reports | Exact imports, delay imports, exports, API-set imports, target export-reference comparisons |
 | UUP audit #7 | [GitHub Actions run 45342686564](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45342686564) | branch experiment/win10-a2dp-catalog-registry-audit-20261124, commit 5bdbc75d904beb8c5f84787cc592ae9134df40c6 | In progress: offline catalog membership and SYSTEM service registrations; no staging/runtime |
 
+## CI #11 offline UUP catalog/service audit (2026-11-24)
+
+- GitHub run: https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45347639357.
+- Artifact: uup-image-a2dp-audit-metadata, artifact ID 14901033654.
+- SHA-256: 277ed892887f10383e34bb9f3c3690a0ebdf290d32cb9f4899d6016e78fbadff; size 331,349 bytes; expires 2026-12-01T08:10:57Z.
+- Contains manifest.json, catalog-membership.json, service-registrations.json, component-hits.json, inf-summary.txt, PE audit JSON and README. No binary payloads or ISO/WIM files were uploaded.
+- The manifest confirms both image audits completed. Win10 catalog membership is verified; Server-side membership is not part of this artifact.
+- Local analysis copy was /mnt/data/uup-image-a2dp-audit-metadata-ci11.zip; local SHA-256 matches the GitHub artifact digest.
+- Follow-up cross-SKU audit branch: experiment/win10-a2dp-cross-sku-catalog-audit-20261124 (workflow commit 08663c4ca7d1536b96c554fd5e484382262b1250).
