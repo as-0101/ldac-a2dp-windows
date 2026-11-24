@@ -74,7 +74,13 @@ def collect_import_table(pe: pefile.PE, directory_name: str) -> list[dict[str, A
             symbols.append({
                 "name": name,
                 "ordinal": int(ordinal) if ordinal is not None else None,
-                "hint": int(getattr(item, "hint", 0)) if name else None,
+                # pefile may expose hint=None for named delay-import entries.
+            # Preserve the missing hint instead of failing the whole image audit.
+            "hint": (
+                int(getattr(item, "hint", None))
+                if name and getattr(item, "hint", None) is not None
+                else None
+            ),
             })
         result.append({"dll": dll, "symbols": symbols, "count": len(symbols)})
     return result

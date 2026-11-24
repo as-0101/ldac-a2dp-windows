@@ -7,6 +7,7 @@ on:
     paths:
       - tools/research/extract_uup_image_a2dp.ps1
       - tools/research/audit_pe_binary.py
+      - tests/test_audit_pe_binary.py
       - .github/workflows/uup-image-audit.yml
   workflow_dispatch:
 
@@ -29,6 +30,9 @@ jobs:
 
       - name: Install pinned PE parser
         run: python -m pip install --disable-pip-version-check --no-input pefile==2024.8.26
+
+      - name: Run PE parser regression tests
+        run: python -m unittest discover -s tests -p "test_*.py" -v
 
       - name: Download exact UUP images and audit components offline
         shell: pwsh
