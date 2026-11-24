@@ -4,7 +4,7 @@
 
 
 
-**Snapshot:** 2026-11-24 02:19 Europe/Kyiv  
+**Snapshot:** 2026-11-24 05:20 Europe/Kyiv  
 **Scope:** A2DP stereo source only. HFP/microphone is out of scope.
 
 ## Executive conclusion
@@ -210,7 +210,7 @@ OPPO Enco Buds2 ETE41 is AAC/SBC only. It can validate the SBC stream, but a lat
 
 ### Static PE audit quality correction
 
-The Library `pe_imports_a2dp.py` repeats the same import descriptor because it does not advance the descriptor pointer by 20 bytes. Its 1.3 MB report is invalid for dependency analysis. Reports (2)/(3) are separate, but their corrected parser source was not retained. Re-run the exact package binaries with Dependencies/PEInspector and retain the script/output pair. Keep the 282,624-byte DriverStore binary and the 279,040-byte System32 binary separate.
+The legacy `pe_imports_a2dp.py` has a parser defect and its 1.3 MB report is invalid. Library contains `pe_imports_a2dp_fixed.py` (file ID `file_000000006ac88210b1f6b3d695278455`), which advances IMAGE_IMPORT_DESCRIPTOR by 20 bytes. Reports (2)/(3) are byte-identical and describe the separate 279,040-byte System32 copy, not the 282,624-byte DriverStore package copy. The fixed script reports direct imports only; use the repository `tools/research/audit_pe_binary.py` for exports, delay imports, VERSIONINFO and API-set data on exact UUP-extracted binaries.
 
 
 ## 8. Server 2022 support-scope boundary — 2026-11-24 02:48

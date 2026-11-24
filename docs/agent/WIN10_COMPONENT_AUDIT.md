@@ -1,6 +1,6 @@
 # Windows 10 Bluetooth A2DP component audit
 
-**Updated:** 2026-11-24 02:19 Europe/Kyiv  
+**Updated:** 2026-11-24 05:20 Europe/Kyiv  
 **Scope:** Windows 10 22H2 A2DP source package → Windows Server 2022 build 20348.5761.  
 **Execution status:** static research only. No build, CI run, driver installation, device restart, or physical-host mutation was performed.
 
@@ -192,7 +192,7 @@ The vendored NOTICE states that certification is required to use LDAC in product
 
 ### 8.3 PE parser correction
 
-The Library script `pe_imports_a2dp.py` does not advance its import-descriptor offset by 20 bytes inside the descriptor loop. It therefore reads the same descriptor repeatedly. The 1,315,472-byte `a2dp_pe_imports_report.txt` is invalid for descriptor counts and dependency conclusions. Reports (2)/(3) are separate 8,098-byte reports, but their corrected generating source was not found in the Library; re-run with Dependencies/PEInspector and retain the parser. Do not conflate those System32 reports with E-119's GNU objdump report for the 282,624-byte DriverStore package copy.
+The legacy `pe_imports_a2dp.py` has a parser defect and its 1.3 MB report is invalid. Library contains `pe_imports_a2dp_fixed.py` (file ID `file_000000006ac88210b1f6b3d695278455`), which advances IMAGE_IMPORT_DESCRIPTOR by 20 bytes. Reports (2)/(3) are byte-identical and describe the separate 279,040-byte System32 copy, not the 282,624-byte DriverStore package copy. The fixed script reports direct imports only; use the repository `tools/research/audit_pe_binary.py` for exports, delay imports, VERSIONINFO and API-set data on exact UUP-extracted binaries.
 
 ### 8.4 Existing user-mode LDAC alternative: BlueCaster
 
