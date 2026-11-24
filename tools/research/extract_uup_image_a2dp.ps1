@@ -20,18 +20,20 @@ New-Item -ItemType Directory -Path $ServerReferenceDirectory -Force | Out-Null
 Import-Module Dism -ErrorAction Stop
 
 $Targets = @(
-    [pscustomobject]@{ Name="server2022-20348.5761"; Role="server"; Id="008aacce-b0b7-4aeb-a3b2-43286434832c"; ExpectedBuild="20348.5761"; PreferredEdition="ServerDatacenter"; FallbackEdition="ServerStandard"; ImagePattern="Datacenter|Standard" },
-    [pscustomobject]@{ Name="win10-19045.5917"; Role="win10"; Id="598d27dc-ad81-41aa-8c83-42b88e60c823"; ExpectedBuild="19045.5917"; PreferredEdition="Professional"; FallbackEdition="Professional"; ImagePattern="Pro|Professional" }
+    [pscustomobject]@{ Name="server2022-20348.5761"; Role="server"; Id="008aacce-b0b7-4aeb-a3b2-43286434832c"; ExpectedBuild="20348.5761"; ExpectedEditionId="ServerDatacenter"; PreferredEdition="ServerDatacenter"; FallbackEdition="ServerStandard"; ImagePattern="Datacenter|Standard" },
+    [pscustomobject]@{ Name="win10-19045.5917"; Role="win10"; Id="598d27dc-ad81-41aa-8c83-42b88e60c823"; ExpectedBuild="19045.5917"; ExpectedEditionId="Professional"; PreferredEdition="Professional"; FallbackEdition="Professional"; ImagePattern="Pro|Professional" }
 )
 
 $TargetFileNames = @(
     "BthA2dp.sys", "BtaMPM.sys", "BthPort.sys", "BthEnum.sys", "BthLEEnum.sys",
     "BTHUSB.sys", "BthMini.sys", "ks.sys", "portcls.sys", "ntoskrnl.exe",
+    "HAL.dll", "SleepStudyHelper.sys", "WDFLDR.SYS", "ksecdd.sys",
     "cng.sys", "WppRecorder.sys", "wdmaud.drv", "AudioEndpointBuilder.dll",
     "AudioSrv.dll", "audioeng.dll", "MMDevAPI.dll", "WMALFXGFXDSP.dll", "SysFxUI.dll"
 )
 $ServerReferenceNames = @(
-    "ntoskrnl.exe", "cng.sys", "WppRecorder.sys", "BthPort.sys", "BthEnum.sys",
+    "ntoskrnl.exe", "HAL.dll", "cng.sys", "WppRecorder.sys", "SleepStudyHelper.sys",
+    "WDFLDR.SYS", "ksecdd.sys", "BthPort.sys", "BthEnum.sys",
     "BthLEEnum.sys", "BTHUSB.sys", "BthMini.sys", "ks.sys", "portcls.sys",
     "wdmaud.drv", "AudioEndpointBuilder.dll", "AudioSrv.dll", "audioeng.dll",
     "MMDevAPI.dll", "WMALFXGFXDSP.dll", "SysFxUI.dll"
@@ -249,6 +251,61 @@ function Get-CatalogSummary {
     return $records
 }
 
+function Get-OfflineImageIdentity {
+    param(
+        [Parameter(Mandatory)][string]$MountDirectory,
+        [Parameter(Mandatory)][string]$WorkDirectory,
+        [Parameter(Mandatory)]$Target
+    )
+    $sourceHive = Join-Path $MountDirectory "Windows\System32\Config\SOFTWARE"
+    if (-not (Test-Path -LiteralPath $sourceHive)) { throw "Offline SOFTWARE hive not found: $sourceHive" }
+
+    # DISM mounts the WIM read-only. Load a temporary copy so the registry
+    # manager can open it without modifying the source image.
+    $hiveCopy = Join-Path $WorkDirectory "SOFTWARE.audit.hiv"
+    Copy-Item -LiteralPath $sourceHive -Destination $hiveCopy -Force
+    $hiveName = "LDAC_UUP_AUDIT_SOFTWARE"
+    $loaded = $false
+    try {
+        $loadOutput = & reg.exe load "HKLM\$hiveName" $hiveCopy 2>&1
+        if ($LASTEXITCODE -ne 0) {
+            throw "Could not load offline SOFTWARE hive (exit=$LASTEXITCODE): $($loadOutput -join ' ')"
+        }
+        $loaded = $true
+        $key = "Registry::HKEY_LOCAL_MACHINE\$hiveName\Microsoft\Windows NT\CurrentVersion"
+        $current = Get-ItemProperty -LiteralPath $key
+        $build = [string]$current.CurrentBuild
+        if ([string]::IsNullOrWhiteSpace($build)) { $build = [string]$current.CurrentBuildNumber }
+        if ($null -eq $current.UBR) { throw "Offline SOFTWARE hive has no UBR value for $($Target.Name)" }
+        $ubr = [int]$current.UBR
+        $editionId = [string]$current.EditionID
+        $imageVersion = "$build.$ubr"
+
+        if ($imageVersion -ne $Target.ExpectedBuild) {
+            throw "Mounted image version mismatch for $($Target.Name): expected $($Target.ExpectedBuild), got $imageVersion"
+        }
+        if ($Target.ExpectedEditionId -and $editionId -ne $Target.ExpectedEditionId) {
+            throw "Mounted image edition mismatch for $($Target.Name): expected $($Target.ExpectedEditionId), got $editionId"
+        }
+
+        return [pscustomobject]@{
+            imageVersion = $imageVersion
+            currentBuild = $build
+            ubr = $ubr
+            editionId = $editionId
+            productName = [string]$current.ProductName
+            installationType = [string]$current.InstallationType
+            buildLabEx = [string]$current.BuildLabEx
+            registrySource = "Offline SOFTWARE hive copied from mounted WIM; read-only source image"
+        }
+    } finally {
+        if ($loaded) {
+            & reg.exe unload "HKLM\$hiveName" 2>&1 | Out-Null
+        }
+        Remove-Item -LiteralPath $hiveCopy -Force -ErrorAction SilentlyContinue
+    }
+}
+
 function Collect-Image {
     param([Parameter(Mandatory)]$Target, [Parameter(Mandatory)][string]$WorkDirectory)
     $download = Download-UupIso -Target $Target -WorkDirectory $WorkDirectory
@@ -274,12 +331,10 @@ function Collect-Image {
         }
         if (-not $selected) { $selected = $images | Where-Object { $_.ImageName -match $Target.ImagePattern } | Select-Object -First 1 }
         if (-not $selected) { throw "Could not select edition for $($Target.Name). Available: $($images.ImageName -join '; ')" }
-        if ($selected.Version -and ([string]$selected.Version -notmatch [regex]::Escape($Target.ExpectedBuild))) {
-            throw "Image version mismatch for $($Target.Name): expected $($Target.ExpectedBuild), got $($selected.Version)"
-        }
-
-        Write-Host "Mounting $($Target.Name): $($selected.ImageName), version=$($selected.Version)"
+        Write-Host "Mounting $($Target.Name): $($selected.ImageName), index=$($selected.ImageIndex); exact version will be read from the offline SOFTWARE hive"
         Mount-WindowsImage -ImagePath $imagePath -Index $selected.ImageIndex -Path $mountDirectory -ReadOnly | Out-Null
+        $identity = Get-OfflineImageIdentity -MountDirectory $mountDirectory -WorkDirectory $WorkDirectory -Target $Target
+        Write-Host "Verified offline image identity: $($identity.productName); $($identity.imageVersion); EditionID=$($identity.editionId); InstallationType=$($identity.installationType)"
         try {
             $searchRoots = @(
                 (Join-Path $mountDirectory "Windows\System32\drivers"),
@@ -346,7 +401,8 @@ function Collect-Image {
                 isoSha256=$download.IsoSha256
                 isoSizeBytes=$download.IsoSizeBytes
                 imageName=$selected.ImageName
-                imageVersion=[string]$selected.Version
+                imageVersion=$identity.imageVersion
+                imageIdentity=$identity
                 imageIndex=$selected.ImageIndex
                 files=$fileRecords
                 infs=$infRecords
