@@ -168,3 +168,5 @@ No build or installation was performed. Public documentation screening only:
 - Result: all five Win10 A2DP package files verified against the same Win10 CBS servicing CAT. Server catalog membership was not checked.
 - Follow-up code branch: experiment/win10-a2dp-cross-sku-catalog-audit-20261124; script commit 05555dc8fac8b2f551826b71cba40084defe9a46; workflow commit 08663c4ca7d1536b96c554fd5e484382262b1250.
 - No driver build or runtime test was performed.
+
+- Follow-up audit's latest script commit: 11f0c4776b3d1ed6c79f5dca75634dda40c19ba9; matched CAT signer/status is now recorded with Get-AuthenticodeSignature.
