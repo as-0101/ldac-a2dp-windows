@@ -848,3 +848,16 @@ Decision: no new LDAC encoder/decoder work is needed. Keep the existing AOSP enc
 - Latest script commit on experiment/win10-a2dp-cross-sku-catalog-audit-20261124: 11f0c4776b3d1ed6c79f5dca75634dda40c19ba9.
 - The matched catalog record now includes Get-AuthenticodeSignature status, signer subject and signer thumbprint in addition to SignTool membership result and catalog SHA-256.
 - The follow-up still has no verified CI result/run ID; do not claim Server catalog acceptance until the cross-SKU artifact is available.
+
+## E-176 — CI #12 cross-SKU A2DP catalog membership (2026-11-24)
+
+- Run [45354874225](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45354874225), run #12, branch experiment/win10-a2dp-cross-sku-catalog-audit-20261124, head 08663c4ca7d1536b96c554fd5e484382262b1250, completed successfully.
+- Artifact ID 14907426966; downloaded metadata ZIP SHA-256 655d93a43fc599c393988cec830e1914639fd1560ff957cea488295077bf7e8a, 326,479 bytes. Library copy: /LDAC Project/Incoming/CI-12-cross-sku-a2dp-audit.zip, Library ID libfile_08ac72cb1a688191b6940ec4cb82716e. Summary: CI-12-cross-sku-a2dp-audit-summary.md, Library ID libfile_9d20fd91acdc8191bf556453ba6d746c, SHA-256 dde07c18a762e63f773552336a9e8f1bd934538a613d10091d3279d760fb19a6.
+- Win10 image identity: 19045.5917 x64; Server image identity: 20348.5761 x64. The Win10 WIM label/EditionID indicate Professional while the offline ProductName string says Enterprise; preserve this metadata discrepancy.
+- One Win10 servicing CAT: Microsoft-Windows-Client-Desktop-Required-Package~31bf3856ad364e35~amd64~~10.0.19041.5917.cat, SHA-256 78772FA12959C072D687283F08D08367B8A8EF1A2F07D7B72F20BCAFD12483BF.
+- Five Win10 files verified against that CAT: BthA2dp.sys 10.0.19041.4355 (5FBA5EE606AAC39D9CBDA51C0A14DBABBB3A9B47BBD8AC5485ED137B4F354EC3); BtaMPM.sys 10.0.19041.5848 (DA5CBBDCE6AC511EF8400E121DF6B6EACA7D05C0F40A01F7353CE9F220EB3DCD); common INF 10.0.19041.4355 (4F3B988B658E1E7F8B97E645C1C92BE0BA270D4DB76832DAB871516EEDCBCF0C); source INF 10.0.19041.1 (B97D1DD53BB6FD040CE5C2527015A09416C29FCBD6B528802D595CBDEEAD4A6A); btampm.inf 10.0.19041.5848 (C657A6B32AC8CCFDEEF3C12630686B87C973DD114BEE73AEC288D86B989961EF). SYS files used /kp; INFs used /pa.
+- The exact same five Win10 hashes had NO_MATCH_IN_SCANNED_CATALOGS across all 8,325 Server catalog candidates.
+- Server positive controls passed 4/4 after 410 candidates: BthPort.sys, BthEnum.sys, BTHUSB.sys and bth.inf. Their common Server CAT is Microsoft-OneCore-Bluetooth-Package~31bf3856ad364e35~amd64~~10.0.20348.5756.cat, SHA-256 B0A59B9C3B6E528487BB273332015C8CC3A65A5E60F33BF8AA263E41F6D59AA6.
+- Interpretation: the Server image does not pre-register a system catalog containing the Win10 A2DP file hashes. This is not proof that the original CAT cannot be validated or added to the target's catalog database. The artifact's catalogSignature field is null, so signer subject/thumbprint were not captured.
+- No package staging, driver load, device enumeration, endpoint, SBC or audio test occurred in CI #12. No physical-host access.
+
