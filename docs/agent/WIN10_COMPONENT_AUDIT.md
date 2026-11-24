@@ -355,3 +355,22 @@ CI #463 metadata artifact `microsoft-catalog-a2dp-audit.zip` (artifact ID `14883
 - For PC → OPPO playback, only `microsoft_bluetooth_a2dp_src.inf` is required: it matches the remote A2DP Sink UUID 0x110B. The separate `microsoft_bluetooth_a2dp_snk.inf` is the reverse direction (Windows as A2DP sink) and is excluded from this milestone. The source INF chains to the common INF and its BtaMPM/KS/WDMAUDIO/MSSysFx dependencies.
 
 This is CBS ownership and static INF direction evidence, not proof of standalone staging. Do not inject the entire Client-Desktop-Required package. Next: verify exact DriverStore/CAT membership, INF target decorations and OS applicability, then stage only the source/common dependency closure in a disposable Server 2022 VM. UUP audit #6 is still required for exact PE and offline registry/CAT data.
+
+
+## 2026-11-24 07:22 — third-party LDAC A2DP alternatives
+
+### Alternative A2DP Driver 1.8.3
+
+Official version history (released 2026-06-22) lists x64 support for Windows 10 22H2 and Windows 11 21H2–25H2; Server 2022 is not listed. Official FAQ says it uses the Windows 10/11 inbox Bluetooth stack, requires the device to be recognized as a classic A2DP device, installs per-device as an alternative A2DP driver, and requires administrator privileges for install/uninstall/device-driver changes. LDAC and ABR support are documented. The trial is 7 days; after expiry the headset connects but no audio is heard.
+
+Public package metadata from a separate LE Audio compatibility review identifies the Classic driver as provider Luculent Systems, class MEDIA, service `AltA2DP`, binary `AltA2DP.sys`, hardware ID `BTHENUM\{0000110b-0000-1000-8000-00805f9b34fb}`, with KS audio/topology/wave/render interfaces. This is a direct replacement candidate for the same A2DP source hardware ID, but Server 2022 compatibility is unverified.
+
+The EULA licenses proprietary object code, binds the license to hardware, prohibits redistribution and restricts reverse engineering/disassembly. No installer or binary was downloaded, unpacked, inspected, installed or patched. Treat it as a black-box candidate only; do not use crack/patcher projects or bypass licensing.
+
+### BlueCaster
+
+BlueCaster is a user-mode BTstack + WinUSB A2DP source supporting LDAC/SBC and other codecs. It lists Windows 10 22H2 / Windows 11, requires a USB Bluetooth adapter, and takes that adapter away from Windows while active. Source is Apache-2.0/MIT, but the bundled BTstack license is personal/non-commercial unless separately licensed. Server 2022 is not listed.
+
+### Selection
+
+The primary SBC milestone remains the Microsoft Win10 A2DP source/common INF package on top of Server's existing Bluetooth core. Alternative A2DP Driver is the most direct ready LDAC driver if the inbox A2DP device can be enumerated, but it is unsupported on Server 2022 and proprietary. BlueCaster is the no-kernel-driver fallback but needs a dedicated USB radio. Neither is being installed or used on the physical host.
