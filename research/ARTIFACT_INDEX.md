@@ -261,3 +261,13 @@ Winbindex README: https://github.com/m417z/winbindex. It states that full downlo
   - .github/workflows/uup-image-audit.yml — disposable Windows Server 2022 CI workflow; metadata-only artifacts.
 - CI #463 artifacts are attached to https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45311922753.
 - UUP image audit run #3: https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45317582562, in progress.
+
+
+## 2026-11-24 new artifacts
+
+- docs/agent/WIN10_UUP_IMAGE_AUDIT.md — PSF delta finding, Winbindex collision evidence, exact UUP image IDs, acceptance criteria.
+- Experimental branch experiment/win10-a2dp-uup-image-audit-20261124:
+  - tools/research/extract_uup_image_a2dp.ps1 — offline UUP image extraction and PE metadata comparison.
+  - .github/workflows/uup-image-audit.yml — disposable Windows Server 2022 CI workflow; metadata-only artifacts.
+- CI #463 artifacts are attached to https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45311922753.
+- UUP image audit run #3: https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45317582562, in progress.
