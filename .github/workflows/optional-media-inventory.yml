@@ -1,0 +1,48 @@
+name: Inventory official Server 2022 optional media
+on:
+  push:
+    branches: [experiment/native-donor-inf-20261124]
+    paths: [.github/workflows/optional-media-inventory.yml]
+permissions: {}
+jobs:
+  media:
+    runs-on: windows-2022
+    timeout-minutes: 50
+    steps:
+      - name: Inspect optional media and neutral CAB member names
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($env:RUNNER_ENVIRONMENT -ne 'github-hosted' -or [Environment]::OSVersion.Version.Build -ne 20348) { throw 'Wrong target' }
+          $path = Join-Path $env:RUNNER_TEMP server2022-lof.iso
+          $url = 'https://go.microsoft.com/fwlink/?linkid=2195333'
+          $final = & curl.exe --fail --location --silent --show-error --retry 2 --output $path --write-out '%{url_effective}' $url
+          if ($LASTEXITCODE) { throw "Media fetch failed $LASTEXITCODE" }
+          if (([uri]$final).Host -notmatch '(^|\.)(microsoft\.com|windowsupdate\.com)$') { throw 'Unexpected media host' }
+          "MEDIA sourceHost=$(([uri]$final).Host) file=$([IO.Path]::GetFileName(([uri]$final).LocalPath)) bytes=$((Get-Item $path).Length) sha256=$((Get-FileHash $path).Hash)"
+          $disk = Mount-DiskImage -ImagePath $path -Access ReadOnly -PassThru
+          try {
+            $vol = $disk | Get-Volume
+            $root = "$($vol.DriveLetter):\"
+            $all = @(Get-ChildItem -LiteralPath $root -File -Recurse)
+            $cabs = @($all | Where-Object Extension -eq '.cab')
+            $control = @($cabs | Where-Object Name -match 'ServerCore.AppCompatibility')
+            $markers = 'microsoft_bluetooth_a2dp|btha2dp|btampm|bluetooth.audio.a2dp'
+            $top = @($all | Where-Object Name -match $markers)
+            "INDEX volume=$($vol.FileSystemLabel) files=$($all.Count) cabs=$($cabs.Count) appcompat=$($control.Count) outerMatches=$($top.Count)"
+            if (!$control.Count) { throw 'Missing Server Core AppCompatibility control' }
+            $top | ForEach-Object { "OUTER $($_.Name)" }
+            $neutral = @($cabs | Where-Object { $_.Name -notmatch '~[a-z]{2,3}(-[a-z0-9]{2,8})+~|LanguageFeatures-|Language-Pack|LanguagePack' })
+            $hits=0; $errors=0; $members=0; $controls=0
+            foreach ($cab in $neutral) {
+              $listing = @(expand.exe -D $cab.FullName)
+              if ($LASTEXITCODE) { $errors++; "ERROR cab=$($cab.Name) exit=$LASTEXITCODE"; continue }
+              foreach ($l in $listing) {
+                if ($l -match '\.(inf|sys|mum|manifest|dll|exe)\s*$') { $members++ }
+                if ($l -match '(^|[\\: \t])(mmc\.exe|compmgmt\.msc|eventvwr\.msc)\s*$') { $controls++ }
+                if ($l -match $markers) { $hits++; "MEMBER cab=$($cab.Name) match=$l" }
+              }
+            }
+            "CABSCAN examined=$($neutral.Count) skipped=$($cabs.Count-$neutral.Count) errors=$errors matched=$hits recognizedMembers=$members knownAppFiles=$controls"
+            if ($errors -or !$members) { throw 'Incomplete CAB table inventory' }
+          } finally { Dismount-DiskImage -ImagePath $path }
