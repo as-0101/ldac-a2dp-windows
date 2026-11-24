@@ -257,3 +257,16 @@ The existing project vendors AOSP `external/libldac` at `eeee1a3f` and staticall
 
 ### D-040 — Evaluate BlueCaster only as a later, separate transport option
 BlueCaster v3.0.4 already implements user-mode A2DP with LDAC through BTstack+WinUSB. It bypasses the Windows Bluetooth stack, takes over a USB adapter, does not list Server 2022 support, and includes BTstack with a personal/non-commercial license. It may be assessed in a disposable VM after SBC, but is not a drop-in DLL and must not be installed on the physical host.
+
+
+## D-2026-11-24-01 — Prefer full UUP images over ad-hoc PSF reconstruction
+
+The Catalog audit found that A2DP SYS entries in KB5036979/KB5126657 are PSF forward deltas. PSFExtractor v3.07 is MIT-licensed but its inspected PA30 path does not supply the RTM base file required for forward-delta reconstruction. 0xZ0F/Windows-Patch-Diff-Helpers handles forward deltas via msdelta.dll, but has no declared license; do not vendor it. Use exact full UUP images first, then revisit PSF reconstruction only if the full image route fails.
+
+## D-2026-11-24-02 — Reject Winbindex symbol-server output as exact identity when SHA differs
+
+The three downloaded files retained timestamp/size but returned different file versions and hashes. Treat Winbindex index metadata as a lookup lead only; a binary is accepted only when its SHA-256 matches the captured archive or a trusted full-image/package extraction.
+
+## D-2026-11-24-03 — Keep ACX bind-probe paused
+
+No evidence yet demonstrates that ACX binding is the blocker. The immediate task is exact Win10 component extraction, INF/CBS/registry mapping, and static Server export compatibility. CI #248 and #255 remain closed.
