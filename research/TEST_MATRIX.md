@@ -153,6 +153,6 @@ No service, device, profile-driver, endpoint, SBC negotiation, audio-stream, LDA
 
 | ID | Gate | Required proof | Actual result | Status / next |
 |---|---|---|---|---|
-| T--Infinity | UUP audit #4/#5 parser robustness | Parse named delay-import entries whose hint is absent | Both runs verified Server 20348.5761 identity, then failed on `int(None)` in AudioEndpointBuilder.dll; no Win10 image or metadata report was reached | FAILED — HARNESS ONLY; no binary conclusion |
-| T--Infinity | PE parser regression tests | Preserve absent hint as null; retain numeric hints | CI #6 run 45332165839, job 138235648697: all three unit tests passed before UUP download | CONFIRMED — BUILD_ONLY; full UUP audit still in progress |
+| T-066 | UUP audit #4/#5 parser robustness | Parse named delay-import entries whose hint is absent | Both runs verified Server 20348.5761 identity, then failed on `int(None)` in AudioEndpointBuilder.dll; no Win10 image or metadata report was reached | FAILED — HARNESS ONLY; no binary conclusion |
+| T-067 | PE parser regression tests | Preserve absent hint as null; retain numeric hints | CI #6 run 45332165839, job 138235648697: all three unit tests passed before UUP download | CONFIRMED — BUILD_ONLY; full UUP audit still in progress |
 
