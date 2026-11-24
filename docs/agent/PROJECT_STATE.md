@@ -701,7 +701,7 @@ The Windows 10 package capture is complete enough for static INF/PE work. This c
 ### Server 2022 and next gate
 - Archived Server 20348.5761 evidence has ks.inf, wdmaudio.inf, WMALFXGFXDSP.dll and SysFxUI.dll, but not the Microsoft A2DP profile package. This is consistent with Microsoft's documented lack of in-box Bluetooth support for Server SKUs, but technical binary compatibility is not yet established.
 - The current Library inventory contains no ISO/WIM/ESD/CAB/MSU media. The next discriminating input is the original Windows 10 22H2 and Server 2022 image/component metadata (CBS MUMs/manifests, system catalogs, package identity and applicability).
-- No fresh live physical-host check, build, CI run, runtime test, driver install or host mutation occurred in this pass. The last recorded oem75.inf / 0.2.325.1600 / Code 37 state remains historical.
+- The last recorded OPPO BTHENUM 0x110B node was present and bound to the project's own oem75.inf (provider LDAC A2DP Project, service LdacA2dp, DriverVer 0.2.325.1600); Code 37 / 0xC000000D occurred at custom driver start. This is not a Microsoft BthA2dp package test. The Server snapshot also had bthserv, Audiosrv and AudioEndpointBuilder running; BTAGService/BthAvctpSvc were absent. No fresh live physical-host check, build, CI run, runtime test, driver install or host mutation occurred in this pass.
 - Next runtime work, if WIM and PE compatibility pass, belongs in a disposable Server 2022 VM and must keep service start, enumeration, driver load, endpoint, SBC negotiation and actual audio as separate gates. LDAC requires a different sink.
 
 Detailed file-level map: [WIN10_COMPONENT_AUDIT.md](WIN10_COMPONENT_AUDIT.md).
