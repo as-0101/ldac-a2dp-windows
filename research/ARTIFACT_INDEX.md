@@ -393,3 +393,4 @@ No third-party binary was downloaded or stored.
 - The manifest confirms both image audits completed. Win10 catalog membership is verified; Server-side membership is not part of this artifact.
 - Local analysis copy was /mnt/data/uup-image-a2dp-audit-metadata-ci11.zip; local SHA-256 matches the GitHub artifact digest.
 - Follow-up cross-SKU audit branch: experiment/win10-a2dp-cross-sku-catalog-audit-20261124 (workflow commit 08663c4ca7d1536b96c554fd5e484382262b1250).
+- Preserved copy in ChatGPT Library: /LDAC Project/Incoming/CI-11-UUP-A2DP-Catalog-Service-Audit.zip (Library file ID libfile_33cc484cab548191be214f6afd0eb8bf). Its SHA-256 matches the GitHub artifact digest above.
