@@ -177,12 +177,19 @@ jobs:
               $raw = $doc.DocumentElement.OuterXml
               $hits = @(Inspect-Document $raw)
               $ok++
-              if ($raw -match 'bthport|bthusb|bthenum') { $positive++ }
+              $identities = @($doc.SelectNodes("//*[local-name()='assemblyIdentity']/@name") | ForEach-Object Value)
+              $btNames = @($identities | Where-Object { $_ -match 'Bluetooth' })
+              if ($btNames.Count) {
+                $positive++
+                if ($f.Name -like 'Microsoft-OneCore-Bluetooth-Package~*') {
+                  "OWNER file=$($f.Name) identities=$($identities.Count) names=$($btNames -join ',')"
+                }
+              }
               if ($hits.Count) { $matchesFound++; "CBS_HIT file=$($f.Name) tokens=$($hits -join ',')" }
             } catch {
               $bad++
               if ($bad -le 4) { "CBS_UNREADABLE file=$($f.Name) reason=$($_.Exception.Message)" }
             }
           }
-          "CBS_SCAN total=$($files.Count) parsed=$ok unreadable=$bad profile_packages=$matchesFound bluetooth_transport_controls=$positive synthetic_hits=$($synthetic.Count)"
+          "CBS_SCAN total=$($files.Count) parsed=$ok unreadable=$bad profile_packages=$matchesFound bluetooth_identity_controls=$positive synthetic_hits=$($synthetic.Count)"
           if ($ok -eq 0 -or $positive -eq 0) { throw 'CBS coverage control failed' }
