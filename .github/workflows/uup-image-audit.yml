@@ -35,6 +35,25 @@ jobs:
       - name: Run PE parser regression tests
         run: python -m unittest discover -s tests -p "test_*.py" -v
 
+      - name: Validate PowerShell script syntax and SignTool availability
+        shell: pwsh
+        run: |
+          $scriptPath = (Resolve-Path "./tools/research/extract_uup_image_a2dp.ps1").Path
+          $tokens = $null
+          $parseErrors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile($scriptPath, [ref]$tokens, [ref]$parseErrors) | Out-Null
+          if ($parseErrors.Count -gt 0) {
+            $parseErrors | ForEach-Object { Write-Error $_.ToString() }
+            throw "PowerShell parser rejected extract_uup_image_a2dp.ps1."
+          }
+          $kitsRoot = Join-Path ([Environment]::GetFolderPath("ProgramFilesX86")) "Windows Kits\10\bin"
+          $signTool = Get-ChildItem -LiteralPath $kitsRoot -Filter "signtool.exe" -File -Recurse -ErrorAction SilentlyContinue |
+            Where-Object { $_.FullName -match "\\x64\\signtool\.exe$" } |
+            Sort-Object FullName -Descending |
+            Select-Object -First 1
+          if (-not $signTool) { throw "Windows SDK x64 SignTool not found under $kitsRoot." }
+          Write-Host "PowerShell syntax OK; SignTool=$($signTool.FullName)"
+
       - name: Download exact UUP images and audit components offline
         shell: pwsh
         run: ./tools/research/extract_uup_image_a2dp.ps1 -OutputDirectory build/uup-image-audit
