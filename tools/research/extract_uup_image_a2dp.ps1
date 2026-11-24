@@ -960,11 +960,21 @@ function Collect-Image {
                 }
             }
 
+            Write-Host "[AUDIT] Get-InfSummary start"
             $infRecords = Get-InfSummary -MountDirectory $mountDirectory -Role $Target.Role
+            Write-Host "[AUDIT] Get-InfSummary complete: $(@($infRecords).Count) records"
+            Write-Host "[AUDIT] Get-ComponentHits start"
             $componentHits = Get-ComponentHits -MountDirectory $mountDirectory -Role $Target.Role
+            Write-Host "[AUDIT] Get-ComponentHits complete: $(@($componentHits).Count) records"
+            Write-Host "[AUDIT] Get-CatalogSummary start"
             $catalogRecords = Get-CatalogSummary -MountDirectory $mountDirectory -Role $Target.Role
+            Write-Host "[AUDIT] Get-CatalogSummary complete: $(@($catalogRecords).Count) records"
+            Write-Host "[AUDIT] Get-TargetCatalogMembership start"
             $catalogMembership = Get-TargetCatalogMembership -MountDirectory $mountDirectory -Role $Target.Role
+            Write-Host "[AUDIT] Get-TargetCatalogMembership complete: $(@($catalogMembership).Count) records"
+            Write-Host "[AUDIT] Get-OfflineServiceSummary start"
             $serviceRegistrations = Get-OfflineServiceSummary -MountDirectory $mountDirectory -WorkDirectory $WorkDirectory -Role $Target.Role
+            Write-Host "[AUDIT] Get-OfflineServiceSummary complete: $(@($serviceRegistrations).Count) records"
 
             [pscustomobject]@{
                 name=$Target.Name
@@ -1067,16 +1077,32 @@ foreach ($target in $Targets) {
         Write-Host "Completed offline audit for $($target.Name)."
     } catch {
         $hadFailures = $true
+        $errorRecord = $_
+        $invocationInfo = Get-OptionalPropertyValue -InputObject $errorRecord -Name "InvocationInfo"
+        $commandInfo = Get-OptionalPropertyValue -InputObject $invocationInfo -Name "MyCommand"
+        $errorMessage = Get-OptionalPropertyValue -InputObject $errorRecord -Name "Exception"
+        $errorMessageText = if ($null -ne $errorMessage) { [string]$errorMessage.Message } else { [string]$errorRecord }
+        $errorLine = Get-OptionalPropertyValue -InputObject $invocationInfo -Name "ScriptLineNumber"
+        $errorCommand = Get-OptionalPropertyValue -InputObject $commandInfo -Name "Name"
+        $errorPositionMessage = Get-OptionalPropertyValue -InputObject $invocationInfo -Name "PositionMessage"
+        $errorScriptStackTrace = Get-OptionalPropertyValue -InputObject $errorRecord -Name "ScriptStackTrace"
+        $errorId = Get-OptionalPropertyValue -InputObject $errorRecord -Name "FullyQualifiedErrorId"
+        Write-Warning "Captured audit exception: $errorMessageText"
+        if ($errorPositionMessage) { Write-Warning ([string]$errorPositionMessage) }
+        if ($errorScriptStackTrace) { Write-Warning ([string]$errorScriptStackTrace) }
         $results += [pscustomobject]@{
             name=$target.Name
             role=$target.Role
             status="FAILED"
             expectedBuild=$target.ExpectedBuild
-            error=$_.Exception.Message
-            errorLine=$_.InvocationInfo.ScriptLineNumber
-            errorCommand=$_.InvocationInfo.MyCommand.Name
+            error=$errorMessageText
+            errorLine=$errorLine
+            errorCommand=$errorCommand
+            errorPositionMessage=$errorPositionMessage
+            errorScriptStackTrace=$errorScriptStackTrace
+            errorFullyQualifiedId=$errorId
         }
-        Write-Warning "Offline audit failed for $($target.Name): $($_.Exception.Message)"
+        Write-Warning "Offline audit failed for $($target.Name): $errorMessageText"
     }
     Save-AuditReports -Results $results
 }
