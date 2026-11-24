@@ -53,9 +53,9 @@ jobs:
           name: uup-image-a2dp-audit-metadata
           path: |
             build/uup-image-audit/README.md
-            build/uup-image-a2dp-audit/manifest.json
-            build/uup-image-a2dp-audit/inf-summary.txt
-            build/uup-image-a2dp-audit/component-hits.json
-            build/uup-image-a2dp-audit/pe-audit/**
+            build/uup-image-audit/manifest.json
+            build/uup-image-audit/inf-summary.txt
+            build/uup-image-audit/component-hits.json
+            build/uup-image-audit/pe-audit/**
           if-no-files-found: warn
           retention-days: 7
