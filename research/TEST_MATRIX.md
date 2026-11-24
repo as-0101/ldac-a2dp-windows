@@ -213,3 +213,10 @@ Server AudioSrv and AudioEndpointBuilder exist with Start=3 (demand start), vers
 | T-073 | Original Win10 A2DP Source package staging on disposable Server 2022 | Stage-smoke run #3 [45371687882](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45371687882): parser preflight passed; UUP extraction/stage test in progress at 12:10 Kyiv. Runs #1/#2 were PowerShell harness parse failures, not compatibility results. | IN PROGRESS — DriverStore-only; no /install, no device binding. |
 | T-074 | BthA2dp service start / BTHENUM UUID 0x110B match / driver load / endpoint / SBC / audio | Not tested by CI #12 or current stage-smoke harness. | NOT RUN — requires a disposable Server 2022 VM with a Bluetooth radio; keep physical host untouched. |
 
+
+## T-075 — Server audio INF dependency closure
+
+CI #12 inf-summary.txt confirms Server 20348.5761 has ks.inf 10.0.20348.1 (SHA-256 88EA223C8DB5F1DD17381F64BD264CCBFE946F1D1EF2DBA06A0992F60FF3ED94) with KS.Registration, and wdmaudio.inf 10.0.20348.5756 (SHA-256 63BCE2D74EC4DCC08ACA21B2CDFC1E981906F3A48BEF61FB96D2446014C7B833) with WDMAUDIO.Registration and mssysfx.CopyFilesAndRegister. Win10 versions differ by hash/version, but required sections exist in Server.
+
+Status: STATIC INF CLOSURE CONFIRMED. Do not replace Server KS/WDMAUDIO INF or APO components. PnP staging and endpoint creation remain untested.
+
