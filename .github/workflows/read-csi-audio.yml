@@ -1,0 +1,31 @@
+name: Decode installed Server CSI deployment manifests
+on:
+  push:
+    branches: [experiment/native-donor-inf-20261124]
+    paths: ['tools/research/read_csi_audio.py','.github/workflows/read-csi-audio.yml']
+permissions:
+  contents: read
+jobs:
+  inventory:
+    runs-on: windows-2022
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/checkout@v5
+        with:
+          repository: martinosani/Win-CBS-Manifest-Decoder
+          ref: dc6cc3a669f22978f80f4925a552b7fdb7518054
+          path: decoder
+          persist-credentials: false
+      - name: Decode native component metadata
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($env:RUNNER_ENVIRONMENT -ne 'github-hosted' -or [Environment]::OSVersion.Version.Build -ne 20348) { throw 'Wrong target' }
+          "TARGET=$([Environment]::OSVersion.Version) UBR=$((Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion').UBR)"
+          $wcp = Get-ChildItem "$env:windir\servicing\Version\*\wcp.dll","$env:windir\WinSxS\amd64_microsoft-windows-servicingstack*\wcp.dll" -ErrorAction SilentlyContinue | Sort-Object { [version]$_.VersionInfo.FileVersionRaw } -Descending | Select-Object -First 1
+          if (!$wcp) { throw 'No amd64 servicing stack dictionary' }
+          $dict = Join-Path $env:RUNNER_TEMP 'cbs-dictionary.bin'
+          python -X utf8 decoder/src/extract-pe-resource.py $wcp.FullName --id 614 --out $dict | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw 'Dictionary extraction failed' }
+          python -X utf8 tools/research/read_csi_audio.py $dict
