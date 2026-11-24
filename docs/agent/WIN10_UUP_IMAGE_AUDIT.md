@@ -207,3 +207,13 @@ The previous E-119 statement that the exact DriverStore BthA2dp had only ntoskrn
 
 UUP audit #7 [45342686564](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45342686564), isolated experiment branch experiment/win10-a2dp-catalog-registry-audit-20261124, adds offline catalog membership and read-only SYSTEM-hive service registration inventory. No package installation or driver load is performed.
 
+
+
+## 2026-11-24 08:50 — correction to the generic BTHENUM mapping comparison
+
+Both images contain the generic mapping for UUID 0x110B:
+- Win10 bth.inf 10.0.19041.5848, SHA 8635AE12E1C0AF71E95AD0DA65FA6CEEAB2AA0866D213620F49AA0A634CE976D.
+- Server bth.inf 10.0.20348.5756, SHA 38302B73607B829CBD94D60D25320924B8727BF55CAD940052444FC22D475459.
+
+Both map the base UUID to BthGenericService with the _GENERIC hardware ID and a null associated-service install. The Win10/Server difference is the additional Win10 dedicated A2DP source/common INFs plus BtaMPM, absent from Server. Do not copy or patch bth.inf. The source INF includes PreConfigureDriver=*; SetupAPI selection/rank remains an explicit disposable-VM test.
+

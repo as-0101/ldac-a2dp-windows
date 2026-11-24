@@ -398,3 +398,11 @@ Correction: btampm.inf is CopyFilesOnly and does not create a BtaMPM service. Th
 
 Catalog membership and runtime compatibility remain unverified. SYS files have no embedded Authenticode signature; catalog verification is pending.
 
+
+
+## INF comparison correction — 2026-11-24
+
+The generic BthGenericService mapping for UUID 0x110B is present in both Win10 bth.inf 10.0.19041.5848 (SHA 8635AE12E1C0AF71E95AD0DA65FA6CEEAB2AA0866D213620F49AA0A634CE976D) and Server bth.inf 10.0.20348.5756 (SHA 38302B73607B829CBD94D60D25320924B8727BF55CAD940052444FC22D475459). Both use the _GENERIC suffix and null associated-service install.
+
+The actual OS delta is the dedicated Win10 A2DP source/common INF package and BtaMPM companion, not the generic mapping. Keep Server bth.inf unchanged. The Win10 source INF includes PreConfigureDriver=*; test its SetupAPI effect on a disposable Server 2022 VM.
+

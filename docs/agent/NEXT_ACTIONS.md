@@ -1,3 +1,7 @@
+## INF comparison correction — 2026-11-24 08:50
+
+Do not describe BthGenericService as a Server-only behavior. The 0x110B generic fallback exists in both Win10 19045.5917 and Server 20348.5761 bth.inf. The delta is the Win10-only dedicated microsoft_bluetooth_a2dp_src.inf + common A2DP INF + BtaMPM dependency. Leave Server bth.inf untouched; test the dedicated source INF's base-UUID match and PreConfigureDriver=* behavior in the disposable VM.
+
 ## ACTIVE NEXT ACTIONS — 2026-11-24 08:39 Europe/Kyiv
 
 1. Complete UUP audit #7 [45342686564](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45342686564): inspect offline Win10 catalogs for the exact A2DP source/common INF, BthA2dp.sys and BtaMPM.sys; capture offline SYSTEM service registrations for Win10 and Server 20348.5761.

@@ -1,3 +1,7 @@
+## INF comparison correction — 2026-11-24 08:50
+
+Win10 and Server bth.inf both include the generic 0x110B BthGenericService mapping with _GENERIC hardware ID and null associated-service installation. The Server gap is the absence of the dedicated Win10 A2DP source/common INF package and BtaMPM companion, not a different generic bth.inf mapping. Keep Server bth.inf unchanged.
+
 ## CURRENT VERIFIED STATE — 2026-11-24 08:39 Europe/Kyiv
 
 - UUP audit #6 identity-checked Win10 Pro 19045.5917 x64 and Server 2022 Datacenter 20348.5761 x64.

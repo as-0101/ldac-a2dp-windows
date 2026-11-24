@@ -374,3 +374,11 @@ Server bth.inf 10.0.20348.5756 (SHA 38302B73607B829CBD94D60D25320924B8727BF55CAD
 - ks.sys/WDMAUDIO/MSSysFx provide audio graph/effects registration, not LDAC negotiation.
 - The fork's AOSP libldac is an encoder library linked into the custom service; it is not registered with Microsoft BthA2dp and cannot add LDAC to its codec list.
 
+
+
+## INF comparison correction — generic fallback is present in both OS images
+
+UUP #6 confirms that Win10 bth.inf 10.0.19041.5848 (SHA 8635AE12E1C0AF71E95AD0DA65FA6CEEAB2AA0866D213620F49AA0A634CE976D) and Server bth.inf 10.0.20348.5756 (SHA 38302B73607B829CBD94D60D25320924B8727BF55CAD940052444FC22D475459) both map BTHENUM UUID 0x110B to BthGenericService using the _GENERIC hardware-ID suffix, with a null associated-service install.
+
+Therefore the generic fallback is not the delta. The Win10 image additionally has the dedicated microsoft_bluetooth_a2dp_src.inf matching the base UUID 0x110B, its common A2DP INF, and BtaMPM dependency. Those dedicated package components are absent from Server 20348.5761. Keep Server bth.inf and Bluetooth core unchanged. The source INF contains PreConfigureDriver=*; inspect its SetupAPI effect and driver ranking during the disposable staging test.
+

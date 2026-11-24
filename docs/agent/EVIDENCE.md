@@ -777,3 +777,17 @@ Correction: earlier E-119 claim that exact DriverStore BthA2dp imported only nto
 
 UUP audit #7 [45342686564](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45342686564), isolated branch experiment/win10-a2dp-catalog-registry-audit-20261124, adds offline catalog membership and read-only SYSTEM service inventory.
 
+
+
+## E-170 — Clarify the BTHENUM generic fallback is common to Win10 and Server
+
+The exact UUP INF summary shows the generic A2DP mapping in both images:
+- Win10 bth.inf 10.0.19041.5848, SHA-256 8635AE12E1C0AF71E95AD0DA65FA6CEEAB2AA0866D213620F49AA0A634CE976D.
+- Server bth.inf 10.0.20348.5756, SHA-256 38302B73607B829CBD94D60D25320924B8727BF55CAD940052444FC22D475459.
+
+Both contain the same mapping of UUID 0x110B to BthGenericService with the _GENERIC hardware-ID suffix and the same null associated-service installation in BthGenericService.NT.Services. Therefore this generic fallback is not the Win10/Server delta and must not be described as missing from Server.
+
+The actual package delta is that Win10 additionally contains microsoft_bluetooth_a2dp_src.inf 10.0.19041.1 (base UUID 0x110B) and microsoft_bluetooth_a2dp.inf 10.0.19041.4355 plus BtaMPM. Those dedicated A2DP source/common INFs are absent from the Server 20348.5761 image. The source INF also has PreConfigureDriver=*; its effect on SetupAPI selection/rank remains to be tested.
+
+Decision: retain Server bth.inf unchanged. Test only the dedicated source/common package closure on disposable Server 2022 after catalog validation.
+

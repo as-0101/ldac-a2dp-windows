@@ -1,3 +1,9 @@
+> **INF comparison correction — 2026-11-24 08:50 Europe/Kyiv**
+>
+> The generic BthGenericService mapping for A2DP UUID 0x110B exists in both Win10 and Server bth.inf. It is not the OS delta. Win10 bth.inf 10.0.19041.5848 (SHA-256 8635AE12E1C0AF71E95AD0DA65FA6CEEAB2AA0866D213620F49AA0A634CE976D) and Server bth.inf 10.0.20348.5756 (SHA-256 38302B73607B829CBD94D60D25320924B8727BF55CAD940052444FC22D475459) both map UUID 0x110B to BthGenericService with the _GENERIC suffix and null associated-service install.
+>
+> The actual Win10 addition is the separate microsoft_bluetooth_a2dp_src.inf (base UUID 0x110B) plus common A2DP INF and BtaMPM dependency. Those dedicated A2DP INF files are absent from the Server image. The minimal experiment must add/test that package only; do not replace or patch bth.inf. Source INF has PreConfigureDriver=*; its SetupAPI selection/rank effect must be checked in the disposable VM.
+>
 > **ACTIVE OVERRIDE — 2026-11-24 08:39 Europe/Kyiv**
 >
 > UUP audit #6 completed successfully: [run 45332165839](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45332165839), artifact ID 14895876155, SHA-256 c1792bd8e5bcdf2a583c3738eeb22bdf27a64ba6ad2701ad70aa8f879d045209.
