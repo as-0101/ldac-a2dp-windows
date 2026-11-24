@@ -189,3 +189,18 @@ No service, device, profile-driver, endpoint, SBC negotiation, audio-stream, LDA
 |---|---|---|---|---|
 | T-071 | Win10 A2DP binary import closure on Server 20348.5761 | Exact archived DriverStore BthA2dp/BtaMPM binaries; PE imports/delay/API sets/exports; every import resolved against target exports | UUP #6 reproduced BthA2dp 10.0.19041.4355 SHA 5FBA...F354EC3 exactly. 149/149 imports resolve against Server 20348.5761 plus exact BtaMPM companion. BtaMPM 10.0.19041.5848 has 42 imports/14 exports; 42/42 resolve. No delay/API-set imports. | CONFIRMED — STATIC_PE_IMPORT_CLOSURE; catalog, INF applicability, staging, runtime load and audio pending |
 
+## A2DP package-signature gate — 2026-11-24
+
+| Test | Environment | Result | Evidence / limitation |
+|---|---|---|---|
+| Win10 A2DP package catalog membership | Win10 19045.5917 offline image | PASS 5/5 | All five exact files verify against one CBS servicing CAT; E-172 |
+| Server catalog membership for Win10 A2DP files | Server 20348.5761 offline image | PENDING | New cross-SKU audit branch |
+| Server catalog positive controls | Server 20348.5761 offline image | PENDING | BthPort.sys, BthEnum.sys, BTHUSB.sys, bth.inf |
+| BthA2dp service registration | Win10 offline SYSTEM hive | PASS | Type 1, Start 3 |
+| BthA2dp service registration | Server 20348.5761 offline SYSTEM hive | ABSENT | Expected profile gap; not a runtime failure |
+| BtaMPM service registration | Both offline SYSTEM hives | ABSENT | BtaMPM is copied as a companion module, not a service |
+| A2DP PnP staging / driver load / endpoint | Disposable Server 2022 | NOT RUN | Wait for cross-SKU signature gate |
+| SBC negotiation / sustained stereo stream | Disposable Server 2022 + OPPO | NOT RUN | No radio/runtime test |
+| LDAC negotiation / actual LDAC stream | LDAC-capable receiver | NOT RUN | Separate post-SBC milestone |
+
+Server AudioSrv and AudioEndpointBuilder exist with Start=3 (demand start), versus Start=2 on Win10. Treat as a configuration difference to validate during runtime, not as proof of failure.
