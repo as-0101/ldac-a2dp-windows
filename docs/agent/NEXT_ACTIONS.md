@@ -1,5 +1,15 @@
 # Current continuation — 2026-11-24 02:19 (codec ownership and PE audit correction)
 
+## Immediate next actions — 2026-11-24
+
+1. Finish GitHub Actions UUP image audit run #3. It must verify Win10 19045.5917 and Server 20348.5761 image versions before accepting any file.
+2. Compare extracted SHA-256 values against the captured archive identities: BthA2dp DriverStore 5FBA5EE606AAC39D9CBDA51C0A14DBABBB3A9B47BBD8AC5485ED137B4F354EC3, BthA2dp System32 0442A18BBED4E323265C66561C8F8C171D8E934E9089C12B94D1DFDBB057B737, BtaMPM DA5CBBDCE6AC511EF8400E121DF6B6EACA7D05C0F40A01F7353CE9F220EB3DCD.
+3. For exact hash matches, record PE architecture, imports, delay imports, exports, API-set references, OS-version fields, and static resolution against Server 20348.5761 exports.
+4. Extract offline SYSTEM/SOFTWARE registry registrations, INF AddService/AddReg/Include/Needs relationships, CBS/WinSxS ownership, and catalog membership. Do not infer catalog membership from an embedded-signature check on a SYS file.
+5. Only after the static pass, use a disposable Server 2022 VM to test service start → device enumeration → driver load → A2DP endpoint → SBC negotiation → actual stereo audio.
+6. Keep ACX bind-probe paused. Do not install drivers or make BCD/security/certificate/OS changes on the physical host.
+
+
 ## Established facts
 
 1. The existing Win10 19045 package archive is already captured; it contains the source/common/sink A2DP INFs, `btampm.inf`, `BthA2dp.sys` and `BtaMPM.sys`. Do not recollect or request that archive.
