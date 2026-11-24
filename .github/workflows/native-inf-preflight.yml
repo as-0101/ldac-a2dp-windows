@@ -22,7 +22,7 @@ jobs:
           using System.Runtime.InteropServices;
           public static class Inf {
             [DllImport("setupapi.dll", CharSet=CharSet.Unicode, SetLastError=true)]
-            public static extern IntPtr SetupOpenInfFileW(string file, string cls, uint style, IntPtr line);
+            public static extern IntPtr SetupOpenInfFileW(string file, IntPtr cls, uint style, IntPtr line);
             [DllImport("setupapi.dll", CharSet=CharSet.Unicode, SetLastError=true)]
             public static extern bool SetupOpenAppendInfFileW(string file, IntPtr handle, IntPtr line);
             [DllImport("setupapi.dll", CharSet=CharSet.Unicode, SetLastError=true)]
@@ -32,12 +32,23 @@ jobs:
           '@
           $names = 'ks.inf','wdmaudio.inf','microsoft_bluetooth_a2dp_src.inf','microsoft_bluetooth_a2dp.inf','btampm.inf'
           foreach ($n in $names) {
-            $h = [Inf]::SetupOpenInfFileW($n,$null,2,[IntPtr]::Zero)
+            $h = [Inf]::SetupOpenInfFileW($n,[IntPtr]::Zero,2,[IntPtr]::Zero)
             $err = [Runtime.InteropServices.Marshal]::GetLastWin32Error()
             $opened = $h.ToInt64() -ne -1
             "SYSTEM name=$n opened=$opened error_on_failure=$(if(!$opened){$err})"
             if ($opened) { [Inf]::SetupCloseInfFile($h) }
             if ($n -in 'ks.inf','wdmaudio.inf' -and !$opened) { throw "Missing positive control $n" }
+          }
+          foreach ($provider in 'ks.inf','wdmaudio.inf') {
+            $handle = [Inf]::SetupOpenInfFileW($provider,[IntPtr]::Zero,2,[IntPtr]::Zero)
+            try {
+              $sections = if ($provider -eq 'ks.inf') { @('KS.Registration') } else { @('WDMAUDIO.Registration','MSSYSFX.CopyFilesAndRegister') }
+              foreach ($section in $sections) {
+                $lines = [Inf]::SetupGetLineCountW($handle,$section)
+                "PROVIDER name=$provider section=$section lines=$lines"
+                if ($lines -lt 1) { throw "Missing provider section $section" }
+              }
+            } finally { [Inf]::SetupCloseInfFile($handle) }
           }
           $root = New-Item -Type Directory -Path (Join-Path $env:RUNNER_TEMP ([guid]::NewGuid()))
           $primary = Join-Path $root 'probe.inf'
@@ -46,7 +57,7 @@ jobs:
           ($header + '[Probe]' + 'Include=a2dp-preflight-sibling.inf' + 'Needs=UniqueSiblingSection') | Set-Content $primary -Encoding unicode
           ($header + '[UniqueSiblingSection]' + 'Answer=42') | Set-Content $extra -Encoding unicode
           foreach ($mode in 'unappended','missing','basename','absolute') {
-            $h = [Inf]::SetupOpenInfFileW($primary,$null,2,[IntPtr]::Zero)
+            $h = [Inf]::SetupOpenInfFileW($primary,[IntPtr]::Zero,2,[IntPtr]::Zero)
             if ($h.ToInt64() -eq -1) { throw 'Cannot open primary fixture' }
             try {
               $append = $null
