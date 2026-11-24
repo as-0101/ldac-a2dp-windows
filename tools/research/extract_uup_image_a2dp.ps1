@@ -82,6 +82,36 @@ function Download-UupIso {
     Expand-Archive -LiteralPath $packageZip -DestinationPath $WorkDirectory -Force
     Remove-Item -LiteralPath $packageZip -Force
 
+    # The UUP helper package's get_aria2.ps1 can run under a reduced child PowerShell
+    # environment where Get-FileHash is not auto-loaded. Prefer Windows PowerShell 5.1
+    # and provide a narrow SHA-256 compatibility function in that helper only.
+    $windowsPowerShellDirectory = Join-Path $env:WINDIR "System32\WindowsPowerShell\v1.0"
+    if (Test-Path -LiteralPath $windowsPowerShellDirectory) {
+        $env:PATH = "$windowsPowerShellDirectory;$env:PATH"
+    }
+    $ariaScript = Get-ChildItem -LiteralPath $WorkDirectory -Filter "get_aria2.ps1" -File -Recurse | Select-Object -First 1
+    if ($ariaScript) {
+        $ariaText = Get-Content -LiteralPath $ariaScript.FullName -Raw
+        if ($ariaText -match "Get-FileHash") {
+            $hashShim = @'
+function Get-FileHash {
+    param([Alias("LiteralPath")][string]$Path, [string]$Algorithm = "SHA256")
+    if ($Algorithm -ne "SHA256") { throw "UUP helper hash shim supports SHA256 only." }
+    $sha = [System.Security.Cryptography.SHA256]::Create()
+    $stream = [System.IO.File]::OpenRead($Path)
+    try {
+        $hex = [System.BitConverter]::ToString($sha.ComputeHash($stream)).Replace("-", "")
+        [pscustomobject]@{ Algorithm = $Algorithm; Hash = $hex; Path = $Path }
+    } finally {
+        $stream.Dispose()
+        $sha.Dispose()
+    }
+}
+'@
+            Set-Content -LiteralPath $ariaScript.FullName -Value ($hashShim + "`r`n" + $ariaText) -Encoding ascii
+        }
+    }
+
     $downloadCommand = Get-ChildItem -LiteralPath $WorkDirectory -Filter "uup_download_windows.cmd" -File -Recurse | Select-Object -First 1
     if (-not $downloadCommand) { throw "UUP download package did not contain uup_download_windows.cmd: $WorkDirectory" }
     $commandDirectory = $downloadCommand.Directory.FullName
