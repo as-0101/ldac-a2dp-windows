@@ -153,3 +153,36 @@ jobs:
           "OEM_NEW $(@($after | Where-Object { $_ -notin $before }) -join ',')"
           Get-Content (Join-Path $env:windir 'INF/setupapi.dev.log') -Tail 300 | Select-String 'wdmaudio|0xe000|catalog|!!!' | Select-Object -Last 32 | ForEach-Object { "SETUP $($_.Line)" }
           exit 0
+      - name: Read all local CBS package XML and test exact profile tokens
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $files = @(Get-ChildItem (Join-Path $env:windir 'servicing/Packages') -Filter '*.mum' -File -Force)
+          $ok = 0; $bad = 0; $positive = 0; $matchesFound = 0
+          $tokens = 'microsoft_bluetooth_a2dp','btha2dp','btampm'
+          function Inspect-Document([string]$xmlText) {
+            $document = [xml]$xmlText
+            $raw = $document.DocumentElement.OuterXml
+            foreach ($token in $tokens) {
+              if ($raw.IndexOf($token,[StringComparison]::OrdinalIgnoreCase) -ge 0) { $token }
+            }
+          }
+          $synthetic = @(Inspect-Document '<assembly><driver name="MICROSOFT_BLUETOOTH_A2DP_SRC.INF"/><file name="BtaMPM.sys"/></assembly>')
+          if ($synthetic.Count -ne 2) { throw 'Broken detector' }
+          foreach ($f in $files) {
+            try {
+              $doc = [System.Xml.XmlDocument]::new()
+              $doc.XmlResolver = $null
+              $doc.Load($f.FullName)
+              $raw = $doc.DocumentElement.OuterXml
+              $hits = @(Inspect-Document $raw)
+              $ok++
+              if ($raw -match 'bthport|bthusb|bthenum') { $positive++ }
+              if ($hits.Count) { $matchesFound++; "CBS_HIT file=$($f.Name) tokens=$($hits -join ',')" }
+            } catch {
+              $bad++
+              if ($bad -le 4) { "CBS_UNREADABLE file=$($f.Name) reason=$($_.Exception.Message)" }
+            }
+          }
+          "CBS_SCAN total=$($files.Count) parsed=$ok unreadable=$bad profile_packages=$matchesFound bluetooth_transport_controls=$positive synthetic_hits=$($synthetic.Count)"
+          if ($ok -eq 0 -or $positive -eq 0) { throw 'CBS coverage control failed' }
