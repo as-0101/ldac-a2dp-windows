@@ -240,3 +240,13 @@ T-073 update: run #3 [45371687882](https://github.com/as-0101/ldac-a2dp-windows/
 Artifact T-077: GitHub artifact 14910689667, 152,010 bytes, SHA-256 `431f94d613a177c2d78735fad72844aab1b9fd04782641e5e39532525ee65c08`; Library ID `libfile_87489e2386f48191a54635114c06391a`.
 
 All package staging remains restricted to disposable hosted/VM environments. No physical Server 2022 action is authorized. UBR 5870 is not the physical target's UBR 5761.
+
+
+## T-079 — Win10 A2DP CAT discovery and common-member gate (2026-11-24)
+
+- Input: five exact package hashes for BthA2dp.sys, BtaMPM.sys, microsoft_bluetooth_a2dp.inf, microsoft_bluetooth_a2dp_src.inf and btampm.inf.
+- Catalog discovery includes Hidden/System files in offline Win10 servicing, WinSxS, CatRoot/CatRoot2 and DriverStore roots. It prefers the historical 19041.5917 CAT, then CBS owner-package CATs, then all catalog files.
+- Pass criterion: SignTool finds one common catalog that validates all five exact files under the appropriate kernel/policy modes; the CAT signature itself must validate on the disposable Server runner.
+- If no common catalog is found, status is BLOCKED_NO_COMMON_CATALOG and root inventory is preserved; no staging occurs.
+- This test does not install/bind a device, start BthA2dp, load a driver, create an endpoint, negotiate SBC or play audio.
+- CI #4 [45381650079](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45381650079) is a harness failure at the hard-coded historical CAT-name gate. Corrected implementation commit `de392442`; CI #5 [45393451133](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45393451133) is running.

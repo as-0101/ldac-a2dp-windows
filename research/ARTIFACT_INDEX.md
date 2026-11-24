@@ -428,3 +428,14 @@ No third-party binary was downloaded or stored.
 |---|---|---|
 | CI #3 stage-smoke partial metadata | GitHub artifact 14910689667; 152,010 bytes; SHA-256 `431f94d613a177c2d78735fad72844aab1b9fd04782641e5e39532525ee65c08` | Library `/LDAC Project/Incoming/CI-3-stage-smoke-failure.zip`, Library ID `libfile_87489e2386f48191a54635114c06391a`. Contains 23 PE JSON reports only; no manifest or stage-test.json. No complete catalog-membership report or DriverStore staging result. |
 | CI #4 diagnostic rerun | Run 45381650079, head 4d5734fb19929dc332dfb572e9824151c470b62b | In progress at last check; no artifact yet. |
+
+
+## CI #4 — stage-smoke catalog discovery failure (2026-11-24)
+
+- GitHub run: [45381650079](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45381650079)
+- Artifact ID: `14918010587`
+- ZIP: 154,452 bytes; SHA-256 `b3f8f459cf468a44a7191554a95a0b43cec72c7c0c2650a687f1c4fab7dcf274`
+- Library path: `/LDAC Project/Incoming/CI-4-stage-smoke-failure.zip`
+- Library ID: `libfile_f37d34e806088191b2e1d8d2a04bc8e3`
+- Contains PE JSON metadata and a manifest. The manifest records failure before the stage-smoke function because the exact historical Win10 CBS CAT filename was not found. No PnPUtil/SignTool staging result exists.
+- Corrected follow-up: CI #5 [45393451133](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45393451133), script commit `de3924424779a44b7d0d66ce2065c7f8dbae6655`.

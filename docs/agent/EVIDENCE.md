@@ -905,3 +905,13 @@ The Server versions contain the required section names and corresponding registr
 - Diagnostic hardening only; root cause of CI #3 is not yet established.
 - CI #4 [45381650079](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45381650079), head `4d5734fb19929dc332dfb572e9824151c470b62b`, was in progress at last check: preflight passed, step 7 active, no artifact.
 
+
+
+## E-183 — Stage-smoke CI #4: historical CAT filename assumption blocked the test (2026-11-24)
+
+- Run [45381650079](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45381650079), job 138401917017, script commit `4d5734fb19929dc332dfb572e9824151c470b62b`, branch `experiment/win10-a2dp-stage-smoke-20261124`.
+- Disposable runner identity was Microsoft Windows Server 2022 Datacenter build **20348.5870**. This is not the target UBR 5761.
+- Win10 UUP image 19045.5917 mounted and identity-checked; PE reports were generated for the A2DP package and audio/Bluetooth dependencies. The offline audit then threw at `Get-TargetCatalogMembership` line 556: the exact historical catalog filename `Microsoft-Windows-Client-Desktop-Required-Package~31bf3856ad364e35~amd64~~10.0.19041.5917.cat` was not found in the enumerated roots.
+- This run did not reach the stage-smoke function. There is no SignTool member verification on the Server runner, no `pnputil /add-driver`, no `signtool catdb`, no DriverStore staging result and no device/runtime result. Classification: **HARNESS/CATALOG-DISCOVERY FAILURE; compatibility UNKNOWN**.
+- This is inconsistent with CI #12 [45354874225](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45354874225), which found that historical CAT in the Win10 image and verified all five exact files against it. The reason for the discrepancy is not yet established; do not infer that Windows rejected the CAT.
+- Artifact 14918010587: 154,452 bytes; downloaded ZIP SHA-256 `b3f8f459cf468a44a7191554a95a0b43cec72c7c0c2650a687f1c4fab7dcf274`. Preserved at Library `/LDAC Project/Incoming/CI-4-stage-smoke-failure.zip`, ID `libfile_f37d34e806088191b2e1d8d2a04bc8e3`.

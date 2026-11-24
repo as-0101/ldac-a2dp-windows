@@ -1,3 +1,12 @@
+## Immediate next actions — 2026-11-24
+
+1. Review CI #5 [45393451133](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45393451133): confirm the PowerShell parser, catalog root inventory, common CAT identity, CAT signature, and all five member checks.
+2. If one common original Microsoft CAT verifies all five exact files, inspect the no-`/install` PnPUtil staging result and cleanup. If not, use the recorded catalog-root inventory and UUP/CBS package payload to locate the package-owned CAT; do not interpret a missing filename as a trust failure.
+3. Record the runner's exact build/UBR. GitHub-hosted 20348.5870 is not the physical target 20348.5761; no target-specific claim until an exact-UBR disposable VM is tested.
+4. After DriverStore staging only, plan a separate disposable-VM PnP test. Do not attempt device install or physical-host changes. A real radio/receiver is required for SBC negotiation and actual stereo audio.
+5. Keep the sequence explicit: service start → device enumeration → driver load → A2DP endpoint → SBC negotiation → actual audio → separate LDAC negotiation/audio with an LDAC-capable sink.
+6. Do not resume ACX/WDK bind-probe. CI #248/#255 remain closed; the current blocker is still the Windows 10 A2DP package's catalog/staging and runtime path.
+
 ## ACTIVE REVIEW — stage-smoke #3 tooling failure; #4 diagnostic rerun
 
 - CI #3 [45371687882](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45371687882), job 138367259323, completed with `failure`. Runner: Windows Server 2022 Datacenter build 20348, **UBR 5870**; preflight steps 1–6 passed.

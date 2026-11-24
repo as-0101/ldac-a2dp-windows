@@ -203,3 +203,11 @@ Stage-smoke scope: disposable GitHub-hosted Windows Server 2022 runner; explicit
 Run #3 artifact is preserved in Library at `/LDAC Project/Incoming/CI-3-stage-smoke-failure.zip` (Library ID `libfile_87489e2386f48191a54635114c06391a`). The PE JSONs are metadata only; no SYS/DLL/INF/CAT payload is retained.
 
 Neither run proves package staging, PnP binding, service start, driver load, endpoint, SBC negotiation or audio. A hosted result on UBR 5870 must not be labelled as an exact 20348.5761 result.
+
+
+## 2026-11-24 — Stage-smoke CI #4 / corrected CI #5
+
+- CI #4 [45381650079](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45381650079), commit `4d5734fb19929dc332dfb572e9824151c470b62b`: runner Windows Server 2022 Datacenter 20348.5870; offline Win10 19045.5917 audit stopped because the exact historical servicing CAT filename was not found in the mounted image's enumerated catalog roots. No SignTool/PnPUtil stage test ran.
+- Artifact 14918010587, 154,452 bytes, SHA-256 `b3f8f459cf468a44a7191554a95a0b43cec72c7c0c2650a687f1c4fab7dcf274`; Library ID `libfile_f37d34e806088191b2e1d8d2a04bc8e3`.
+- Corrected script commit `de3924424779a44b7d0d66ce2065c7f8dbae6655`; CI #5 [45393451133](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45393451133) running. New behavior discovers CATs with Hidden/System attributes, searches historical and CBS-owner candidates, requires a common catalog for all five exact files, and preserves a blocked diagnostic instead of throwing before reports are saved.
+- Stage scope remains DriverStore staging only, no `/install`, device binding or service start. Runner UBR must be recorded; 20348.5870 is not 20348.5761.

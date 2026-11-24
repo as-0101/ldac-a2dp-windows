@@ -460,3 +460,8 @@ The outer catch had an unguarded `InvocationInfo.MyCommand.Name` access that cou
 ## D-176 — Preserve the UBR boundary
 
 The disposable CI #3 runner was 20348.5870, while the physical target is recorded as 20348.5761. A successful hosted staging result is evidence for its recorded UBR only. Do not claim exact 5761 acceptance without a disposable target matching that UBR. No OS update or physical-host action is authorized.
+
+
+## 2026-11-24 — Do not hard-code one historical servicing CAT filename for stage smoke
+
+CI #4 failed before SignTool/PnPUtil because the stage-only path required one exact historical CAT filename. CI #12 had previously verified the same five package files against that catalog, so CI #4 is a catalog-discovery inconsistency, not evidence that Server 2022 rejects the package. The experiment now searches Hidden/System catalog files and the CBS owner-package catalog candidates, verifies one common CAT against all five pinned file hashes, and records a blocked result with root inventory if no common catalog is found. Only after a common CAT and its signature verify on the disposable Server runner may PnPUtil staging without /install run. No changes to the original INF/SYS/CAT are permitted.

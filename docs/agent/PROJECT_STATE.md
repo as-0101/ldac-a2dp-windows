@@ -1,3 +1,12 @@
+## Active status — 2026-11-24 (CI #4 reviewed; CI #5 running)
+
+- Stage-smoke CI #4 [45381650079](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45381650079) ran on disposable Windows Server 2022 Datacenter **20348.5870** (not target UBR 5761). Win10 19045.5917 extraction and PE reports completed, but the stage path stopped before SignTool/PnPUtil because it required the historical CAT filename `Microsoft-Windows-Client-Desktop-Required-Package~31bf3856ad364e35~amd64~~10.0.19041.5917.cat` and did not find that exact name in the mounted image's catalog roots. This is a catalog-discovery/harness failure, **not** a Server trust rejection and not a driver-compatibility result.
+- CI #4 artifact 14918010587: 154,452 bytes, SHA-256 `b3f8f459cf468a44a7191554a95a0b43cec72c7c0c2650a687f1c4fab7dcf274`; saved to Library `/LDAC Project/Incoming/CI-4-stage-smoke-failure.zip` (Library ID `libfile_f37d34e806088191b2e1d8d2a04bc8e3`).
+- Corrective experiment commit [de392442](https://github.com/as-0101/ldac-a2dp-windows/commit/de3924424779a44b7d0d66ce2065c7f8dbae6655) on `experiment/win10-a2dp-stage-smoke-20261124`: catalog discovery now includes Hidden/System CAT files, prefers the previously observed exact CAT then CBS owner-package catalogs then a full fallback scan, verifies that one common catalog covers all five pinned package files, records per-root inventory, and skips staging with an explicit blocked report if no common catalog is found. The old CAT name/hash is now a historical reference, not a hard-coded prerequisite.
+- CI #5 [45393451133](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45393451133) is running the corrected script. No result yet. It remains limited to original package signature verification and DriverStore staging without `/install`; it cannot prove PnP enumeration, service start, driver load, endpoint, SBC negotiation or audio.
+- Primary path remains the unmodified Windows 10 A2DP Source/common + BtaMPM package on disposable Server 2022, first SBC stereo with OPPO Enco Buds2. Existing AOSP LDAC encoder/AVDTP work remains deferred until SBC; OPPO ETE41 is SBC/AAC only.
+- Physical Server 2022 is untouched; `server-2022-oppo` remains frozen; ACX bind-probe remains parked.
+
 ## ACTIVE REVIEW — stage-smoke #3 tooling failure; #4 diagnostic rerun
 
 - CI #3 [45371687882](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45371687882), job 138367259323, completed with `failure`. Runner: Windows Server 2022 Datacenter build 20348, **UBR 5870**; preflight steps 1–6 passed.
