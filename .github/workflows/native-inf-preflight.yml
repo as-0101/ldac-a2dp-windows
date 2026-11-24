@@ -1,0 +1,68 @@
+name: Server 2022 native INF preflight
+on:
+  push:
+    branches: [experiment/server2022-native-inf-preflight]
+    paths: [.github/workflows/native-inf-preflight.yml]
+permissions: {}
+jobs:
+  preflight:
+    runs-on: windows-2022
+    timeout-minutes: 8
+    steps:
+      - name: Query native INF namespace and compare explicit append controls
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($env:RUNNER_ENVIRONMENT -ne 'github-hosted') { throw 'Hosted runner required' }
+          $os = Get-CimInstance Win32_OperatingSystem
+          if ($os.BuildNumber -ne '20348' -or $os.ProductType -ne 3) { throw 'Unexpected OS' }
+          "OS=$($os.Caption) BUILD=$($os.BuildNumber) UBR=$((Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion').UBR)"
+          Add-Type @'
+          using System;
+          using System.Runtime.InteropServices;
+          public static class Inf {
+            [DllImport("setupapi.dll", CharSet=CharSet.Unicode, SetLastError=true)]
+            public static extern IntPtr SetupOpenInfFileW(string file, string cls, uint style, IntPtr line);
+            [DllImport("setupapi.dll", CharSet=CharSet.Unicode, SetLastError=true)]
+            public static extern bool SetupOpenAppendInfFileW(string file, IntPtr handle, IntPtr line);
+            [DllImport("setupapi.dll", CharSet=CharSet.Unicode, SetLastError=true)]
+            public static extern int SetupGetLineCountW(IntPtr handle, string section);
+            [DllImport("setupapi.dll")] public static extern void SetupCloseInfFile(IntPtr handle);
+          }
+          '@
+          $names = 'ks.inf','wdmaudio.inf','microsoft_bluetooth_a2dp_src.inf','microsoft_bluetooth_a2dp.inf','btampm.inf'
+          foreach ($n in $names) {
+            $h = [Inf]::SetupOpenInfFileW($n,$null,2,[IntPtr]::Zero)
+            $err = [Runtime.InteropServices.Marshal]::GetLastWin32Error()
+            $opened = $h.ToInt64() -ne -1
+            "SYSTEM name=$n opened=$opened error_on_failure=$(if(!$opened){$err})"
+            if ($opened) { [Inf]::SetupCloseInfFile($h) }
+            if ($n -in 'ks.inf','wdmaudio.inf' -and !$opened) { throw "Missing positive control $n" }
+          }
+          $root = New-Item -Type Directory -Path (Join-Path $env:RUNNER_TEMP ([guid]::NewGuid()))
+          $primary = Join-Path $root 'probe.inf'
+          $extra = Join-Path $root 'a2dp-preflight-sibling.inf'
+          $header = '[Version]', 'Signature="$Windows NT$"'
+          ($header + '[Probe]' + 'Include=a2dp-preflight-sibling.inf' + 'Needs=UniqueSiblingSection') | Set-Content $primary -Encoding unicode
+          ($header + '[UniqueSiblingSection]' + 'Answer=42') | Set-Content $extra -Encoding unicode
+          foreach ($mode in 'unappended','missing','basename','absolute') {
+            $h = [Inf]::SetupOpenInfFileW($primary,$null,2,[IntPtr]::Zero)
+            if ($h.ToInt64() -eq -1) { throw 'Cannot open primary fixture' }
+            try {
+              $append = $null
+              $err = $null
+              if ($mode -ne 'unappended') {
+                $path = switch ($mode) { missing { Join-Path $root 'absent.inf' } basename { Split-Path $extra -Leaf } absolute { $extra } }
+                $append = [Inf]::SetupOpenAppendInfFileW($path,$h,[IntPtr]::Zero)
+                if (!$append) { $err = [Runtime.InteropServices.Marshal]::GetLastWin32Error() }
+              }
+              $count = [Inf]::SetupGetLineCountW($h,'UniqueSiblingSection')
+              "CONTROL mode=$mode append=$append error_on_failure=$err section_lines=$count"
+              if ($mode -eq 'absolute' -and (!$append -or $count -ne 1)) { throw 'Explicit positive control failed' }
+              if ($mode -eq 'missing' -and ($append -or $count -ne -1)) { throw 'Missing-file control failed' }
+            } finally { [Inf]::SetupCloseInfFile($h) }
+          }
+          $caps = @(Get-WindowsCapability -Online -ErrorAction Stop)
+          $matches = @($caps | Where-Object Name -match 'Bluetooth|A2DP')
+          "CAPABILITIES total=$($caps.Count) named_matches=$($matches.Count)"
+          $matches | Select-Object Name,State | Format-Table
