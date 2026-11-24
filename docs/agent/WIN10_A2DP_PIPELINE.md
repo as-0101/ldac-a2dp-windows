@@ -420,3 +420,10 @@ Therefore the Win10 A2DP package is not pre-registered as an in-box system packa
 
 The package dependency closure remains: source INF → common A2DP INF → BtaMpm.inf CopyFilesOnly + Server ks.inf / wdmaudio.inf sections; BthA2dp.sys is the profile/AVDTP kernel component. Do not transplant the reverse-direction sink INF, HFP, or Server KS/WDMAUDIO components without evidence.
 
+
+## Server audio INF dependency closure — CI #12
+
+The Win10 A2DP common INF's KS/WDMAUDIO/MSSysFx dependencies can use the existing Server 20348.5761 INF files. Server ks.inf 10.0.20348.1 (SHA-256 88EA223C8DB5F1DD17381F64BD264CCBFE946F1D1EF2DBA06A0992F60FF3ED94) contains KS.Registration. Server wdmaudio.inf 10.0.20348.5756 (SHA-256 63BCE2D74EC4DCC08ACA21B2CDFC1E981906F3A48BEF61FB96D2446014C7B833) contains WDMAUDIO.Registration and mssysfx.CopyFilesAndRegister. Win10 counterparts have different hashes (ks.inf 40BCDDCC32E331D1290C0EE1DD1115FC53736308E160B9C2151F83E4A7A4AAD9; wdmaudio.inf C03AE27DCC719043344DAAF9A933F54A1522F7FA6974A69249376FCAA54B7CC1) but the required section names are present in Server.
+
+Decision: do not transplant the Win10 KS/WDMAUDIO/MSSysFx components. The minimal candidate remains the A2DP Source/common INF and BtaMPM companion files, subject to the disposable staging test.
+
