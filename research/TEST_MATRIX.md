@@ -220,3 +220,12 @@ CI #12 inf-summary.txt confirms Server 20348.5761 has ks.inf 10.0.20348.1 (SHA-2
 
 Status: STATIC INF CLOSURE CONFIRMED. Do not replace Server KS/WDMAUDIO INF or APO components. PnP staging and endpoint creation remain untested.
 
+
+
+## 2026-11-24 12:25 — stage-smoke runner fidelity
+
+| ID | Gate | Required proof | Actual result | Status / next |
+|---|---|---|---|---|
+| T-076 | Stage-smoke runner UBR fidelity | Record exact Server 2022 UBR; require 5761 before treating staging result as exact-target evidence | Workflow checks build 20348 and InstallationType=Server, records UBR, but does not enforce 5761. Run #3 remains in step 7; no result yet. | CONFIRMED — WORKFLOW_SCOPE_LIMIT; if runner UBR differs from 5761, repeat staging on an exact-UBR disposable VM before claiming target-specific acceptance |
+
+T-073 update: run #3 [45371687882](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45371687882) was still in step 7 at 12:25 Kyiv. No staging conclusion or artifact exists yet.
