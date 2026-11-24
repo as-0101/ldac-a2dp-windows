@@ -333,25 +333,25 @@ function Get-OfflineServiceSummary {
         [Parameter(Mandatory)][string]$WorkDirectory,
         [Parameter(Mandatory)][string]$Role
     )
-    $sourceHive = Join-Path $MountDirectory "Windows\\System32\\Config\\SYSTEM"
+    $sourceHive = Join-Path $MountDirectory "Windows\System32\Config\SYSTEM"
     if (-not (Test-Path -LiteralPath $sourceHive)) { throw "Offline SYSTEM hive not found: $sourceHive" }
     $hiveCopy = Join-Path $WorkDirectory "SYSTEM.audit.hiv"
     Copy-Item -LiteralPath $sourceHive -Destination $hiveCopy -Force
     $hiveName = "LDAC_UUP_AUDIT_SYSTEM_$Role"
     $loaded = $false
     try {
-        $loadOutput = & reg.exe load "HKLM\\$hiveName" $hiveCopy 2>&1
+        $loadOutput = & reg.exe load "HKLM\$hiveName" $hiveCopy 2>&1
         if ($LASTEXITCODE -ne 0) { throw "Could not load offline SYSTEM hive (exit=$LASTEXITCODE): $($loadOutput -join ' ')" }
         $loaded = $true
-        $selectPath = "Registry::HKEY_LOCAL_MACHINE\\$hiveName\\Select"
+        $selectPath = "Registry::HKEY_LOCAL_MACHINE\$hiveName\Select"
         $select = Get-ItemProperty -LiteralPath $selectPath
         $currentValue = Get-OptionalPropertyValue -InputObject $select -Name "Current"
-        if ($null -eq $currentValue) { throw "Offline SYSTEM hive has no Select\\Current value." }
+        if ($null -eq $currentValue) { throw "Offline SYSTEM hive has no Select\Current value." }
         $current = [int]$currentValue
         $controlSet = "ControlSet{0:D3}" -f $current
         $serviceNames = @("BthA2dp", "BtaMPM", "BthPort", "BthEnum", "BTHUSB", "AudioSrv", "AudioEndpointBuilder")
         $records = foreach ($serviceName in $serviceNames) {
-            $servicePath = "Registry::HKEY_LOCAL_MACHINE\\$hiveName\\$controlSet\\Services\\$serviceName"
+            $servicePath = "Registry::HKEY_LOCAL_MACHINE\$hiveName\$controlSet\Services\$serviceName"
             if (Test-Path -LiteralPath $servicePath) {
                 $item = Get-ItemProperty -LiteralPath $servicePath
                 $parametersPath = Join-Path $servicePath "Parameters"
@@ -396,7 +396,7 @@ function Get-OfflineServiceSummary {
         }
         return $records
     } finally {
-        if ($loaded) { & reg.exe unload "HKLM\\$hiveName" 2>&1 | Out-Null }
+        if ($loaded) { & reg.exe unload "HKLM\$hiveName" 2>&1 | Out-Null }
         Remove-Item -LiteralPath $hiveCopy -Force -ErrorAction SilentlyContinue
     }
 }
