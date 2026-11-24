@@ -443,3 +443,10 @@ The owning MUM declares:
 SignTool verified BthA2dp.sys and BtaMPM.sys with /kp, and the three INF files with /pa. All five resolve to the same catalog after 386/3,326 catalog candidates. This proves membership in the Win10 image's catalog; Server 20348.5761 catalog acceptance is still pending.
 
 The Server image's offline SYSTEM hive contains BthPort/BthEnum/BTHUSB registrations but no BthA2dp service. This confirms a profile-registration gap, not absence of the underlying Bluetooth core.
+
+## 2026-11-24 — catalog membership and target acceptance
+
+CI #12 [45354874225](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45354874225) verified all five exact Win10 A2DP package files against the Win10 19045.5917 servicing CAT, SHA-256 78772FA12959C072D687283F08D08367B8A8EF1A2F07D7B72F20BCAFD12483BF. The same hashes had no match across the 8,325 Server 20348.5761 CAT candidates. Four Server Bluetooth core controls passed against the Server OneCore Bluetooth CAT, proving the Server catalog scan worked.
+
+This means the Server image does not already contain the Win10 A2DP package catalog membership. It does not prove the CAT signature chain is rejected by Server. The dedicated stage-smoke branch tests explicit SignTool verification and PnPUtil staging without /install on a disposable Server 2022 runner. Do not alter the physical server or certificate stores.
+
