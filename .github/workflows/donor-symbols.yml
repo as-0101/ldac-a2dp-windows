@@ -1,0 +1,20 @@
+name: Inspect donor import names against hosted Server kernel exports
+on:
+  push:
+    branches: [experiment/native-donor-inf-20261124]
+    paths: ['research/donor-symbols/**','.github/workflows/donor-symbols.yml']
+permissions:
+  contents: read
+jobs:
+  exports:
+    runs-on: windows-2022
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v5
+      - shell: pwsh
+        run: |
+          if ($env:RUNNER_ENVIRONMENT -ne 'github-hosted' -or [Environment]::OSVersion.Version.Build -ne 20348) { throw 'Unexpected OS' }
+          "BUILD=20348.$((Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion').UBR)"
+          python -m pip install pefile==2024.8.26
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          python research/donor-symbols/probe.py
