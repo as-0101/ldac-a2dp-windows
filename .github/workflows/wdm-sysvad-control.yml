@@ -1,0 +1,68 @@
+name: WDM SysVAD baseline control
+on:
+  push:
+    branches: [research/wdm-profile-reengineering]
+    paths: ['.github/workflows/wdm-sysvad-control.yml', 'research/wdm-portcls/**']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  portcls-control:
+    runs-on: windows-2022
+    timeout-minutes: 45
+    steps:
+      - name: Checkout project build infrastructure
+        uses: actions/checkout@v4
+        with:
+          path: project
+      - name: Checkout pinned official Microsoft SysVAD
+        uses: actions/checkout@v4
+        with:
+          repository: microsoft/Windows-driver-samples
+          ref: d49bb7d72f3651952b2b6e4ad28d14fe2247eb69
+          path: upstream
+          submodules: recursive
+          persist-credentials: false
+      - name: Add MSBuild to path
+        uses: microsoft/setup-msbuild@v2
+      - name: Audit pinned original source before build
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force evidence | Out-Null
+          python -m unittest discover -s project/research/wdm-portcls -p 'test_wdm_sysvad_audit.py' -v 2>&1 | Tee-Object evidence/audit-tests.txt
+          if ($LASTEXITCODE -ne 0) { throw 'Audit unit tests failed' }
+          python project/research/wdm-portcls/wdm_sysvad_audit.py --root upstream --out evidence/sysvad-static.json
+          if ($LASTEXITCODE -ne 0) { throw 'Source gate failed' }
+      - name: Restore existing NuGet WDK 26100 toolchain
+        shell: pwsh
+        run: |
+          nuget restore project/driver/packages.config -PackagesDirectory upstream/packages -NonInteractive
+          if ($LASTEXITCODE -ne 0) { throw "NuGet WDK restore failed: $LASTEXITCODE" }
+      - name: Build unmodified TabletAudioSample x64 control
+        shell: pwsh
+        run: |
+          Copy-Item project/driver/Directory.Build.props upstream/Directory.Build.props -Force
+          $sample = 'upstream/audio/sysvad/TabletAudioSample/TabletAudioSample.vcxproj'
+          & msbuild $sample /m /nologo /p:Configuration=Release /p:Platform=x64 /p:SignMode=Off /v:minimal '/flp:logfile=evidence/sysvad-msbuild.log;verbosity=normal'
+          $rc = $LASTEXITCODE
+          "msbuild_exit_code=$rc" | Set-Content evidence/exit-code.txt
+          if ($rc -ne 0) { throw "SysVAD control MSBuild failed, code $rc" }
+      - name: Capture control metadata and output hashes (no binaries)
+        if: always()
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force evidence | Out-Null
+          $version = Get-ItemProperty 'HKLM:/SOFTWARE/Microsoft/Windows NT/CurrentVersion'
+          "runner_build=$($version.CurrentBuildNumber);UBR=$($version.UBR)" | Set-Content evidence/runner.txt
+          "upstream_commit=d49bb7d72f3651952b2b6e4ad28d14fe2247eb69" | Add-Content evidence/runner.txt
+          "wdk_nuget=10.0.26100.6584" | Add-Content evidence/runner.txt
+          Get-ChildItem upstream/audio/sysvad -Recurse -File -Include *.sys,*.inf,*.cat -ErrorAction SilentlyContinue | ForEach-Object { "$($_.Name) $($_.Length) $((Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash)" } | Set-Content evidence/outputs-sha256.txt
+          if (Test-Path upstream/audio/sysvad/TabletAudioSample/ComponentizedAudioSample.inx) { Select-String -Path upstream/audio/sysvad/TabletAudioSample/ComponentizedAudioSample.inx -Pattern '^(Include|Needs|AddInterface|AddService|CatalogFile)\s*=' | Select-Object -ExpandProperty Line | Set-Content evidence/inf-directives.txt }
+      - name: Upload metadata only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wdm-sysvad-control-metadata
+          path: evidence/
+          if-no-files-found: warn
+          retention-days: 7
