@@ -60,7 +60,25 @@ jobs:
             "wdk_targets=$($targetFile.FullName)" | Set-Content evidence/infverif-target-context.txt
             Select-String -LiteralPath $targetFile.FullName -Pattern 'InfVerif|RunInfVerif|InfVerifToolPath' -Context 2,3 | Out-String -Width 260 | Add-Content evidence/infverif-target-context.txt
           }
-      - name: Build unmodified EndpointsCommon x64 dependency then TabletAudioSample
+      - name: Apply isolated INF-2663 regression fix to pinned SysVAD checkout
+        shell: pwsh
+        run: |
+          # Baseline code stays pinned and unchanged in GitHub. Modify only this disposable CI checkout.
+          $path = 'upstream/audio/sysvad/TabletAudioSample/ComponentizedAudioSample.inx'
+          $before = Get-Content -LiteralPath $path -Raw
+          $needle = 'Needs=KS.Registration, WDMAUDIO.Registration'
+          $after = 'Needs=KS.Registration, WDMAUDIO.Registration, MsApoFxProxy.Registration'
+          $count = ([regex]::Matches($before, [regex]::Escape($needle))).Count
+          if ($count -ne 1) { throw "Unexpected SysVAD INF baseline: expected one Needs line, found $count" }
+          $updated = $before.Replace($needle, $after)
+          $updated | Set-Content -LiteralPath $path -Encoding utf8 -NoNewline
+          if (([regex]::Matches((Get-Content -LiteralPath $path -Raw), [regex]::Escape($after))).Count -ne 1) { throw 'INF regression patch not applied exactly once' }
+          "origin=Microsoft SysVAD d49bb7d72f3651952b2b6e4ad28d14fe2247eb69" | Set-Content evidence/inf-2663-patch.txt
+          "reason=InfVerif ERROR(2663) at SYSVAD_SA.NT Needs missing MsApoFxProxy.Registration" | Add-Content evidence/inf-2663-patch.txt
+          "old=$needle" | Add-Content evidence/inf-2663-patch.txt
+          "new=$after" | Add-Content evidence/inf-2663-patch.txt
+          "modified_source_sha256=$((Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash)" | Add-Content evidence/inf-2663-patch.txt
+      - name: Build EndpointsCommon x64 then locally INF-patched TabletAudioSample
         shell: pwsh
         run: |
           Copy-Item project/driver/Directory.Build.props upstream/Directory.Build.props -Force
