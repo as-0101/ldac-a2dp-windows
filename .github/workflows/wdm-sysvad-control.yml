@@ -73,10 +73,27 @@ jobs:
           $libs | ForEach-Object { "$($_.FullName) $($_.Length) $((Get-FileHash $_.FullName -Algorithm SHA256).Hash)" } | Set-Content evidence/endpoints-lib-sha256.txt
           if (!$libs.Count) { throw 'EndpointsCommon built without producing required .lib' }
           $sample = 'upstream/audio/sysvad/TabletAudioSample/TabletAudioSample.vcxproj'
-          & msbuild $sample /m /nologo /p:Configuration=Release /p:Platform=x64 /p:SignMode=Off /v:minimal '/flp:logfile=evidence/sysvad-msbuild.log;verbosity=normal'
+          # This is COMPILE-ONLY: the NuGet x64 WDK does not include the x86 INF/API DLLs the built-in MSBuild tasks request.
+          # Run standalone x64 InfVerif separately, NEVER label this a validated or installable driver package.
+          & msbuild $sample /m /nologo /p:Configuration=Release /p:Platform=x64 /p:SignMode=Off /p:SkipPackageVerification=true /p:ApiValidator_Enable=false /p:RunApiValidator=false /v:minimal '/flp:logfile=evidence/sysvad-msbuild.log;verbosity=normal'
           $rc = $LASTEXITCODE
-          "tablet_msbuild_exit_code=$rc" | Add-Content evidence/exit-code.txt
-          if ($rc -ne 0) { throw "SysVAD control MSBuild failed, code $rc" }
+          "tablet_compile_only_exit_code=$rc" | Add-Content evidence/exit-code.txt
+          if ($rc -ne 0) { throw "SysVAD compile-only MSBuild failed, code $rc" }
+      - name: Independently inspect generated INF files with x64 InfVerif
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem -LiteralPath 'upstream/packages' -Recurse -File -Filter InfVerif.exe | Where-Object { $_.Directory.Name -eq 'x64' } | Select-Object -First 1
+          if (!$exe) { throw 'Standalone x64 InfVerif.exe missing' }
+          $infs = @(Get-ChildItem 'upstream/audio/sysvad/TabletAudioSample/x64/Release' -File -Filter '*.inf' -ErrorAction SilentlyContinue)
+          if (!$infs.Count) { throw 'No generated INF to verify independently' }
+          $failed = @()
+          foreach ($inf in $infs) {
+            "INF=$($inf.Name)" | Add-Content evidence/infverif-standalone.txt
+            & $exe.FullName /h $inf.FullName 2>&1 | Out-String -Width 240 | Add-Content evidence/infverif-standalone.txt
+            "infverif_$($inf.Name)_exit_code=$LASTEXITCODE" | Add-Content evidence/exit-code.txt
+            if ($LASTEXITCODE -ne 0) { $failed += $inf.Name }
+          }
+          if ($failed.Count) { throw "Standalone x64 InfVerif failed: $($failed -join ', '); see artifact" }
       - name: Capture control metadata and output hashes (no binaries)
         if: always()
         shell: pwsh
