@@ -7,6 +7,7 @@ on:
       - 'tools/research/hfp_inf_cat_gate.py'
       - 'tools/research/test_hfp_inf_cat_gate.py'
       - 'tools/research/probe_hfp_server_readonly.ps1'
+      - 'tools/stand/collect_win10_hfp_inf_cat_evidence.ps1'
   workflow_dispatch:
 permissions:
   contents: read
@@ -22,6 +23,22 @@ jobs:
           New-Item -ItemType Directory -Force evidence | Out-Null
           python -m unittest discover -s tools/research -p test_hfp_inf_cat_gate.py -v 2>&1 | Tee-Object evidence/inf-test-results.txt
           if ($LASTEXITCODE -ne 0) { throw 'HFP INF structure tests failed' }
+      - name: Parse Win10 donor collector and reject its use on Server
+        shell: pwsh
+        run: |
+          $path = (Resolve-Path 'tools/stand/collect_win10_hfp_inf_cat_evidence.ps1').Path
+          $tokens = $null
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile($path,[ref]$tokens,[ref]$errors) | Out-Null
+          if ($errors.Count -gt 0) { throw ($errors | Out-String) }
+          $rejected = $false
+          try {
+            & $path -OutputDirectory 'evidence/donor-collector-must-not-run'
+          } catch {
+            if ($_.Exception.Message -like '*Windows 10 donor required*') { $rejected = $true } else { throw }
+          }
+          if (!$rejected) { throw 'The donor collector did not reject Server 2022!' }
+          'parse=PASS;server_guard=PASS;no_donor_files_copied=true' | Set-Content evidence/win10-collector-safety-control.txt
       - name: Read only real Server 2022 HFP / signature prerequisite inventory
         shell: pwsh
         run: |
