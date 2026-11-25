@@ -48,14 +48,34 @@ jobs:
           $dir = $stamps[0].Directory.FullName
           $dir | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
           "selected_stampinf=$($stamps[0].FullName)" | Add-Content evidence/runner.txt
-      - name: Build unmodified TabletAudioSample x64 control
+      - name: Inspect WDK INF verification target and available tools
+        shell: pwsh
+        run: |
+          $toolRoots = @('upstream/packages', 'C:/Program Files (x86)/Windows Kits/10') | Where-Object { Test-Path -LiteralPath $_ }
+          $names = @('infverif.exe', 'infverif.dll')
+          $found = foreach ($root in $toolRoots) { foreach ($name in $names) { Get-ChildItem -LiteralPath $root -Recurse -File -Filter $name -ErrorAction SilentlyContinue | Select-Object -ExpandProperty FullName } }
+          @($found) | Set-Content evidence/infverif-paths.txt
+          $targetFile = Get-ChildItem -LiteralPath 'upstream/packages' -Recurse -File -Filter WindowsDriver.common.targets -ErrorAction SilentlyContinue | Select-Object -First 1
+          if ($targetFile) {
+            "wdk_targets=$($targetFile.FullName)" | Set-Content evidence/infverif-target-context.txt
+            Select-String -LiteralPath $targetFile.FullName -Pattern 'InfVerif|RunInfVerif|InfVerifToolPath' -Context 2,3 | Out-String -Width 260 | Add-Content evidence/infverif-target-context.txt
+          }
+      - name: Build unmodified EndpointsCommon x64 dependency then TabletAudioSample
         shell: pwsh
         run: |
           Copy-Item project/driver/Directory.Build.props upstream/Directory.Build.props -Force
+          $common = 'upstream/audio/sysvad/EndpointsCommon/EndpointsCommon.vcxproj'
+          & msbuild $common /m /nologo /p:Configuration=Release /p:Platform=x64 /p:SignMode=Off /v:minimal '/flp:logfile=evidence/endpoints-msbuild.log;verbosity=normal'
+          $depRc = $LASTEXITCODE
+          "endpoints_msbuild_exit_code=$depRc" | Set-Content evidence/exit-code.txt
+          if ($depRc -ne 0) { throw "EndpointsCommon control MSBuild failed, code $depRc" }
+          $libs = @(Get-ChildItem 'upstream/audio/sysvad/EndpointsCommon' -Recurse -File -Filter EndpointsCommon.lib -ErrorAction SilentlyContinue)
+          $libs | ForEach-Object { "$($_.FullName) $($_.Length) $((Get-FileHash $_.FullName -Algorithm SHA256).Hash)" } | Set-Content evidence/endpoints-lib-sha256.txt
+          if (!$libs.Count) { throw 'EndpointsCommon built without producing required .lib' }
           $sample = 'upstream/audio/sysvad/TabletAudioSample/TabletAudioSample.vcxproj'
           & msbuild $sample /m /nologo /p:Configuration=Release /p:Platform=x64 /p:SignMode=Off /v:minimal '/flp:logfile=evidence/sysvad-msbuild.log;verbosity=normal'
           $rc = $LASTEXITCODE
-          "msbuild_exit_code=$rc" | Set-Content evidence/exit-code.txt
+          "tablet_msbuild_exit_code=$rc" | Add-Content evidence/exit-code.txt
           if ($rc -ne 0) { throw "SysVAD control MSBuild failed, code $rc" }
       - name: Capture control metadata and output hashes (no binaries)
         if: always()
