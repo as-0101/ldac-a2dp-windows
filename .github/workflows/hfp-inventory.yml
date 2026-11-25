@@ -1,0 +1,40 @@
+name: Inventory Classic Bluetooth HFP on Server 2022
+on:
+  push:
+    branches: [experiment/native-donor-inf-20261124]
+    paths: [.github/workflows/hfp-inventory.yml]
+permissions: {}
+jobs:
+  inventory:
+    runs-on: windows-2022
+    timeout-minutes: 7
+    steps:
+      - name: Inspect published packages, payloads and service definitions
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $cv = Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion'
+          if ($env:RUNNER_ENVIRONMENT -ne 'github-hosted' -or $cv.CurrentBuild -ne '20348') { throw 'Wrong target' }
+          "TARGET=$($cv.CurrentBuild).$($cv.UBR)"
+          $names = 'BTHHFENUM|BTHHFAUD|BTHHFSRV|BTAGService|BthAGAudio|BthAvctpSvc|BthA2dp|BtaMPM'
+          $paths = @("$env:windir\INF","$env:windir\System32\drivers","$env:windir\System32","$env:windir\System32\DriverStore\FileRepository","$env:windir\WinSxS\Manifests")
+          foreach ($path in $paths) {
+            $entries = @(Get-ChildItem -LiteralPath $path -Force)
+            "INVENTORY path=$path entries=$($entries.Count) HFP_MATCHES=$(@($entries | Where-Object Name -match $names).Count)"
+            $entries | Where-Object Name -match $names | ForEach-Object { "MATCH $($_.Name)" }
+          }
+          foreach ($name in 'BthPort','BthEnum','BTHUSB','bthserv','AudioSrv','AudioEndpointBuilder','BthHfEnum','BthHfAud','BthHFSrv','BTAGService','BthAvctpSvc','BthA2dp','BtaMPM') {
+            $key = "HKLM:\SYSTEM\CurrentControlSet\Services\$name"
+            if (Test-Path -LiteralPath $key) {
+              $entry = Get-ItemProperty -LiteralPath $key
+              "SERVICE $name present=True type=$($entry.Type) start=$($entry.Start) image=$($entry.ImagePath)"
+            } else { "SERVICE $name present=False" }
+          }
+          $inf = Join-Path $env:windir 'INF\bth.inf'
+          if (!(Test-Path -LiteralPath $inf) -or !(Test-Path 'HKLM:\SYSTEM\CurrentControlSet\Services\BthPort')) { throw 'Core positive control absent' }
+          Select-String -LiteralPath $inf -Pattern '0000111e-0000-1000-8000-00805f9b34fb' | ForEach-Object { "GENERIC line=$($_.Line.Trim())" }
+          $selected = @(Get-ChildItem "$env:windir\System32\DriverStore\FileRepository" -Directory | Where-Object Name -match '^(bth|ibt|bluetooth|microsoft_bluetooth|rtka2dp)')
+          $infs = @($selected | ForEach-Object { Get-ChildItem -LiteralPath $_.FullName -Filter *.inf -File })
+          "DRIVER_INF inspected=$($infs.Count)"
+          if (!$infs.Count) { throw 'DriverStore scan had no inputs' }
+          $infs | Select-String -Pattern $names | ForEach-Object { "INF_HIT $($_.Filename):$($_.LineNumber) $($_.Line.Trim())" }
