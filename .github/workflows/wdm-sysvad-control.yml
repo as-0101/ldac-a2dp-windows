@@ -42,7 +42,7 @@ jobs:
         shell: pwsh
         run: |
           $roots = @('upstream/packages', 'C:/Program Files (x86)/Windows Kits/10') | Where-Object { Test-Path -LiteralPath $_ }
-          $stamps = @($roots | ForEach-Object { Get-ChildItem -LiteralPath $_ -Filter stampinf.exe -Recurse -File -ErrorAction SilentlyContinue })
+          $stamps = @($roots | ForEach-Object { Get-ChildItem -LiteralPath $_ -Filter stampinf.exe -Recurse -File -ErrorAction SilentlyContinue } | Where-Object { $_.Directory.Name -ieq 'x64' } | Sort-Object FullName)
           $stamps | Select-Object -ExpandProperty FullName | Set-Content evidence/stampinf-candidates.txt
           if (!$stamps.Count) { throw 'WDK StampInf missing from restored NuGet and installed SDK: inspect evidence/stampinf-candidates.txt' }
           $dir = $stamps[0].Directory.FullName
