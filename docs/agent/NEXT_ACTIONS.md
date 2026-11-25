@@ -1,3 +1,11 @@
+# Active executable queue — 2026-11-25
+## P0-WDM: independent audio control (new priority)
+1. On research/wdm-profile-reengineering, inspect Microsoft's SysVAD PortCls sample and existing repository build tooling. Identify exact WDK 20348-compatible render/capture topology and dependencies. Pin sample revision, record license and source. Build an unmodified control on an available free isolated Windows runner, without changing trust policy. Inspect logs, PE imports and INF closure. A build is not a loaded endpoint. If signed installation is unavailable, record signing as a runtime gate and continue static and transport checks.
+2. Compare documented Bluetooth BRB L2CAP and SCO interfaces with Server headers/import inventory. Design independent transport adapter with A2DP Source and HFP AG state machines; reuse only license-compatible existing code. Test protocol logic independently of hardware; save actual test output. No fabricated endpoint claims.
+3. HFP: check fixed donor CI fd55005a rather than rerun original failed job. Use connector jobs/logs/artifacts; if listing unavailable record exact limitation and advance WDM.
+4. In every run make an actual tool call first, perform a concrete test or analysis, persist evidence and next task. A report without work is not a successful cycle. Never invent a blocker.
+
+## Prior queue (still applicable)
 # Active queue — 2026-11-25
 Canonical scope: [START_HERE](../../START_HERE.md). Historical queue: [archive](../../archive/2026-11-25/docs/agent/NEXT_ACTIONS.md).
 ## P0 HFP donor dependency evidence
