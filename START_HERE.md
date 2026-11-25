@@ -2,6 +2,12 @@
 
 User clarified 2026-11-24: the deliverable is restoration of standard Bluetooth Classic A2DP Source playback on Windows Server 2022 using the existing Windows Bluetooth transport, not an OPPO- or Intel-specific driver. OPPO Enco Buds2 and Intel are reference hardware only. The design must not require vendor-specific controller IDs or headset model IDs in profile binding; use the standard remote Audio Sink service UUID (0x110B) where appropriate. Controller vendors can supply transport drivers and optional proprietary extensions, so compatibility is conditional on a working Windows-compatible Bluetooth Classic transport and remote A2DP Sink support. Preserve Server inbox Bluetooth core and audio core. Initial success: stable SBC stereo endpoint and audible playback on reference hardware. Generalization: separately validate other available controller/headset combinations (ideally Intel and Realtek with distinct A2DP headsets); do not claim universal hardware compatibility before testing. LDAC and HFP remain separate later milestones. This clarification does not change the active WDM research path, authorize physical-host modifications, or prove runtime support.
 
+## 2026-11-25 — HFP donor dependency audit started
+
+Read-only Win10 donor WIM inventory [run 45586559618](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45586559618), commit a787409c8f5ee27907d92644c2b483d243ff2611. The workflow records HFP INF Include/Needs, service and model directives, SHA-256 hashes, PE import metadata and the donor offline service registrations. It keeps the original payloads in the disposable runner and publishes metadata only. Check the job and hfp-win10-metadata artifact before attributing results. Hosted Server 20348.5870 file/service inventory is already complete.
+
+The original CI #6 artifact was rechecked at SHA-256 8a6742e5185d28539f9ba281faf0618c3b560534e94cbf3e8c64ec109f66d005. All five signature checks passed. Each of the three PnPUtil attempts added zero packages and returned 0xE000022F. The common INF also could not locate BtaMpm.inf, and the source INF could not locate the common INF. The standalone MPM attempt reported no missing Include. No physical-host changes.
+
 ## 2026-11-25 — HFP inventory completed
 
 The exact Windows 10 profile family microsoft_bluetooth_hfp.inf, its BthHfAud runtime and candidate HFP service definitions were absent from the inspected hosted Server 20348.5870 inventory. The generic 0x111E mapping and core service controls were present. Windows 10 SetupAPI identifies the original HFP audio child, INF and SYS. [Evidence](/research/native-inf-preflight-20261124/hfp-inventory.md).
@@ -16,9 +22,9 @@ A2DP Source remains the stereo SBC milestone. HFP Audio Gateway is a separate mi
 
 All three original donor INFs failed staging with 0xE000022F, including the standalone MPM attempt. On hosted Server 20348.5870, explicit append exposed all eight tested sections and the donor SYS pair resolved 149 and 42 direct imports respectively in a static check. No runtime binding or audio result. [Report](/research/native-inf-preflight-20261124/donor-results.md).
 
-## 2026-11-25 — Dependency-first staging CI started
+## 2026-11-25 — Dependency-first staging CI completed
 
-[Run 45511693396](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45511693396) on experiment/win10-a2dp-stage-smoke-20261124, commit df8eb05e896312277938c01fda37a51418c374d7. The hosted Server preflight and PowerShell syntax checks passed. Step 7 prepares the donor WIM and verifies original Microsoft CAT membership before separate PnPUtil calls in common INF, MPM INF, source INF order. Each call records its exit code, matching newly staged entries and appended SetupAPI log. The disposable runner does not install devices, change signature policy or register a catalog in this experiment. Check the run's step 7 log and stage-test.json before assigning any staging result. CI #5's equivalent image preparation and staging step took about 27 minutes.
+[Run 45511693396](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45511693396) verified the original catalog against the donor payloads. All three individual imports failed with 0xE000022F. See [donor results](/research/native-inf-preflight-20261124/donor-results.md).
 
 ## 2026-11-25 — Bluetooth deployment and additional component media checked
 
