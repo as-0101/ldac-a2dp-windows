@@ -1,0 +1,50 @@
+name: Read-only HFP INF CAT signed package gate
+on:
+  push:
+    branches: [research/hfp-inf-cat-gate-20261125]
+    paths:
+      - '.github/workflows/hfp-inf-cat-readonly.yml'
+      - 'tools/research/hfp_inf_cat_gate.py'
+      - 'tools/research/test_hfp_inf_cat_gate.py'
+      - 'tools/research/probe_hfp_server_readonly.ps1'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  hfp-inbox-control:
+    runs-on: windows-2022
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: INF parser unit controls (no Microsoft binaries)
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force evidence | Out-Null
+          python -m unittest discover -s tools/research -p test_hfp_inf_cat_gate.py -v 2>&1 | Tee-Object evidence/inf-test-results.txt
+          if ($LASTEXITCODE -ne 0) { throw 'HFP INF structure tests failed' }
+      - name: Read only real Server 2022 HFP / signature prerequisite inventory
+        shell: pwsh
+        run: |
+          ./tools/research/probe_hfp_server_readonly.ps1 -OutputDirectory evidence
+          python tools/research/hfp_inf_cat_gate.py --root "$env:windir/INF" --out evidence/hfp-infs-os.json
+          if ($LASTEXITCODE -ne 0) { throw 'HFP INF metadata scanner failed' }
+          python tools/research/hfp_inf_cat_gate.py --root "$env:windir/System32/DriverStore/FileRepository" --out evidence/hfp-infs-driverstore.json
+          if ($LASTEXITCODE -ne 0) { throw 'HFP DriverStore scanner failed' }
+      - name: Classify gate without INF/CAT false positives
+        shell: pwsh
+        run: |
+          $os = Get-Content evidence/hfp-infs-os.json -Raw | ConvertFrom-Json
+          $store = Get-Content evidence/hfp-infs-driverstore.json -Raw | ConvertFrom-Json
+          $server = Get-Content evidence/server-hfp-signing-gate.json -Raw | ConvertFrom-Json
+          if ($server.environment.build -ne '20348') { throw 'Not Windows Server 2022 build 20348' }
+          $status = [ordered]@{ runner='Server 2022'; installed_inf_status=$os.status; driverstore_inf_status=$store.status; contains_original_hfp_inf=([bool]$server.hfp_inf_in_windows_inf -or @($server.hfp_driverstore_directories).Count -gt 0); signature_membership='UNTESTED'; real_HFP_driver_load='NOT_ATTEMPTED'; source='read_only_current_server_only' }
+          $status | ConvertTo-Json -Depth 6 | Set-Content evidence/hfp-gate-verdict.json -Encoding utf8
+          Write-Host "HFP_SIGNING_GATE originalInf=$($status.contains_original_hfp_inf) signedMembership=UNTESTED load=NOT_ATTEMPTED"
+      - name: Upload metadata and test logs only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hfp-inbox-signature-gate-metadata
+          path: evidence/
+          retention-days: 7
+          if-no-files-found: warn
