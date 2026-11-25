@@ -20,7 +20,9 @@ $infRecords = foreach ($inf in @($infs + @($files | Where-Object Extension -eq '
 $peScript = Join-Path $PSScriptRoot 'audit_pe_binary.py'
 $peDir = Join-Path $OutputDirectory 'hfp-pe'
 New-Item -Path $peDir -ItemType Directory -Force | Out-Null
+$hasBthHfAud = $false
 $hashes = foreach ($file in @($files + $payload | Sort-Object FullName -Unique)) {
+  if ($file.Name -ieq 'BthHfAud.sys') { $hasBthHfAud = $true }
   $sha=(Get-FileHash -LiteralPath $file.FullName).Hash
   if ($file.Extension -in '.sys','.dll') {
     $report=Join-Path $peDir ($file.Name+'-'+$sha.Substring(0,12)+'.json')
@@ -31,6 +33,6 @@ $hashes = foreach ($file in @($files + $payload | Sort-Object FullName -Unique))
   }
   [ordered]@{ path=$file.FullName.Substring($MountDirectory.Length+1); sha256=$sha; bytes=$file.Length }
 }
-if (!(@($hashes | Where-Object { $_['path'] -match '\\BthHfAud\.sys$' }).Count)) { throw 'BthHfAud positive control absent' }
+if (!$hasBthHfAud) { throw 'BthHfAud positive control absent' }
 [ordered]@{ packages=@($packages.Name); files=@($hashes); infs=@($infRecords) } | ConvertTo-Json -Depth 10 | Set-Content -Encoding utf8 (Join-Path $OutputDirectory 'hfp-donor.json')
 "HFP_DONOR packages=$($packages.Count) files=$(@($hashes).Count) infs=$(@($infRecords).Count)"
