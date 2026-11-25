@@ -1,3 +1,7 @@
+## 2026-11-25 — CI #6 completed; direct import names resolved
+
+All three original donor INFs failed staging with 0xE000022F, including the standalone MPM attempt. On hosted Server 20348.5870, explicit append exposed all eight tested sections and the donor SYS pair resolved 149 and 42 direct imports respectively in a static check. No runtime binding or audio result. [Report](/research/native-inf-preflight-20261124/donor-results.md).
+
 ## 2026-11-24 — VM_TEST / STATIC_ANALYSIS
 
 Native CI runs 45482378430 (failed control), 45482659386 (fixed control), 45482793915 (signature matrix) and 45482932167 (one-byte parseable mutation) reviewed. Last three succeeded on 20348.5870. Offline CTL, MUM, physical capture and staging-log comparisons passed. [Native INF preflight and signed-catalog evidence](/research/native-inf-preflight-20261124/README.md).

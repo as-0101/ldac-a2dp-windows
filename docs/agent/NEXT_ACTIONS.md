@@ -1,3 +1,7 @@
+## 2026-11-25 — CI #6 completed; direct import names resolved
+
+All three original donor INFs failed staging with 0xE000022F, including the standalone MPM attempt. On hosted Server 20348.5870, explicit append exposed all eight tested sections and the donor SYS pair resolved 149 and 42 direct imports respectively in a static check. No runtime binding or audio result. [Report](/research/native-inf-preflight-20261124/donor-results.md).
+
 ## 2026-11-24 — Next candidate gate
 
 Native read-only preflight is complete. Resume package staging only with an identified Server-applicable amd64 profile package or documented servicing component and resolvable dependencies. The inspected Intel radio package and CSR profile listing do not establish this. [Native INF preflight and signed-catalog evidence](/research/native-inf-preflight-20261124/README.md).
