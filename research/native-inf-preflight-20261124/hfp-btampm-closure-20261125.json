@@ -1,0 +1,46 @@
+{
+  "scope": "Static name-only PE import/export closure; no CAT/staging/binding/driver load",
+  "hfp_run_id": 45612001590,
+  "hfp_artifact_id": 15023735500,
+  "hfp_artifact_zip_sha256": "d105dea586066c10e3f162a0bb1fb4dae5280dbe5041b6bac3527ad7043f610d",
+  "a2dp_archive_zip_sha256": "e750de7636098d71b73cc64542059547c0854cbdbf39547b0b6c4c2fc280c60d",
+  "bta_driver_sha256": "da5cbbdce6ac511ef8400e121df6b6eaca7d05c0f40a01f7353ce9f220eb3dcd",
+  "bta_export_count": 14,
+  "enum_versions": [
+    {
+      "report_file": "hfp-pe/BthHfEnum.sys-1E9A3CA8F834.json",
+      "driver_sha256": "1e9a3ca8f834c12a2c866e6f65ab5cf1116b641298578e0b753718790287538c",
+      "size_bytes": 149504,
+      "btampm_imports_count": 7,
+      "missing_export_names": [],
+      "imported_names": [
+        "BtaMpmBuildIndirectStringFromMessageWithSingleUTF8Arg",
+        "BtaMpmConnectionRequest",
+        "BtaMpmGetRemoteDeviceProfileVersionAndAttribute",
+        "BtaMpmRegister",
+        "BtaMpmSuspendRequest",
+        "BtaMpmUnregister",
+        "BtaMpmUpdateConnectionStatus"
+      ],
+      "closure_by_name": true
+    },
+    {
+      "report_file": "hfp-pe/BthHfEnum.sys-91C72C54142A.json",
+      "driver_sha256": "91c72c54142a0d4e5a5f33268850ceb8315aa30c2f0b74a9ffa962887abac797",
+      "size_bytes": 144896,
+      "btampm_imports_count": 7,
+      "missing_export_names": [],
+      "imported_names": [
+        "BtaMpmBuildIndirectStringFromMessageWithSingleUTF8Arg",
+        "BtaMpmConnectionRequest",
+        "BtaMpmGetRemoteDeviceProfileVersionAndAttribute",
+        "BtaMpmRegister",
+        "BtaMpmSuspendRequest",
+        "BtaMpmUnregister",
+        "BtaMpmUpdateConnectionStatus"
+      ],
+      "closure_by_name": true
+    }
+  ],
+  "all_7_imports_resolve": true
+}
