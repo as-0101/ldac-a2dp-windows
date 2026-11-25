@@ -2,12 +2,14 @@
 param(
     [string]$OutputDirectory = "build/uup-image-audit",
     [switch]$Win10Only,
+    [switch]$HfpInventory,
     [switch]$StagePackageOnRunner
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"
+if ($HfpInventory -and (!$Win10Only -or $StagePackageOnRunner -or $env:RUNNER_ENVIRONMENT -ne 'github-hosted')) { throw 'HFP inventory requires a hosted runner and Win10-only read-only analysis' }
 
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
 $AuditScript = Join-Path $RepoRoot "tools\research\audit_pe_binary.py"
@@ -381,7 +383,7 @@ function Get-OfflineServiceSummary {
         if ($null -eq $currentValue) { throw "Offline SYSTEM hive has no Select\Current value." }
         $current = [int]$currentValue
         $controlSet = "ControlSet{0:D3}" -f $current
-        $serviceNames = @("BthA2dp", "BtaMPM", "BthPort", "BthEnum", "BTHUSB", "AudioSrv", "AudioEndpointBuilder")
+        $serviceNames = @("BthA2dp", "BtaMPM", "BthPort", "BthEnum", "BTHUSB", "AudioSrv", "AudioEndpointBuilder", "BthHfEnum", "BthHfAud", "BthHFSrv", "BTAGService", "BthAvctpSvc")
         $records = foreach ($serviceName in $serviceNames) {
             $servicePath = "Registry::HKEY_LOCAL_MACHINE\$hiveName\$controlSet\Services\$serviceName"
             if (Test-Path -LiteralPath $servicePath) {
@@ -962,6 +964,9 @@ function Collect-Image {
         $identity = Get-OfflineImageIdentity -MountDirectory $mountDirectory -WorkDirectory $WorkDirectory -Target $Target
         Write-Host "Verified offline image identity: $($identity.productName); $($identity.imageVersion); EditionID=$($identity.editionId); InstallationType=$($identity.installationType)"
         try {
+            if ($HfpInventory) {
+                & (Join-Path $PSScriptRoot 'inspect_hfp_donor.ps1') -MountDirectory $mountDirectory -OutputDirectory $OutputDirectory
+            }
             $searchRoots = @(
                 (Join-Path $mountDirectory "Windows\System32\drivers"),
                 (Join-Path $mountDirectory "Windows\System32"),
@@ -1207,7 +1212,7 @@ if ($StagePackageOnRunner) {
 }
 
 Remove-Item -LiteralPath $ServerReferenceDirectory -Recurse -Force -ErrorAction SilentlyContinue
-& (Join-Path $PSScriptRoot 'probe_exact_donor.ps1') -InputDirectory $Win10PackageFilesDirectory
+if (!$HfpInventory) { & (Join-Path $PSScriptRoot 'probe_exact_donor.ps1') -InputDirectory $Win10PackageFilesDirectory }
 Remove-Item -LiteralPath $Win10PackageFilesDirectory -Recurse -Force -ErrorAction SilentlyContinue
 Write-Host "UUP image audit complete. Manifest: $(Join-Path $OutputDirectory 'manifest.json')"
 exit 0
