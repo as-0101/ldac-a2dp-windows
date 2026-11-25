@@ -5,6 +5,13 @@
 3. HFP: check fixed donor CI fd55005a rather than rerun original failed job. Use connector jobs/logs/artifacts; if listing unavailable record exact limitation and advance WDM.
 4. In every run make an actual tool call first, perform a concrete test or analysis, persist evidence and next task. A report without work is not a successful cycle. Never invent a blocker.
 
+## Verified checkpoint 2026-11-25 — next runnable discriminators
+- WDM SysVAD static gate: 6/6 unit tests and 9/9 pinned source assertions pass on CI 45653348638. It does not prove a running endpoint.
+- WDM native build: CI 45653348638 blocked TRK0005 stampinf.exe; diagnostic CI 45653894037 found stampinf but chose ARM64 and failed TRK0002. Fix x64 selection committed 552870ff83abaa98bd622f34f81006c0a362b026. CHECK actual next CI log and outcome, no false build success.
+- Independent pre-existing A2DP: pinned RafiMota/open-a2dp 167ebc0 (MIT + MS-PL derivatives) built both oa2dp.sys and PortCls oa2dpaudio.sys and Inf2Cat on Windows runner CI 38632901913. Not tested on Server or headset; HFP not implemented. Evidence research/wdm-portcls/OPEN_A2DP_COMPARISON.md on research/wdm-profile-reengineering. This is a promising SBC-first implementation to audit against Server BthPort/PortCls, not a substitute for actual hardware acceptance.
+- HFP diagnostic repaired a3e0551 but donor CI 45652810986 attempts 1 and 2 failed BEFORE audit on UUP HTTP 504. No repeated identical downloader calls; use cached donor or change source and compare HFP provider/exports separately.
+**Next concrete experiment:** check running x64 SysVAD CI; if success capture driver .sys hashes, PE imports and INF closure on hosted Server without publishing binaries or installing; independently inspect open-a2dp applicability and design HFP RFCOMM+SCO AG capture. Preserve physical Server and trust policy.
+
 ## Prior queue (still applicable)
 # Active queue — 2026-11-25
 Canonical scope: [START_HERE](../../START_HERE.md). Historical queue: [archive](../../archive/2026-11-25/docs/agent/NEXT_ACTIONS.md).
