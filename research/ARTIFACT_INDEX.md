@@ -1,3 +1,7 @@
+## 2026-11-25 — HFP inventory
+
+[Report](/research/native-inf-preflight-20261124/hfp-inventory.md). /LDAC Project/Artifacts/HFP-Server2022-inventory-20261125.md, libfile_2ef56deb57ac8191a28ec89d02c730fb, SHA-256 3bb581bc89d82372f58242bbc3f023033789ea3f9475b157f88b488d2267c1eb.
+
 ## 2026-11-25 — Donor CI results
 
 /LDAC Project/Artifacts/A2DP-donor-results-20261125.zip, libfile_3763b22cab088191ad573bb12275ad12, SHA-256 e750de7636098d71b73cc64542059547c0854cbdbf39547b0b6c4c2fc280c60d. Contains original CI #6 artifact, import observations and [report](/research/native-inf-preflight-20261124/donor-results.md).
