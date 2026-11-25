@@ -1,0 +1,15 @@
+name: Check headset input and output inventory
+on:
+  push:
+    branches: [experiment/native-donor-inf-20261124]
+    paths: ['tools/stand/headset-endpoints.ps1','.github/workflows/headset-endpoints.yml']
+permissions:
+  contents: read
+jobs:
+  inventory:
+    runs-on: windows-2022
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - shell: pwsh
+        run: ./tools/stand/headset-endpoints.ps1
