@@ -30,6 +30,17 @@ class AuditTests(unittest.TestCase):
         td,d=self.fixture({'hfp':'// no bthhfpddi.h and no ioctl'})
         with td:
             r=scan(d); self.assertFalse(r['passed']); self.assertFalse(r['checks']['hfp_sideband_ioctl_dependency'])
+    def test_utf16le_bom_inf_supported(self):
+        td,d=self.fixture()
+        with td:
+            (d/PATHS['inf']).write_text(DATA['inf'], encoding='utf-16')
+            r=scan(d); self.assertTrue(r['passed'],r['checks'])
+    def test_invalid_encoding_fails_closed(self):
+        td,d=self.fixture()
+        with td:
+            (d/PATHS['inf']).write_bytes(b"\xff\xfe\xff")
+            with self.assertRaises(UnicodeError):
+                scan(d)
     def test_comment_not_sufficient(self):
         td,d=self.fixture({'inf':'[Version]\n; AddInterface=%KSCATEGORY_CAPTURE%,%KSNAME_WaveBthHfpMic%\n'+DATA['inf'].replace('KSCATEGORY_CAPTURE','NONE')})
         with td:

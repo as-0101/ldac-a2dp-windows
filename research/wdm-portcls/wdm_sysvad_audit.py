@@ -15,8 +15,16 @@ PATHS = {
     "pairs": "audio/sysvad/EndpointsCommon/bthhfpminipairs.h",
 }
 
+def read_unicode(path: Path) -> str:
+    raw = path.read_bytes()
+    if raw.startswith(b"\xff\xfe"):
+        return raw[2:].decode("utf-16-le")
+    if raw.startswith(b"\xfe\xff"):
+        return raw[2:].decode("utf-16-be")
+    return raw.decode("utf-8-sig")
+
 def scan(root: Path) -> dict:
-    texts = {k: (root / rel).read_text(encoding="utf-8-sig") for k, rel in PATHS.items()}
+    texts = {k: read_unicode(root / rel) for k, rel in PATHS.items()}
     inf = "\n".join(l.split(";", 1)[0].strip() for l in texts["inf"].splitlines())
     project = texts["project"]
     hfp = texts["hfp"]
