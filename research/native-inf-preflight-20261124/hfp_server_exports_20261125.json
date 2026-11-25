@@ -1,0 +1,236 @@
+{
+  "scope": "Static named PE import/export resolution only, no ABI/runtime/signature/binding",
+  "source_archives": {
+    "hfp_metadata": "d105dea586066c10e3f162a0bb1fb4dae5280dbe5041b6bac3527ad7043f610d",
+    "server_exports": "5d52b990b9c8850696f452dc9c6cae8a1860014b1a8028348ee6a664865f2f53",
+    "a2dp_donor_results": "e750de7636098d71b73cc64542059547c0854cbdbf39547b0b6c4c2fc280c60d"
+  },
+  "server_environment": "Caption=Microsoft Windows Server 2022 Datacenter\r\nVersion=10.0.20348\r\nBuildNumber=20348\r\nOSArchitecture=64-bit\r\nDUMPBIN=C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\VC\\Tools\\MSVC\\14.29.30133\\bin\\HostX64\\x64\\dumpbin.exe",
+  "server_module_status_sha256": "4f806303c289d880d437fc87864db2ce895636d60c0c7b201aa77a0102706ed8",
+  "server_inventory_name_counts": {
+    "ks.sys": 239,
+    "cng.sys": 67,
+    "hal.dll": 91,
+    "ksecdd.sys": 110,
+    "ntoskrnl.exe": 3146,
+    "sleepstudyhelper.sys": 18,
+    "wdfldr.sys": 10,
+    "wpprecorder.sys": 17
+  },
+  "bta_export_count": 14,
+  "pe_reports": [
+    {
+      "file": "hfp-pe/BthHfAud.sys-4E4D7E1F1A6D.json",
+      "sha256": "4e4d7e1f1a6dfcdb35e2ce1c1cb99b1e23e4aef7023aa5889f44ce50dd38af9d",
+      "imports_total": 83,
+      "modules": [
+        {
+          "module": "ntoskrnl.exe",
+          "imports": 43,
+          "provided": true,
+          "missing": [],
+          "ordinal_imports": [],
+          "forwarded": [],
+          "forwarder_missing": []
+        },
+        {
+          "module": "hal.dll",
+          "imports": 1,
+          "provided": true,
+          "missing": [],
+          "ordinal_imports": [],
+          "forwarded": [
+            {
+              "name": "KeQueryPerformanceCounter",
+              "target": "ntoskrnl.KeQueryPerformanceCounter"
+            }
+          ],
+          "forwarder_missing": []
+        },
+        {
+          "module": "ks.sys",
+          "imports": 35,
+          "provided": true,
+          "missing": [],
+          "ordinal_imports": [],
+          "forwarded": [],
+          "forwarder_missing": []
+        },
+        {
+          "module": "wpprecorder.sys",
+          "imports": 4,
+          "provided": true,
+          "missing": [],
+          "ordinal_imports": [],
+          "forwarded": [],
+          "forwarder_missing": []
+        }
+      ],
+      "passed": true
+    },
+    {
+      "file": "hfp-pe/BthHfEnum.sys-1E9A3CA8F834.json",
+      "sha256": "1e9a3ca8f834c12a2c866e6f65ab5cf1116b641298578e0b753718790287538c",
+      "imports_total": 76,
+      "modules": [
+        {
+          "module": "ntoskrnl.exe",
+          "imports": 45,
+          "provided": true,
+          "missing": [],
+          "ordinal_imports": [],
+          "forwarded": [],
+          "forwarder_missing": []
+        },
+        {
+          "module": "hal.dll",
+          "imports": 1,
+          "provided": true,
+          "missing": [],
+          "ordinal_imports": [],
+          "forwarded": [
+            {
+              "name": "KeQueryPerformanceCounter",
+              "target": "ntoskrnl.KeQueryPerformanceCounter"
+            }
+          ],
+          "forwarder_missing": []
+        },
+        {
+          "module": "btampm.sys",
+          "imports": 7,
+          "provided": true,
+          "missing": [],
+          "ordinal_imports": [],
+          "forwarded": [],
+          "forwarder_missing": []
+        },
+        {
+          "module": "wpprecorder.sys",
+          "imports": 4,
+          "provided": true,
+          "missing": [],
+          "ordinal_imports": [],
+          "forwarded": [],
+          "forwarder_missing": []
+        },
+        {
+          "module": "sleepstudyhelper.sys",
+          "imports": 8,
+          "provided": true,
+          "missing": [],
+          "ordinal_imports": [],
+          "forwarded": [],
+          "forwarder_missing": []
+        },
+        {
+          "module": "ksecdd.sys",
+          "imports": 7,
+          "provided": true,
+          "missing": [],
+          "ordinal_imports": [],
+          "forwarded": [],
+          "forwarder_missing": []
+        },
+        {
+          "module": "wdfldr.sys",
+          "imports": 4,
+          "provided": true,
+          "missing": [],
+          "ordinal_imports": [],
+          "forwarded": [],
+          "forwarder_missing": []
+        }
+      ],
+      "passed": true
+    },
+    {
+      "file": "hfp-pe/BthHfEnum.sys-91C72C54142A.json",
+      "sha256": "91c72c54142a0d4e5a5f33268850ceb8315aa30c2f0b74a9ffa962887abac797",
+      "imports_total": 70,
+      "modules": [
+        {
+          "module": "ntoskrnl.exe",
+          "imports": 39,
+          "provided": true,
+          "missing": [],
+          "ordinal_imports": [],
+          "forwarded": [],
+          "forwarder_missing": []
+        },
+        {
+          "module": "hal.dll",
+          "imports": 1,
+          "provided": true,
+          "missing": [],
+          "ordinal_imports": [],
+          "forwarded": [
+            {
+              "name": "KeQueryPerformanceCounter",
+              "target": "ntoskrnl.KeQueryPerformanceCounter"
+            }
+          ],
+          "forwarder_missing": []
+        },
+        {
+          "module": "btampm.sys",
+          "imports": 7,
+          "provided": true,
+          "missing": [],
+          "ordinal_imports": [],
+          "forwarded": [],
+          "forwarder_missing": []
+        },
+        {
+          "module": "wpprecorder.sys",
+          "imports": 4,
+          "provided": true,
+          "missing": [],
+          "ordinal_imports": [],
+          "forwarded": [],
+          "forwarder_missing": []
+        },
+        {
+          "module": "sleepstudyhelper.sys",
+          "imports": 8,
+          "provided": true,
+          "missing": [],
+          "ordinal_imports": [],
+          "forwarded": [],
+          "forwarder_missing": []
+        },
+        {
+          "module": "ksecdd.sys",
+          "imports": 7,
+          "provided": true,
+          "missing": [],
+          "ordinal_imports": [],
+          "forwarded": [],
+          "forwarder_missing": []
+        },
+        {
+          "module": "wdfldr.sys",
+          "imports": 4,
+          "provided": true,
+          "missing": [],
+          "ordinal_imports": [],
+          "forwarded": [],
+          "forwarder_missing": []
+        }
+      ],
+      "passed": true
+    }
+  ],
+  "summary": {
+    "files": 3,
+    "imports": 229,
+    "unresolved": 0,
+    "all_pass": true
+  },
+  "limitations": [
+    "Server 20348.5866 inventory differs from physical 20348.5761 and hosted 20348.5870",
+    "Export name closure does not establish call ABI, PnP binding, installability, kernel signature, or loaded audio endpoints",
+    "BtaMPM exports come from pinned Win10 donor package, not from Server inbox",
+    "No physical OPPO mic or live duplex tested"
+  ]
+}
