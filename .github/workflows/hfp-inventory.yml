@@ -16,11 +16,11 @@ jobs:
           $cv = Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion'
           if ($env:RUNNER_ENVIRONMENT -ne 'github-hosted' -or $cv.CurrentBuild -ne '20348') { throw 'Wrong target' }
           "TARGET=$($cv.CurrentBuild).$($cv.UBR)"
-          $names = 'BTHHFENUM|BTHHFAUD|BTHHFSRV|BTAGService|BthAGAudio|BthAvctpSvc|BthA2dp|BtaMPM'
+          $names = 'microsoft_bluetooth_hfp|BTHHFENUM|BTHHFAUD|BTHHFSRV|BTAGService|BthAGAudio|BthAvctpSvc|BthA2dp|BtaMPM'
           $paths = @("$env:windir\INF","$env:windir\System32\drivers","$env:windir\System32","$env:windir\System32\DriverStore\FileRepository","$env:windir\WinSxS\Manifests")
           foreach ($path in $paths) {
             $entries = @(Get-ChildItem -LiteralPath $path -Force)
-            "INVENTORY path=$path entries=$($entries.Count) HFP_MATCHES=$(@($entries | Where-Object Name -match $names).Count)"
+            "INVENTORY path=$path entries=$($entries.Count) PROFILE_MATCHES=$(@($entries | Where-Object Name -match $names).Count)"
             $entries | Where-Object Name -match $names | ForEach-Object { "MATCH $($_.Name)" }
           }
           foreach ($name in 'BthPort','BthEnum','BTHUSB','bthserv','AudioSrv','AudioEndpointBuilder','BthHfEnum','BthHfAud','BthHFSrv','BTAGService','BthAvctpSvc','BthA2dp','BtaMPM') {
