@@ -31,6 +31,6 @@ $hashes = foreach ($file in @($files + $payload | Sort-Object FullName -Unique))
   }
   [ordered]@{ path=$file.FullName.Substring($MountDirectory.Length+1); sha256=$sha; bytes=$file.Length }
 }
-if (!(@($hashes | Where-Object path -match '\\BthHfAud\.sys$').Count)) { throw 'BthHfAud positive control absent' }
+if (!(@($hashes | Where-Object { $_['path'] -match '\\BthHfAud\.sys$' }).Count)) { throw 'BthHfAud positive control absent' }
 [ordered]@{ packages=@($packages.Name); files=@($hashes); infs=@($infRecords) } | ConvertTo-Json -Depth 10 | Set-Content -Encoding utf8 (Join-Path $OutputDirectory 'hfp-donor.json')
 "HFP_DONOR packages=$($packages.Count) files=$(@($hashes).Count) infs=$(@($infRecords).Count)"
