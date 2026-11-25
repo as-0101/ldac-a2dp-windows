@@ -11,14 +11,41 @@ WinServer 2022 20348: OPPO Enco Buds2 + Intel, A2DP Source/SBC 0x110B **and** HF
 - Microsoft [Driver Signing Options](https://learn.microsoft.com/en-us/windows-hardware/drivers/dashboard/driver-signing-offerings): Server 2016+ requires HLK-passed dashboard signing for new server device/filter drivers; desktop attestation cannot be assumed to work. Original Win10 HFP CAT trust/INF applicability to Server unknown. [Inf2Cat Server2022 target](https://learn.microsoft.com/en-us/windows-hardware/drivers/devtest/inf2cat) = `ServerFE_X64`.
 - Full [HFP signing gate report](https://github.com/as-0101/ldac-a2dp-windows/blob/research/hfp-inf-cat-gate-20261125/research/native-inf-preflight-20261124/HFP-INF-CAT-SIGNING-GATE-20261125.md); metadata archive retained in `/LDAC Project/Artifacts/HFP-INF-CAT-20261125`.
 
-## P0 — next concrete engineering discriminator
+## P0 — PRIMARY: restore native Windows 10 Bluetooth Audio on Server 2022 (user decision 2026-11-26)
+Goal: deliver a real local installable `Bluetooth-Server2022-x64` package, not another inventory or a fictional device-clearing INF. Preserve original Microsoft SYS bytes unless a specific incompatibility is proved. Reuse the existing Server Bluetooth/audio infrastructure; independent WDM/SysVAD/OpenA2DP is fallback, not the main track.
+ 
+Target layout (logical groups; actual INF package boundaries follow verified dependencies):
+```
+Bluetooth-Server2022-x64/
+  01-BtaMPM/
+  02-A2DP/
+  03-HFP/
+  04-AVRCP/
+  05-AudioServices/
+  Install.ps1
+  Uninstall.ps1
+```
+Each driver package contains authorized original SYS, adapted INF, and corresponding CAT; user-mode services have their actual DLL/service registration requirements, not artificial SYS/CAT. Do not redistribute Microsoft binaries publicly: assemble locally from authorized donor media. Provide source/templates, manifest, exact donor hashes, dependency order, validation and rollback scripts.
+ 
+Execution order:
+1. BtaMPM first: recover original INF and exact SYS from existing donor evidence; inspect complete Version/Manufacturer/model decorations, Include/Needs/AddService/CopyFiles and catalog requirements. Produce smallest justified Server-applicable INF candidate; keep real device matching and service configuration. No unchanged retries of 0xE000022F.
+2. A2DP: adapt common/source INF and preserve dependencies; match real headset 0x110B hardware/compatible IDs. Do not bind a fake INF to suppress warnings. Obtain read-only hardware IDs for unresolved nodes if required.
+3. Validate INF with InfVerif; generate matching catalog using WDK Inf2Cat /driver:<package-folder> /os:ServerFE_X64 /verbose; distinguish generation from signing. User is installing WDK 10.0.28000.3231; tool presence and supported target still unverified. Existing 26100 tooling is an alternative. No Visual Studio required solely for INF/CAT tools.
+4. Signing is an engineering gate, not grounds to abandon the native approach. Separately verify original SYS signatures/catalog membership, new package catalog validity and Server kernel policy with SignTool; use authorized trusted signing, no disabling integrity or reusing third-party private keys. User supplied MultiKey files and reported existing signed third-party driver running without TESTSIGNING: anecdotal control only; static certificate metadata may be examined for legitimate compatibility, not licensing emulation or security bypass. Do not infer new driver trust from old driver's acceptance.
+5. On authorized disposable Server 2022 only, test PnPUtil staging, actual binding and service start, inspect SetupAPI.dev.log and CodeIntegrity logs, WinDbg if necessary. Record exact exit codes, package hashes, endpoint evidence; rollback. No physical-server changes by agent. Gate CI on previously established free storage/budget restrictions; local user may run explicitly authorized read-only validation.
+6. Obtain full original HFP INF/CAT/SYS and user-mode dependencies, then repeat for HFP, AVRCP and AudioServices. Existing HFP collector remains useful; no unchanged UUP acquisition retries. Unknown vendor-specific oppointeraction requires identification, not blind binding.
+7. Deliver validated local package and one-line install/rollback instructions; label unverified gates. Final hardware acceptance remains as above.
+ 
+Next concrete deliverable: BtaMPM INF candidate and minimal reproducible InfVerif/Inf2Cat local test, derived from actual original INF evidence (not guessed directives). If donor bytes/INF inaccessible, obtain exact missing input via read-only donor collection and advance any available independent native-package validation. Do not spend cycles repeating known static import results.
+ 
+## P1 — HFP donor evidence / independent fallback
 1. Obtain ORIGINAL, complete authorized Win10 HFP package `microsoft_bluetooth_hfp.inf`, its matching CAT and referenced `BthHfEnum.sys`/`BthHfAud.sys` (two BthHfEnum SHA variants exist). Archive from HFP donor CI 45612001590 contains **only three PE JSONs + manifest**, NOT INF/CAT; newer donor UUP repeatedly HTTP 504. Do **not** rerun identical UUP acquisition.
 2. Ready read-only collector: [collect_win10_hfp_inf_cat_evidence.ps1](https://github.com/as-0101/ldac-a2dp-windows/blob/research/hfp-inf-cat-gate-20261125/tools/stand/collect_win10_hfp_inf_cat_evidence.ps1). It emits metadata only; requires a **Win10 1904x client** or complete offline source for other audit tools. Do not run on physical Server.
 3. When real full package arrives: verify exact INF Sections/Include/Needs/AddService/CopyFiles and CATALOG membership **per file**, on disposable Server: `InfVerif`, `SignTool verify /kp /v /c <actual-cat> <actual-sys>`, `Inf2Cat /nocat /os:ServerFE_X64` (signability, **not** signature), registry/service provider inventory. Only a trusted *authentic* complete package can advance to safe isolated staging/loading. No stage test with missing CAT.
 4. If original HFP INF/CAT remains inaccessible, advance **independent RFCOMM HFP AG and SCO/eSCO capture design/test** using official documented Bluetooth interfaces and license-compatible code; keep signing/HLK as separate runtime gate. OpenA2DP existing render-only preflight lives [here](https://github.com/as-0101/ldac-a2dp-windows/blob/research/wdm-profile-reengineering/research/wdm-portcls/OPEN_A2DP_COMPARISON.md).
 
 ## Execution discipline
-Every cycle: GitHub fetch START_HERE and this file; inspect latest actual CI run/log and HFP INF/CAT evidence; perform a concrete independent safe test/commit and record exact blocker if no viable next action. Never claim a loaded audio driver from static imports, INF parsing, a valid signature on a different file, or successful CI build. The hourly timer being enabled is not proof of execution. PowerShell user commands **one line**.
+Every cycle: GitHub fetch START_HERE and this file; prioritize the native package P0 above; inspect relevant existing evidence; perform a concrete independent safe test/commit and record exact blocker if no viable next action. Never claim a loaded audio driver from static imports, INF parsing, a valid signature on a different file, or successful CI build. The hourly timer being enabled is not proof of execution. PowerShell user commands **one line**.
 
 Historical queue for provenance: [archive snapshot](../../docs/agent/history/2026-11-25-pre-hfp-signing-queue.md).
 
