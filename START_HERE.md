@@ -1,6 +1,14 @@
-## Product scope — vendor-independent A2DP Source
+## Product scope — Windows 10 Bluetooth Classic headset stack on Windows Server 2022
 
-User clarified 2026-11-24: the deliverable is restoration of standard Bluetooth Classic A2DP Source playback on Windows Server 2022 using the existing Windows Bluetooth transport, not an OPPO- or Intel-specific driver. OPPO Enco Buds2 and Intel are reference hardware only. The design must not require vendor-specific controller IDs or headset model IDs in profile binding; use the standard remote Audio Sink service UUID (0x110B) where appropriate. Controller vendors can supply transport drivers and optional proprietary extensions, so compatibility is conditional on a working Windows-compatible Bluetooth Classic transport and remote A2DP Sink support. Preserve Server inbox Bluetooth core and audio core. Initial success: stable SBC stereo endpoint and audible playback on reference hardware. Generalization: separately validate other available controller/headset combinations (ideally Intel and Realtek with distinct A2DP headsets); do not claim universal hardware compatibility before testing. LDAC and HFP remain separate later milestones. This clarification does not change the active WDM research path, authorize physical-host modifications, or prove runtime support.
+User clarified 2026-11-25: adapt the Windows 10 Bluetooth Classic headset audio stack to Windows Server 2022. A headset is one paired physical device with integrated speakers and microphone. OPPO Enco Buds2 is the first reference headset. Intel is the first reference controller. Target the class of Windows 10 compatible Classic headsets supporting A2DP Sink and HFP Hands-Free, over supported Windows Bluetooth Classic transports.
+
+- Stereo playback uses the PC's A2DP Source role with SBC and the headset's standard Audio Sink service (0x110B).
+- Calls use the PC's HFP Audio Gateway role with the same headset's Hands-Free service (0x111E). Validate HFP playback and recording together.
+- Preserve the Server Bluetooth transport and audio core. Use the Windows 10 donor components as the baseline, identify their dependencies and adapt packaging through the supported driver trust path. Match standard profile service IDs wherever the model permits.
+- End-to-end acceptance on one pairing: play stereo, open the integrated microphone, verify recorded samples and two-way HFP audio, close capture, verify stereo playback resumes, then repeat after reconnection. Verify on OPPO Enco Buds2 first and another Windows 10 compatible headset and controller before making broader compatibility claims. Two profiles can expose distinct Windows endpoints for the same device.
+- First engineering milestone is SBC playback. Project acceptance requires both profiles and their transition on the same headset. LDAC remains an optional codec milestone.
+
+Experiments use disposable systems. Physical server changes require separate authorization.
 
 ## 2026-11-25 — HFP donor dependency audit started
 
