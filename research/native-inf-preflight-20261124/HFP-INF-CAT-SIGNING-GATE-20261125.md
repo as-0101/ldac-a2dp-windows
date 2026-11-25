@@ -23,3 +23,9 @@ Microsoft [Driver Signing Options](https://learn.microsoft.com/en-us/windows-har
 3. Only after a Server-accepted signed package exists, consider isolated staging, PnP binding, service start, media capture endpoint and actual radio/duplex tests. No test-signing, no physical server modifications, no paid CI.
 
 **Acceptance: UNTESTED. Real HFP driver load: NOT ATTEMPTED. Current missing blocker: authentic complete Windows 10 HFP INF/CAT and Server-eligible signing path.**
+
+## Follow-up collector safety CI
+- The Windows 10 read-only metadata collector is committed as `tools/stand/collect_win10_hfp_inf_cat_evidence.ps1` (commit [`e68ae127`](https://github.com/as-0101/ldac-a2dp-windows/commit/e68ae127fdc17a4cdc516fbb397a0160314f1928)).
+- [CI 45664199748](https://github.com/as-0101/ldac-a2dp-windows/actions/runs/45664199748), **completed/SUCCESS** on hosted Server 20348.5870. PowerShell Parser: PASS; Server guard: PASS; original Win10 donor files copied: NONE. This tests safety/syntax only, **not execution on Win10**.
+- Metadata ZIP artifact `15045324530`, SHA256 `3f4f98b1f043d1199b775ba761419d22769f9c82a34406d436e8321e591ca074`. Backed up in `LDAC Project/Artifacts/HFP-INF-CAT-20261125/CI-45664199748-metadata.zip`.
+- Canonical [NEXT_ACTIONS](https://github.com/as-0101/ldac-a2dp-windows/blob/docs/project-source-reorg/docs/agent/NEXT_ACTIONS.md) reduced to a current executable queue; old queue archived without deletion (commit `6963de7c`).
