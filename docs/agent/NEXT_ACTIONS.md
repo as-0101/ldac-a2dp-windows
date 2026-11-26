@@ -1,5 +1,8 @@
 # NEXT_ACTIONS — live executable queue (2026-11-25 17:26 UTC)
 
+## AUTHORITATIVE METHODOLOGY RESET — 2026-11-26
+[Revised strategy, critical retrospective and gated execution](https://github.com/as-0101/ldac-a2dp-windows/blob/docs/project-source-reorg/docs/agent/METHODOLOGY-RESET-20261126.md). Supersedes all earlier priorities and scheduling instructions. User stopped hourly automation; do not resume. Native restoration preferred, not an axiom; first proven break is missing profile packages and rejected staging, not known ABI failure. No more unchanged CAT/INF attempts, blind PDB analysis, new CI, or serial local commands. Seek legitimate applicable package/supported deployment or signed independent full-profile provider; evaluate hardware workaround separately. Only call user for consolidated irreducible local tests after validating collector. Hardware acceptance UNTESTED. No new local changes. Older material below is historical evidence, not active work queue.
+
 ## CURRENT P0 — mandatory priority, user confirmed 2026-11-26
 Native Microsoft Bluetooth stack restoration is the primary research track. Supersedes older next-action sections and stale independent-driver/CI priorities below. Use authentic local donor media; no paid credits, no new CI, no publication of Microsoft binaries, no integrity weakening. User executes explicitly authorized physical-server commands; agents must not autonomously modify it.
 
